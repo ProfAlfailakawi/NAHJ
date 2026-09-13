@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "organization": {
+      "title": "Organization",
+      "description": "Operating institution data and profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "nameEn": { "type": "string" },
+        "industry": { "type": "string" },
+        "verifiedSkillsCount": { "type": "number" }
+      },
+      "required": ["id", "name"]
+    },
+    "skill": {
+      "title": "Skill",
+      "description": "Operational procedural skill learned by AI",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "autonomyLevel": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    },
+    "workItem": {
+      "title": "WorkItem",
+      "description": "Operational work item or student request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string" },
+        "priority": { "type": "string" }
+      },
+      "required": ["id", "title"]
+    },
+    "approvalRequest": {
+      "title": "ApprovalRequest",
+      "description": "Human approval gate request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "title", "status"]
+    },
+    "auditEvent": {
+      "title": "AuditEvent",
+      "description": "Institutional immutable audit log record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "action": { "type": "string" },
+        "actorName": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "action"]
+    }
+  },
+  "firestore": {
+    "/organization/{orgId}": {
+      "schema": "organization",
+      "description": "Organization profile and settings"
+    },
+    "/skills/{skillId}": {
+      "schema": "skill",
+      "description": "Operational verified and drafted skills"
+    },
+    "/workItems/{workItemId}": {
+      "schema": "workItem",
+      "description": "Operational work items and student requests"
+    },
+    "/approvalRequests/{requestId}": {
+      "schema": "approvalRequest",
+      "description": "Human-in-the-loop approval requests"
+    },
+    "/auditEvents/{eventId}": {
+      "schema": "auditEvent",
+      "description": "Operational audit logs"
+    }
+  }
+}

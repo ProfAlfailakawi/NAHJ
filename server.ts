@@ -1,6 +1,6 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
+import fs from "fs";
 import { apiRouter } from "./server/routes.ts";
 
 async function startServer() {
@@ -9,9 +9,15 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Health check endpoint
+  // Health check endpoints for cloud deployment and probes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", app: "NAHJ - نهج", timestamp: new Date().toISOString() });
+  });
+  app.get("/healthz", (req, res) => {
+    res.status(200).send("ok");
+  });
+  app.get("/_health", (req, res) => {
+    res.status(200).send("ok");
   });
 
   // Mount domain API routes
@@ -19,6 +25,7 @@ async function startServer() {
 
   // Vite middleware for development / production static fallback
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
@@ -28,13 +35,24 @@ async function startServer() {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      const indexPath = path.join(distPath, "index.html");
+      if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+      } else {
+        res.status(200).send("NAHJ OS is active. Preparing static assets...");
+      }
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`[NAHJ] Server running on http://0.0.0.0:${PORT}`);
+  });
+
+  server.on("error", (err: any) => {
+    console.error("[NAHJ] Server listen error:", err);
   });
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error("[NAHJ] Fatal error starting server:", err);
+});

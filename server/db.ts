@@ -189,7 +189,9 @@ class Store {
 
 export const db = new Store();
 
-// Initial background sync to Firebase project nahj-a27a4
+// Non-blocking background sync to Firebase project nahj-a27a4 after boot
 setTimeout(() => {
-  void db.syncAllToFirebase();
-}, 2000);
+  void db.syncAllToFirebase().catch((err) => {
+    console.warn("[Firebase] Background initial sync handled:", err);
+  });
+}, 8000);
