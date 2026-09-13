@@ -1,11 +1,63 @@
-<div align="center">
+# نهج — NAHJ
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+**نهج** هو نظام تعلم تشغيلي للمؤسسات: يتعلم كيف تعمل المؤسسة، يحول العمل الحقيقي إلى مهارات موثقة وقابلة للإصدار، يختبر نفسه عليها، ثم يكتسب حق التنفيذ تدريجيًا تحت حوكمة بشرية واضحة.
 
-  <h1>Built with AI Studio</h2>
+> **Teach → Learn → Verify → Practice → Shadow → Work → Audit → Improve**
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## ما الذي يميز نهج؟
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+- **Company Brain** بدل Knowledge Base تقليدية.
+- **Teach Mode** لتعليم العملية كما ينفذها الموظف فعليًا.
+- **Controlled Learning**: الملاحظة لا تتحول إلى سياسة من دون مراجعة واعتماد.
+- **Versioned Skills** مع أدلة، استثناءات، قواعد، اختبارات ومالك بشري.
+- **Autonomy Ladder**: Observe → Practice → Shadow → Suggest → Approval → Autopilot.
+- **Policy / Risk / Approval Engines** قبل أي تنفيذ حساس.
+- **Action & Connector Layer** حتى لا يرتبط منطق العمل بنظام خارجي واحد.
+- **Audit Trail** قابل للتفسير لكل قرار وتنفيذ مهم.
+- **Process Intelligence** لاكتشاف التعارض، الانحراف، الاعتماد على موظف واحد وفرص التحسين.
 
-</div>
+## الهوية البصرية
+
+الواجهة ليست Dashboard تقليدية. كل سطح له لغة إنفوجرافيكية خاصة: Atlas للعقل التشغيلي، Radar للتعلم، Teaching Stage لجلسة التعليم، Runway لتدرج الاستقلالية، Work River للتنفيذ، Constellation للتكاملات وGovernance Shield للحوكمة.
+
+راجع `DESIGN_SYSTEM.md` قبل تعديل أي واجهة.
+
+## التشغيل المحلي
+
+المتطلبات: Node.js 22+.
+
+```bash
+npm install
+cp .env.example .env
+# ضع GEMINI_API_KEY عند الحاجة
+npm run dev
+```
+
+للفحص والبناء:
+
+```bash
+npm run lint
+npm run build
+```
+
+## نقطة البداية التجريبية
+
+الحزمة تتضمن Education demo لإثبات الحلقة الأساسية عبر عملية **تسجيل طالب جديد**، لكن قلب النظام عام وغير مربوط بقطاع التعليم.
+
+## وثائق المشروع
+
+- `PRODUCT_SPEC.md`
+- `ARCHITECTURE.md`
+- `DATABASE_SCHEMA.md`
+- `AI_ARCHITECTURE.md`
+- `SECURITY.md`
+- `EVALUATION.md`
+- `MVP_SCOPE.md`
+- `DECISIONS.md`
+- `DESIGN_SYSTEM.md`
+
+## قاعدة المنتج
+
+**Don't make companies configure AI. Let AI learn the company.**
+
+**AI must earn the right to act.**

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f1e8" />
+    <title>نهج | NAHJ</title>
+    <meta name="description" content="نهج يتعلم كيف تعمل المؤسسة، يحول العمل إلى مهارات موثقة، ثم يتدرّب ويكسب حق التنفيذ تدريجيًا." />
+    <meta property="og:title" content="نهج | NAHJ" />
+    <meta property="og:description" content="AI that learns how your organization actually works." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      html,body,#root{min-height:100%;margin:0}body{background:#f4f1e8}
+      #nahj-splash{position:fixed;inset:0;z-index:9999;background:#f4f1e8;display:grid;place-items:center;transition:opacity .38s ease,visibility .38s ease}
+      #nahj-splash.out{opacity:0;visibility:hidden}
+      #nahj-splash .mark{width:76px;height:76px;filter:drop-shadow(0 18px 30px rgba(16,37,31,.12))}
+      #nahj-splash .path{stroke-dasharray:1;stroke-dashoffset:1;animation:nahj-draw 1.05s cubic-bezier(.22,.78,.24,1) forwards}
+      #nahj-splash .dot{opacity:0;animation:nahj-dot .35s .7s ease forwards}
+      @keyframes nahj-draw{to{stroke-dashoffset:0}}@keyframes nahj-dot{to{opacity:1}}
+      @media(prefers-reduced-motion:reduce){#nahj-splash .path{stroke-dashoffset:0;animation:none}#nahj-splash .dot{opacity:1;animation:none}}
+    </style>
+  </head>
+  <body>
+    <div id="nahj-splash" aria-hidden="true">
+      <svg class="mark" viewBox="0 0 72 72" fill="none">
+        <rect x="2" y="2" width="68" height="68" rx="23" fill="#fffdf7" stroke="rgba(16,37,31,.08)"/>
+        <path class="path" pathLength="1" d="M18 18v12c0 7.2 5.8 13 13 13h9c7.8 0 14 6.2 14 14v3" stroke="#10251f" stroke-width="4.6" stroke-linecap="round"/>
+        <path class="path" pathLength="1" d="M18 18h10M44 16h10v10" stroke="#2f7d65" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle class="dot" cx="18" cy="18" r="5" fill="#e0a04b"/><circle class="dot" cx="54" cy="60" r="5" fill="#5e79e6"/><circle class="dot" cx="38" cy="43" r="4.8" fill="#2f7d65" stroke="#fffdf7" stroke-width="2"/>
+      </svg>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

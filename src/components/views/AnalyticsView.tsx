@@ -1,0 +1,15 @@
+import React from "react";
+import { ArrowDownRight, ArrowUpRight, CheckCircle2, Clock3, Gauge, ShieldCheck, Sparkles, TimerReset } from "lucide-react";
+import { PageHeader, SectionTitle } from "../Primitives";
+import { ImpactHalo } from "../Visuals";
+
+export type AnalyticsData={
+  kpis:{totalTasksCompleted:number;totalHoursSaved:number;automationRatePercent:number;shadowMatchRatePercent:number;errorRatePercent:number;humanTakeoverPercent:number;avgProcessDurationMin:number;institutionalCoverageScore:number};
+  weeklyTrend:{day:string;tasks:number;savedHours:number}[];
+  riskDistribution:{low:number;medium:number;high:number};
+  topSkillsByUsage:{name:string;usageCount:number;hoursSaved:number;successRate:number;reliabilityTier:string}[];
+};
+
+type Props={lang:"ar"|"en";data:AnalyticsData};
+export function AnalyticsView({lang,data}:Props){const ar=lang==="ar";const max=Math.max(...data.weeklyTrend.map(d=>d.tasks),1);return <div className="page-enter"><PageHeader eyebrow="IMPACT / ROI" title={ar?"الأثر، لا عدد الرسائل.":"Measure outcomes, not messages."} hint={ar?"وقت مستعاد، عمل مكتمل، ومخاطر أقل.":"Time back, completed work, lower risk."}/><div className="impact-layout"><section className="impact-hero surface"><ImpactHalo value={data.kpis.totalHoursSaved}/><div className="impact-hero-copy"><em>{ar?"هذا الشهر":"THIS MONTH"}</em><strong>{data.kpis.totalTasksCompleted}</strong><span>{ar?"مهمة مكتملة":"completed tasks"}</span></div><div className="impact-badges"><span><ArrowUpRight/> {data.kpis.automationRatePercent}%</span><span><ShieldCheck/> {data.kpis.shadowMatchRatePercent}%</span><span><ArrowDownRight/> {data.kpis.errorRatePercent}%</span></div></section><section className="impact-metrics surface-strong"><Metric icon={<Gauge/>} value={`${data.kpis.institutionalCoverageScore}%`} label={ar?"تغطية المعرفة":"coverage"}/><Metric icon={<Clock3/>} value={`${data.kpis.avgProcessDurationMin}m`} label={ar?"مدة العملية":"duration"}/><Metric icon={<TimerReset/>} value={`${data.kpis.humanTakeoverPercent}%`} label={ar?"استلام بشري":"takeover"}/><Metric icon={<CheckCircle2/>} value={`${data.kpis.shadowMatchRatePercent}%`} label={ar?"تطابق الظل":"shadow match"}/></section><section className="weekly-visual surface-strong"><SectionTitle title={ar?"نبض الأسبوع":"Week pulse"}/><div className="bars">{data.weeklyTrend.map(d=><div key={d.day}><span style={{height:`${Math.max(12,d.tasks/max*100)}%`}}/><b>{d.tasks}</b><small>{d.day.slice(0,3)}</small></div>)}</div></section><section className="top-skill-visual surface"><SectionTitle title={ar?"أكثر المهارات أثرًا":"Top skills"}/><div className="top-skills">{data.topSkillsByUsage.slice(0,4).map((s,i)=><div key={s.name}><span>{i+1}</span><div><strong>{s.name}</strong><small>{s.usageCount} · {s.hoursSaved}h</small></div><b>{s.successRate}%</b></div>)}</div></section></div></div>}
+function Metric({icon,value,label}:{icon:React.ReactNode;value:string;label:string}){return <div className="impact-metric"><span>{icon}</span><strong>{value}</strong><small>{label}</small></div>}

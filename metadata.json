@@ -1,0 +1,7 @@
+{
+  "name": "نهج | NAHJ",
+  "description": "منصة ذكاء اصطناعي تشغيلية تتعلم كيف تعمل المؤسسة فعليًا، وتحول المعرفة والإجراءات إلى مهارات معتمدة يتدرب عليها الذكاء الاصطناعي ويبدأ بتنفيذها تدريجيًا.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
