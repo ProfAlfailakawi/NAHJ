@@ -23,11 +23,22 @@ async function startServer() {
   // Mount domain API routes
   app.use("/api", apiRouter);
 
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`[NAHJ] Server running on http://0.0.0.0:${PORT}`);
+  });
+
+  server.on("error", (err: any) => {
+    console.error("[NAHJ] Server listen error:", err);
+  });
+
   // Vite middleware for development / production static fallback
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: { server }, // Bind HMR to the Express server to avoid port 24678 conflicts
+      },
       appType: "spa",
     });
     app.use(vite.middlewares);
@@ -43,14 +54,6 @@ async function startServer() {
       }
     });
   }
-
-  const server = app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[NAHJ] Server running on http://0.0.0.0:${PORT}`);
-  });
-
-  server.on("error", (err: any) => {
-    console.error("[NAHJ] Server listen error:", err);
-  });
 }
 
 startServer().catch((err) => {
