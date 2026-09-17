@@ -76,4 +76,24 @@ export const authApi = {
       "/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }
     ),
   logout: () => api<void>("/auth/logout", { method: "POST" }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    api<{ ok: boolean }>("/auth/change-password", { method: "POST", body: JSON.stringify({ currentPassword, newPassword }) }),
+};
+
+export interface AccountSummary {
+  id: string; email: string; name: string; role: string; status: string;
+  createdAt: string; lastLoginAt: string | null; lockedUntil: string | null; activeSessions: number;
+}
+
+/** إدارة الحسابات — المشرف وحده، ومحجوبة عن البيئة التجريبية. */
+export const accountsApi = {
+  list: () => api<{ accounts: AccountSummary[] }>("/auth/accounts"),
+  create: (body: { name: string; email: string; password: string; role: string }) =>
+    api<{ account: AccountSummary }>("/auth/accounts", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: { role?: string; status?: string }) =>
+    api<{ account: AccountSummary }>(`/auth/accounts/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) }),
+  setPassword: (id: string, newPassword: string) =>
+    api<{ ok: boolean }>(`/auth/accounts/${encodeURIComponent(id)}/password`, { method: "POST", body: JSON.stringify({ newPassword }) }),
+  revokeSessions: (id: string) =>
+    api<{ revoked: number }>(`/auth/accounts/${encodeURIComponent(id)}/revoke-sessions`, { method: "POST", body: "{}" }),
 };

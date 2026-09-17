@@ -157,3 +157,63 @@
 .login-demo:hover:not(:disabled) { background: rgba(190, 138, 42, .18); }
 .login-demo:disabled { opacity: .55; cursor: not-allowed; }
 .login-demo svg { width: 16px; height: 16px; }
+
+/* ---- إدارة الحسابات ------------------------------------------------------ */
+.accounts-self, .accounts-create, .accounts-list, .accounts-locked {
+  margin-top: 16px; padding: 18px 20px; border-radius: 18px;
+}
+.accounts-self h3, .accounts-create h3, .accounts-list h3 {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 14px;
+}
+.accounts-self h3 svg, .accounts-create h3 svg, .accounts-list h3 svg { width: 16px; height: 16px; }
+.accounts-list h3 small { margin-inline-start: auto; opacity: .55; font-weight: 600; }
+.accounts-self form, .accounts-create form { display: flex; flex-wrap: wrap; gap: 8px; }
+.accounts-self input, .accounts-create input, .accounts-create select,
+.accounts-controls select {
+  flex: 1 1 180px; min-width: 0; padding: 9px 12px; border-radius: 11px;
+  border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04);
+  color: inherit; font: inherit; font-size: 13px;
+}
+.accounts-password-row { display: flex; gap: 8px; flex: 1 1 320px; min-width: 0; }
+.accounts-password-row input { flex: 1; font-family: ui-monospace, SFMono-Regular, monospace; }
+.accounts-self button, .accounts-create button, .accounts-controls button, .accounts-issued button {
+  padding: 9px 14px; border-radius: 11px; font: inherit; font-size: 12.5px; font-weight: 700;
+  cursor: pointer; color: inherit;
+  background: rgba(120,170,255,.16); border: 1px solid rgba(120,170,255,.3);
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.accounts-self button:disabled, .accounts-create button:disabled,
+.accounts-controls button:disabled, .accounts-controls select:disabled { opacity: .45; cursor: not-allowed; }
+.accounts-controls svg { width: 14px; height: 14px; }
+.accounts-issued {
+  display: flex; align-items: flex-start; gap: 10px; margin-top: 14px; padding: 12px 14px;
+  border-radius: 12px; background: rgba(190,138,42,.12); border: 1px solid rgba(190,138,42,.34);
+}
+.accounts-issued > svg { width: 18px; height: 18px; flex: none; margin-top: 2px; }
+.accounts-issued div { flex: 1; min-width: 0; }
+.accounts-issued strong { display: block; font-size: 13px; }
+.accounts-issued p { margin: 2px 0 8px; font-size: 12px; opacity: .75; }
+.accounts-issued code {
+  display: block; padding: 7px 10px; margin-bottom: 6px; border-radius: 9px;
+  background: rgba(0,0,0,.25); font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 13px; word-break: break-all; user-select: all;
+}
+.accounts-rows { display: flex; flex-direction: column; gap: 10px; }
+.accounts-rows article {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+  padding: 12px 14px; border-radius: 13px;
+  background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08);
+}
+.accounts-rows article.is-suspended { opacity: .55; }
+.accounts-identity { flex: 1 1 220px; min-width: 0; }
+.accounts-identity strong { display: block; font-size: 13.5px; }
+.accounts-identity em { font-style: normal; opacity: .6; font-weight: 500; }
+.accounts-identity small { display: block; font-size: 11.5px; opacity: .65; }
+.accounts-identity .accounts-meta { margin-top: 3px; opacity: .5; }
+.accounts-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.accounts-controls select { flex: 0 0 auto; }
+.accounts-empty { font-size: 13px; opacity: .6; margin: 0; }
+.accounts-locked { display: flex; align-items: center; gap: 10px; }
+.accounts-locked svg { width: 18px; height: 18px; }
+.accounts-locked p { margin: 0; font-size: 13px; opacity: .8; }
+@media (max-width: 720px) { .accounts-controls { width: 100%; } }

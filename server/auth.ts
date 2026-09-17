@@ -323,6 +323,134 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
 }
 
 /** حارس أدوار. الترتيب تصاعدي في الصلاحية. */
+/*
+ * إدارة الحسابات.
+ *
+ * نهج بلا مزوّد بريد، فلا يوجد "نسيت كلمة المرور" يُرسل رابطاً. البديل الصادق هو ما
+ * تفعله الأنظمة المغلقة: المشرف يُصدر كلمة مرور مؤقتة ويسلّمها بقناة يثق بها، ثم
+ * يغيّرها صاحبها. لا ندّعي استعادة ذاتية لا نملك وسيلتها.
+ */
+
+export interface AccountSummary extends Account {
+  createdAt: string;
+  lastLoginAt: string | null;
+  lockedUntil: string | null;
+  activeSessions: number;
+}
+
+export function listAccounts(): AccountSummary[] {
+  const rows = openDatabase().prepare(
+    `SELECT a.id, a.email, a.name, a.role, a.status, a.created_at, a.locked_until,
+            (SELECT COUNT(*) FROM sessions s WHERE s.account_id = a.id AND s.expires_at > ?) AS active_sessions,
+            (SELECT MAX(s2.created_at) FROM sessions s2 WHERE s2.account_id = a.id) AS last_login_at
+     FROM accounts a ORDER BY a.created_at ASC`
+  ).all(now()) as Array<Record<string, unknown>>;
+  return rows.map(row => ({
+    id: String(row.id), email: String(row.email), name: String(row.name),
+    role: String(row.role) as AccountRole, status: String(row.status),
+    createdAt: String(row.created_at),
+    lastLoginAt: row.last_login_at ? String(row.last_login_at) : null,
+    lockedUntil: row.locked_until ? String(row.locked_until) : null,
+    activeSessions: Number(row.active_sessions ?? 0),
+  }));
+}
+
+const adminCount = () => {
+  const row = openDatabase().prepare("SELECT COUNT(*) AS count FROM accounts WHERE role = 'admin' AND status = 'ACTIVE'").get() as { count: number };
+  return Number(row?.count ?? 0);
+};
+
+/**
+ * يمنع إزالة آخر مشرف نشط — بخفض دوره أو بتعطيله.
+ *
+ * بدون هذا الحارس تستطيع بضغطة واحدة أن تترك النظام بلا أحد يملك إدارته، ولا يوجد
+ * "نسيت كلمة المرور" ولا شاشة تهيئة تعيد فتحه (تُقفل بعد أول حساب). أي أن الخطأ
+ * غير قابل للتراجع إلا بتحرير قاعدة البيانات يدوياً.
+ */
+function assertNotLastAdmin(accountId: string, nextRole: string, nextStatus: string) {
+  const target = openDatabase().prepare('SELECT role, status FROM accounts WHERE id = ?').get(accountId) as
+    | { role: string; status: string } | undefined;
+  if (!target) return;
+  const wasActiveAdmin = target.role === 'admin' && target.status === 'ACTIVE';
+  const staysActiveAdmin = nextRole === 'admin' && nextStatus === 'ACTIVE';
+  if (wasActiveAdmin && !staysActiveAdmin && adminCount() <= 1) {
+    throw Object.assign(new Error('لا يمكن إزالة آخر مشرف نشط — عيّن مشرفاً آخر أولاً.'), { status: 409 });
+  }
+}
+
+export async function adminCreateAccount(input: CreateAccountInput): Promise<Account> {
+  const existing = openDatabase().prepare('SELECT id FROM accounts WHERE email = ? LIMIT 1')
+    .get(String(input.email || '').trim().toLowerCase());
+  if (existing) throw Object.assign(new Error('هذا البريد مسجّل مسبقاً.'), { status: 409 });
+  try {
+    return await createAccount(input);
+  } catch (error) {
+    throw Object.assign(error as Error, { status: (error as { status?: number }).status || 400 });
+  }
+}
+
+export function updateAccount(accountId: string, changes: { role?: AccountRole; status?: string }): AccountSummary {
+  const db = openDatabase();
+  const current = db.prepare('SELECT role, status FROM accounts WHERE id = ? LIMIT 1').get(accountId) as
+    | { role: string; status: string } | undefined;
+  if (!current) throw Object.assign(new Error('الحساب غير موجود.'), { status: 404 });
+
+  const role = changes.role ?? (current.role as AccountRole);
+  const status = changes.status ?? current.status;
+  if (!ROLES.includes(role)) throw Object.assign(new Error('الدور غير صالح.'), { status: 400 });
+  if (!['ACTIVE', 'SUSPENDED'].includes(status)) throw Object.assign(new Error('حالة الحساب غير صالحة.'), { status: 400 });
+
+  assertNotLastAdmin(accountId, role, status);
+
+  db.prepare('UPDATE accounts SET role = ?, status = ?, updated_at = ? WHERE id = ?').run(role, status, now(), accountId);
+  // تعطيل الحساب أو خفض دوره يطرد جلساته فوراً؛ وإلّا بقي الدور القديم سارياً حتى تنتهي.
+  if (status !== 'ACTIVE' || role !== current.role) {
+    db.prepare('DELETE FROM sessions WHERE account_id = ?').run(accountId);
+  }
+  return listAccounts().find(account => account.id === accountId)!;
+}
+
+/** يضبط كلمة مرور جديدة لحساب ويطرد جلساته. يستعمله المشرف لإصدار كلمة مؤقتة. */
+export async function adminSetPassword(accountId: string, newPassword: unknown): Promise<void> {
+  const passwordError = validatePassword(newPassword);
+  if (passwordError) throw Object.assign(new Error(passwordError), { status: 400 });
+  const db = openDatabase();
+  const exists = db.prepare('SELECT id FROM accounts WHERE id = ? LIMIT 1').get(accountId);
+  if (!exists) throw Object.assign(new Error('الحساب غير موجود.'), { status: 404 });
+
+  const { hash, salt } = await hashPassword(String(newPassword));
+  db.prepare('UPDATE accounts SET password_hash = ?, password_salt = ?, failed_login_count = 0, locked_until = NULL, updated_at = ? WHERE id = ?')
+    .run(hash, salt, now(), accountId);
+  db.prepare('DELETE FROM sessions WHERE account_id = ?').run(accountId);
+}
+
+/**
+ * تغيير المستخدم كلمة مروره بنفسه. يتطلب كلمة المرور الحالية: بدونها يكفي جهاز
+ * مفتوح بلا صاحبه لاختطاف الحساب نهائياً.
+ */
+export async function changeOwnPassword(accountId: string, currentPassword: unknown, newPassword: unknown): Promise<void> {
+  const passwordError = validatePassword(newPassword);
+  if (passwordError) throw Object.assign(new Error(passwordError), { status: 400 });
+
+  const db = openDatabase();
+  const row = db.prepare('SELECT password_hash, password_salt FROM accounts WHERE id = ? LIMIT 1').get(accountId) as
+    | { password_hash: string; password_salt: string } | undefined;
+  if (!row) throw Object.assign(new Error('الحساب غير موجود.'), { status: 404 });
+
+  const valid = typeof currentPassword === 'string' && (await verifyPassword(currentPassword, row.password_hash, row.password_salt));
+  if (!valid) throw Object.assign(new Error('كلمة المرور الحالية غير صحيحة.'), { status: 403 });
+
+  const { hash, salt } = await hashPassword(String(newPassword));
+  db.prepare('UPDATE accounts SET password_hash = ?, password_salt = ?, updated_at = ? WHERE id = ?')
+    .run(hash, salt, now(), accountId);
+}
+
+/** يُنهي كل جلسات حساب — للطرد الفوري عند فقدان جهاز. */
+export function revokeSessions(accountId: string): number {
+  const result = openDatabase().prepare('DELETE FROM sessions WHERE account_id = ?').run(accountId);
+  return Number(result.changes ?? 0);
+}
+
 export function requireRole(...allowed: AccountRole[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.account) return res.status(401).json({ error: "يلزم تسجيل الدخول.", code: "AUTH_REQUIRED" });

@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { db } from "./db.ts";
 import { PolicyEngine } from "./engine/policyEngine.ts";
 import { SkillEngine } from "./engine/skillEngine.ts";
@@ -9,14 +9,20 @@ import { AutonomyLevel, SkillStep, LearningSession, Skill } from "../src/types/i
 import { getFirebaseStatus } from "./firebase.ts";
 import {
   AuthenticatedRequest,
+  adminCreateAccount,
+  adminSetPassword,
+  changeOwnPassword,
   clearSessionCookies,
   createFirstAccount,
+  listAccounts,
   login,
   logout,
   needsFirstRunSetup,
   requireAuth,
   requireRole,
+  revokeSessions,
   setSessionCookies,
+  updateAccount,
   authCookieNames,
 } from "./auth.ts";
 
@@ -77,6 +83,80 @@ authRouter.post("/logout", (req: Request, res: Response) => {
 
 authRouter.get("/me", requireAuth, (req: AuthenticatedRequest, res: Response) => {
   res.json({ account: req.account });
+});
+
+/* تغيير المستخدم كلمة مروره بنفسه — متاح لكل حساب مسجَّل، لا للمشرف وحده. */
+authRouter.post("/change-password", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    await changeOwnPassword(req.account!.id, req.body?.currentPassword, req.body?.newPassword);
+    res.json({ ok: true });
+  } catch (error) {
+    const status = Number((error as { status?: number })?.status) || 400;
+    res.status(status).json({ error: (error as Error)?.message || "تعذّر تغيير كلمة المرور." });
+  }
+});
+
+/*
+ * إدارة الحسابات — للمشرف وحده.
+ *
+ * الزائر التجريبي يمرّ من requireAuth بهوية admin اصطناعية، فلا بد من استبعاده
+ * صراحةً هنا: صندوقه في الذاكرة لا يحوي حسابات، لكن هذه المسارات تكتب في قاعدة
+ * البيانات الحقيقية مباشرة لا عبر الصندوق.
+ */
+const realAdminOnly = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (req.account?.id === "demo") {
+    return void res.status(403).json({ error: "إدارة الحسابات غير متاحة في البيئة التجريبية.", code: "DEMO_READONLY" });
+  }
+  next();
+};
+
+const accountsGuard = [requireAuth, realAdminOnly, requireRole("admin")] as const;
+
+authRouter.get("/accounts", ...accountsGuard, (_req: AuthenticatedRequest, res: Response) => {
+  res.json({ accounts: listAccounts() });
+});
+
+authRouter.post("/accounts", ...accountsGuard, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const account = await adminCreateAccount({
+      email: req.body?.email,
+      name: req.body?.name,
+      password: req.body?.password,
+      role: req.body?.role,
+    });
+    res.status(201).json({ account });
+  } catch (error) {
+    const status = Number((error as { status?: number })?.status) || 400;
+    res.status(status).json({ error: (error as Error)?.message || "تعذّر إنشاء الحساب." });
+  }
+});
+
+authRouter.patch("/accounts/:id", ...accountsGuard, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // لا يخفض المشرف دوره هو ولا يعطّل نفسه: خطأٌ يقفله خارج نظامه بلا رجعة.
+    if (req.params.id === req.account!.id) {
+      return void res.status(409).json({ error: "لا يمكنك تغيير دور حسابك أو حالته." });
+    }
+    res.json({ account: updateAccount(req.params.id, { role: req.body?.role, status: req.body?.status }) });
+  } catch (error) {
+    const status = Number((error as { status?: number })?.status) || 400;
+    res.status(status).json({ error: (error as Error)?.message || "تعذّر تحديث الحساب." });
+  }
+});
+
+/* إصدار كلمة مرور مؤقتة. سلّمها بقناة تثق بها — لا يوجد بريد يرسلها. */
+authRouter.post("/accounts/:id/password", ...accountsGuard, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    await adminSetPassword(req.params.id, req.body?.newPassword);
+    res.json({ ok: true, sessionsRevoked: true });
+  } catch (error) {
+    const status = Number((error as { status?: number })?.status) || 400;
+    res.status(status).json({ error: (error as Error)?.message || "تعذّر ضبط كلمة المرور." });
+  }
+});
+
+authRouter.post("/accounts/:id/revoke-sessions", ...accountsGuard, (req: AuthenticatedRequest, res: Response) => {
+  res.json({ ok: true, revoked: revokeSessions(req.params.id) });
 });
 
 /*

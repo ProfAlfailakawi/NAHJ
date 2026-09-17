@@ -10,7 +10,10 @@ import path from "node:path";
  *   2. ما يُكتب يبقى بعد إعادة التشغيل.
  */
 
-import { createAccount, createFirstAccount, login, needsFirstRunSetup, validatePassword } from "./auth.ts";
+import {
+  adminSetPassword, changeOwnPassword, createAccount, createFirstAccount, listAccounts,
+  login, needsFirstRunSetup, revokeSessions, updateAccount, validatePassword,
+} from "./auth.ts";
 import { closeDatabase, hasPersistedState, openDatabase, readState, startPersistenceWorker, writeState } from "./persistence.ts";
 
 /*
@@ -198,6 +201,103 @@ test("setup is closed when an account was preseeded from the environment", async
       () => createFirstAccount({ email: "late@nahj.test", name: "متأخر", password: fixturePassword() }),
       (error: { status?: number }) => error.status === 409
     );
+  } finally {
+    closeDatabase();
+  }
+});
+
+test("the last active admin cannot be demoted or suspended", async () => {
+  useFreshDatabase();
+  try {
+    const owner = await createFirstAccount({ email: "owner@nahj.test", name: "المالك", password: fixturePassword() });
+    const helper = await createAccount({ email: "helper@nahj.test", name: "مساعد", password: fixturePassword(), role: "operator" });
+
+    /*
+     * هذا أهم حارس في إدارة الحسابات: لا يوجد "نسيت كلمة المرور" ولا شاشة تهيئة
+     * تُعاد، فترك النظام بلا مشرف نشط خطأ لا يُتراجع عنه إلا بتحرير القاعدة يدوياً.
+     */
+    // updateAccount متزامنة وترمي مباشرة، فـassert.throws هي الأداة الصحيحة لا assert.rejects.
+    assert.throws(() => updateAccount(owner.id, { role: "viewer" }),
+      (error: { status?: number }) => error.status === 409);
+    assert.throws(() => updateAccount(owner.id, { status: "SUSPENDED" }),
+      (error: { status?: number }) => error.status === 409);
+
+    // بوجود مشرف ثانٍ يصير الخفض مسموحاً.
+    updateAccount(helper.id, { role: "admin" });
+    const demoted = updateAccount(owner.id, { role: "viewer" });
+    assert.equal(demoted.role, "viewer");
+  } finally {
+    closeDatabase();
+  }
+});
+
+test("changing a role or suspending an account kills its live sessions", async () => {
+  useFreshDatabase();
+  try {
+    await createFirstAccount({ email: "root@nahj.test", name: "جذر", password: fixturePassword() });
+    const member = await createAccount({ email: "member@nahj.test", name: "عضو", password: fixturePassword(), role: "operator" });
+    await login("member@nahj.test", fixturePassword());
+    assert.equal(listAccounts().find(a => a.id === member.id)?.activeSessions, 1);
+
+    updateAccount(member.id, { status: "SUSPENDED" });
+    assert.equal(listAccounts().find(a => a.id === member.id)?.activeSessions, 0,
+      "a suspended account must not keep a usable session");
+  } finally {
+    closeDatabase();
+  }
+});
+
+test("an admin-issued password works once and revokes the old sessions", async () => {
+  useFreshDatabase();
+  try {
+    await createFirstAccount({ email: "root2@nahj.test", name: "جذر", password: fixturePassword() });
+    const member = await createAccount({ email: "m2@nahj.test", name: "عضو", password: fixturePassword(), role: "viewer" });
+    await login("m2@nahj.test", fixturePassword());
+
+    const temporary = ["Nahj", "Temporary", "2026"].join("-");
+    await adminSetPassword(member.id, temporary);
+
+    assert.equal(listAccounts().find(a => a.id === member.id)?.activeSessions, 0);
+    await assert.rejects(() => login("m2@nahj.test", fixturePassword()), /غير صحيحة/);
+    const ok = await login("m2@nahj.test", temporary);
+    assert.equal(ok.account.email, "m2@nahj.test");
+  } finally {
+    closeDatabase();
+  }
+});
+
+test("changing your own password requires the current one", async () => {
+  useFreshDatabase();
+  try {
+    const owner = await createFirstAccount({ email: "self@nahj.test", name: "ذات", password: fixturePassword() });
+    const next = ["Nahj", "Rotated", "2026"].join("-");
+
+    // جهاز مفتوح بلا صاحبه لا يكفي لاختطاف الحساب.
+    await assert.rejects(() => changeOwnPassword(owner.id, "wrong-password-1", next),
+      (error: { status?: number }) => error.status === 403);
+    await assert.rejects(() => changeOwnPassword(owner.id, fixturePassword(), "short"),
+      (error: { status?: number }) => error.status === 400);
+
+    await changeOwnPassword(owner.id, fixturePassword(), next);
+    const ok = await login("self@nahj.test", next);
+    assert.equal(ok.account.role, "admin");
+  } finally {
+    closeDatabase();
+  }
+});
+
+test("revoking sessions logs a device out without touching the password", async () => {
+  useFreshDatabase();
+  try {
+    const owner = await createFirstAccount({ email: "rev@nahj.test", name: "مالك", password: fixturePassword() });
+    await login("rev@nahj.test", fixturePassword());
+    await login("rev@nahj.test", fixturePassword());
+    assert.equal(listAccounts().find(a => a.id === owner.id)?.activeSessions, 2);
+
+    assert.equal(revokeSessions(owner.id), 2);
+    assert.equal(listAccounts().find(a => a.id === owner.id)?.activeSessions, 0);
+    // كلمة المرور لم تتغيّر — الطرد ليس إعادة تعيين.
+    assert.ok((await login("rev@nahj.test", fixturePassword())).sessionToken);
   } finally {
     closeDatabase();
   }
