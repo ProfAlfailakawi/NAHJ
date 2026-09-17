@@ -7,7 +7,21 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  // Do not advertise the server framework (reduces info disclosure / fingerprinting)
+  app.disable("x-powered-by");
+
+  // Conservative security response headers. Kept intentionally minimal so they
+  // cannot break the SPA or embedding in the AI Studio applet host (no CSP /
+  // X-Frame-Options which could interfere with iframe embedding or HMR).
+  app.use((_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+    next();
+  });
+
+  // Cap JSON body size to mitigate trivial memory-exhaustion payloads
+  app.use(express.json({ limit: "1mb" }));
 
   // Health check endpoints for cloud deployment and probes
   app.get("/api/health", (req, res) => {
