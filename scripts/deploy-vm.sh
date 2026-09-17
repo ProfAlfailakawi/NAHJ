@@ -81,7 +81,12 @@ chown -R 1000:1000 "$MOUNT"
 
 IMAGE=$(curl -sf -H "Metadata-Flavor: Google" \
   http://metadata.google.internal/computeMetadata/v1/instance/attributes/nahj-image)
-docker-credential-gcr configure-docker --registries "$(echo "$IMAGE" | cut -d/ -f1)" || true
+# جذر COS للقراءة فقط، فـ `docker-credential-gcr` لا يستطيع كتابة /root/.docker
+# ويفشل صامتاً (`|| true`)، فيخرج السحب بلا اعتماد ويُرفض بـ "Unauthenticated
+# request". نوجّه HOME إلى مسار قابل للكتابة فيقرؤه المُعتمِد وعميل docker معاً.
+export HOME=/var/lib/nahj-docker
+mkdir -p "$HOME"
+docker-credential-gcr configure-docker --registries "$(echo "$IMAGE" | cut -d/ -f1)"
 docker pull "$IMAGE"
 # SIGTERM ثم مهلة: الخادم يلتقطها ويدفق الحالة ويغلق القاعدة. `docker rm -f`
 # يرسل SIGKILL مباشرة، فيتخطّى ذلك ويضيّع حتى ٣ ثوانٍ من آخر تغييرات.
@@ -153,16 +158,43 @@ fi
 IP=$(gcloud compute instances describe "$INSTANCE" --zone "$ZONE" \
   --format='value(networkInterfaces[0].accessConfigs[0].natIP)')
 
+# لا نُعلن النجاح لمجرد أن gcloud رجع بلا خطأ: أول تشغيل حقيقي لهذا السكربت أنشأ
+# كل الموارد بنجاح بينما فشل سكربت الإقلاع داخل الخادم ولم تقم الحاوية إطلاقاً،
+# فطُبع عنوان لا يرد. نسأل الخادم نفسه.
+echo
+echo "── التحقق ────────────────────────────────"
+echo "انتظار إقلاع الحاوية (حتى ٣ دقائق)…"
+UP=""
+for _ in $(seq 1 18); do
+  CODE=$(curl -s -o /dev/null -m 5 -w '%{http_code}' "http://${IP}/" 2>/dev/null || true)
+  if [[ "$CODE" == "200" ]]; then UP="yes"; break; fi
+  sleep 10
+done
+
+if [[ -z "$UP" ]]; then
+  cat >&2 <<FAIL
+
+❌ الموارد أُنشئت، لكن نهج لا يرد على http://${IP}
+
+هذا فشل، لا تأخّر. سجلّ سكربت الإقلاع يقول السبب:
+
+  gcloud compute ssh ${INSTANCE} --zone ${ZONE} --project ${PROJECT_ID} \
+    --command 'docker ps -a; docker logs nahj 2>&1 | tail -30; sudo journalctl -u google-startup-scripts --no-pager | tail -30'
+
+أعد تشغيل هذا السكربت بعد معالجة السبب — لن يُنشئ شيئاً مرتين ولن يمسّ القرص.
+FAIL
+  exit 1
+fi
+
 cat <<EOM
 
-تم. نهج على:  http://${IP}
+✅ تم التحقق: نهج يرد على  http://${IP}
 
-أول إقلاع يأخذ دقيقة أو دقيقتين (سحب الصورة وتهيئة القرص). إن لم تُفتح الصفحة
-فوراً، انتظر ثم أعد المحاولة، أو راجع السجل:
+افتح المتصفح وأنشئ حساب المشغّل الأول.
 
-  gcloud compute ssh ${INSTANCE} --zone ${ZONE} --command 'docker logs nahj'
+لمراجعة السجل في أي وقت:
 
-ثم افتح المتصفح وأنشئ حساب المشغّل الأول.
+  gcloud compute ssh ${INSTANCE} --zone ${ZONE} --project ${PROJECT_ID} --command 'docker logs nahj'
 
 الاختبار الوحيد الذي يثبت أن القرص دائم: غيّر شيئاً (رقِّ مهارة)، ثم أعد تشغيل
 هذا السكربت نفسه، ثم تأكد أن التغيير باقٍ.
