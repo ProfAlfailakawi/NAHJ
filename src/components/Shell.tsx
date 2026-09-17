@@ -111,9 +111,17 @@ export function Shell({
                 <button type="button" onClick={onExitDemo} disabled={demoBusy} title={ar ? "الخروج من البيئة التجريبية" : "Exit demo"} aria-label={ar ? "الخروج من البيئة التجريبية" : "Exit demo"}><LogOut/></button>
               </div>
             ) : demoEnabled ? (
-              <button type="button" className="demo-enter" onClick={onEnterDemo} disabled={demoBusy}>
+              /* أيقونة صامتة: المدخل ثانويّ ولا ينبغي أن يزاحم شريط الأدوات
+                 بعبارة. الوصف في `title`/`aria-label` لقارئ الشاشة ولمن يمرّ. */
+              <button
+                type="button"
+                className="demo-enter demo-enter--icon"
+                onClick={onEnterDemo}
+                disabled={demoBusy}
+                title={ar ? "تجربة العرض — بيئة تجريبية معزولة" : "Try the demo — isolated sandbox"}
+                aria-label={ar ? "تجربة العرض" : "Try the demo"}
+              >
                 <FlaskConical aria-hidden="true"/>
-                <span>{ar ? "تجربة العرض" : "Try the demo"}</span>
               </button>
             ) : null}
             <button className="top-icon" onClick={onToggleLang} aria-label="Language"><Languages/></button>
