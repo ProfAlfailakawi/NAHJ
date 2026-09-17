@@ -178,7 +178,7 @@ export class Store {
   /**
    * Synchronize entire operational memory to Firebase Firestore project nahj-a27a4
    */
-  public async syncAllToFirebase(): Promise<{ success: boolean; count: number; status: any }> {
+  public async syncAllToFirebase(): Promise<{ success: boolean; count: number; status: any; reason?: string }> {
     // A sandbox never publishes. Reporting success keeps the demo's own
     // "sync" screen honest-looking without a single document being written.
     if (this.isDemo) return { success: true, count: 0, status: getFirebaseStatus() };
@@ -237,8 +237,22 @@ export class Store {
       console.log(`[Firebase nahj-a27a4] Successfully synced ${count} entities to Firestore.`);
       return { success: true, count, status: getFirebaseStatus() };
     } catch (err: any) {
-      console.warn("[Firebase nahj-a27a4] Sync error:", err);
-      return { success: false, count: 0, status: getFirebaseStatus() };
+      /*
+       * قواعد Firestore تمنع وصول العملاء (وهو المقصود: نهج بلا مصادقة على مستوى
+       * Firestore). المزامنة الحالية تستعمل SDK العميل، فتُرفض دائماً. نُعيد السبب
+       * صراحةً بدل رقم صفر صامت يقرؤه العميل كنجاح.
+       */
+      const message = String(err?.message || err);
+      const denied = /permission|PERMISSION_DENIED|insufficient/i.test(message);
+      console.warn("[Firebase nahj-a27a4] Sync error:", message);
+      return {
+        success: false,
+        count: 0,
+        status: getFirebaseStatus(),
+        reason: denied
+          ? "المرآة مقفلة: قواعد Firestore تمنع وصول العملاء. تفعيلها يحتاج نقل الخادم إلى Admin SDK بحساب خدمة."
+          : `تعذّرت المزامنة: ${message.slice(0, 200)}`,
+      };
     }
   }
 }
