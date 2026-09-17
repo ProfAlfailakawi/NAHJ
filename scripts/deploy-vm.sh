@@ -115,14 +115,14 @@ if gcloud compute instances describe "$INSTANCE" --zone "$ZONE" >/dev/null 2>&1;
     gcloud compute instances start "$INSTANCE" --zone "$ZONE" --quiet
   fi
 else
+  # النطاقات أضيق ما يكفي: قراءة الصور من Artifact Registry، وكتابة السجلات
+  # والقياسات. cloud-platform كان يعني أن أي اختراق لهذا الخادم المكشوف يُسلّم
+  # رمزاً بصلاحية المشروع كله عبر خادم البيانات الوصفية.
   gcloud compute instances create "$INSTANCE" \
     --zone "$ZONE" \
     --machine-type "$MACHINE_TYPE" \
     --image-family cos-stable --image-project cos-cloud \
     --disk "name=${DATA_DISK},device-name=nahj-data,mode=rw,auto-delete=no" \
-    `# أضيق نطاق يكفي: قراءة الصور من Artifact Registry، وكتابة السجلات والقياسات.` \
-    `# cloud-platform كان يعني أن أي اختراق للخادم المكشوف يُسلّم رمزاً بصلاحية` \
-    `# المشروع كله عبر خادم البيانات الوصفية.` \
     --scopes https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write \
     --tags nahj-web \
     --metadata "nahj-image=$IMAGE" \
