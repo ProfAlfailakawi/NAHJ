@@ -136,6 +136,33 @@ export default function App(){
     else{await refreshDemoConfig();notify(lang==="ar"?"انتهت الجلسة التجريبية":"Demo session expired",true)}
     setDemoBusy(false);
   };
+  /*
+   * تسجيل الخروج.
+   *
+   * الخادم كان جاهزًا من البداية — `POST /api/auth/logout` يحذف صفّ الجلسة
+   * ويمسح الكوكي — و`authApi.logout` موجودة. لكن لم يكن في الواجهة ما يناديها،
+   * فلا سبيل إلى الخروج من الحساب أصلًا: يبقى مفتوحًا حتى تنتهي مهلته.
+   *
+   * وإعادة تحميل كاملة بعده، لا تبديلُ حالةٍ في المحلّ: على الشاشة سجلّ التدقيق
+   * وطلبات الاعتماد ومهامّ صاحب الحساب السابق، وتركها في الذاكرة يعني أنها قد
+   * تلمع لمن يدخل بعده. الصفحة تُبنى من الصفر، فلا يبقى منه شيء.
+   *
+   * وفشلُ الطلب لا يُدّعى نجاحًا: الكوكي لم تُمسح، والجلسة قائمة — فيُقال ذلك
+   * ولا يُعاد التحميل، لأن إعادته تُظهر شاشة دخولٍ بينما الحساب ما زال مفتوحًا.
+   */
+  const [signingOut,setSigningOut]=useState(false);
+  const signOut=async()=>{
+    setSigningOut(true);
+    try{
+      await authApi.logout();
+    }catch{
+      setSigningOut(false);
+      notify(lang==="ar"?"تعذّر تسجيل الخروج. تحقّق من الاتصال ثم أعد المحاولة":"Could not sign out. Check your connection and try again",true);
+      return;
+    }
+    window.location.reload();
+  };
+
   const exitDemo=async()=>{
     setDemoBusy(true);
     await apiOrNull<{ok:boolean}>("/demo/exit",{method:"POST",body:"{}"});
@@ -195,7 +222,7 @@ export default function App(){
   }
 
   return <>
-    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()}>{paused&&<div className="pause-banner"><TriangleAlert/>{lang==="ar"?"التنفيذ الآلي متوقف. التعلم والمراجعة يعملان.":"Autonomous execution is paused. Learning and review remain active."}</div>}{view}</Shell>
+    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut}>{paused&&<div className="pause-banner"><TriangleAlert/>{lang==="ar"?"التنفيذ الآلي متوقف. التعلم والمراجعة يعملان.":"Autonomous execution is paused. Learning and review remain active."}</div>}{view}</Shell>
     <ApprovalModal lang={lang} approval={activeApprovalObj} busy={approvalBusy} onClose={()=>setActiveApproval(null)} onApprove={id=>void decideApproval(id,"approved")} onReject={(id,r)=>void decideApproval(id,"rejected",r)} onTakeOver={id=>void takeOver(id)}/>
     {toast&&<div className={`toast ${toast.error?"error":""}`}>{toast.error?<TriangleAlert/>:<CheckCircle2/>}<span>{toast.text}</span></div>}
   </>;

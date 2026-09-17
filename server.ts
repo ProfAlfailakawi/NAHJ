@@ -31,7 +31,17 @@ function setDemoCookie(res: express.Response, sessionId: string): void {
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  /*
+   * المنفذ من البيئة، و3000 افتراضًا.
+   *
+   * لا يتغيّر شيء في النشر القائم: `Dockerfile` يعلن 3000، وCaddy يوجّه إلى
+   * `nahj:3000`، ولا يضبط أحدٌ PORT هناك — فيبقى 3000 كما كان حرفيًا.
+   *
+   * لكنه كان رقمًا مثبّتًا لا يقرأ شيئًا، فمن يضبط PORT ظنًّا أنه فعل شيئًا لا
+   * يفعل: يستمع الخادم في موضع ويُنتظر في آخر، ولا خطأ يقول ذلك. والمنصّات التي
+   * تحقن المنفذ ولا تتفاوض عليه — Cloud Run مثلًا — لا تعمل معه إطلاقًا.
+   */
+  const PORT = Number(process.env.PORT) > 0 ? Number(process.env.PORT) : 3000;
 
   // Do not advertise the server framework (reduces info disclosure / fingerprinting)
   app.disable("x-powered-by");
