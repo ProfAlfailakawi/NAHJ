@@ -21,7 +21,24 @@ let isConnected = false;
 let lastSyncTime: string | null = null;
 let connectionError: string | null = null;
 
-export function getFirebaseConfig() {
+/*
+ * غياب ملف الإعداد يعني «لا مزامنة»، لا «تواصل مع الإنتاج».
+ *
+ * كانت الدالة ترتدّ إلى معرّفات مشروع الإنتاج `nahj-a27a4` مكتوبةً هنا حرفيًا.
+ * فنزعُ الملف — وهو ما يفعله أيُّ من يشغّل نسخةً محلية ليعزل نفسه — لا يفصل
+ * شيئًا: يبقى الخادم موصولًا بمشروع المؤسسة الحقيقي ويكتب إليه. ولا يُعلَن ذلك
+ * في أي مكان؛ السطر الوحيد في السجلّ يقول «Initialized connected to project».
+ *
+ * ورُئي عمليًا: تشغيلٌ محلي واحد بعد نزع الملف حاول اثنتين وثلاثين كتابة على
+ * `nahj-a27a4`. ولم تنجح واحدة — قواعد Firestore ترفض عملاء غير مصرَّح لهم منذ
+ * ٢٠٢٦-٠٩-١٧ (انظر CONNECT.md) — فلم يُمَسّ شيء. لكن الحاجز الذي أنقذ الموقف
+ * هو آخر حاجز، والاعتماد عليه وحده سوء تصميم: كان يكفي أن تكون القواعد مفتوحة
+ * كما كانت قبل ذلك التاريخ ليكتب جهازُ مطوّرٍ في قاعدة المؤسسة بلا أن يقصد.
+ *
+ * فبلا ملفٍ لا يُهيَّأ شيء. والنشر لا يتأثر: `Dockerfile` ينسخ الملف إلى الصورة،
+ * فالحاوية تجده كما كانت دائمًا.
+ */
+export function getFirebaseConfig(): Record<string, any> | null {
   try {
     const configPath = path.join(process.cwd(), "firebase-applet-config.json");
     if (fs.existsSync(configPath)) {
@@ -30,22 +47,38 @@ export function getFirebaseConfig() {
     }
   } catch (err) {
     console.warn("[Firebase] Could not read firebase-applet-config.json:", err);
+    return null;
   }
-  return {
-    projectId: "nahj-a27a4",
-    appId: "1:447946287034:web:42b4a0a7fa902fcc7d1f83",
-    apiKey: "AIzaSyChj-6_KFBi0ag7XidqKkxp1Fxx7GuDit0",
-    authDomain: "nahj-a27a4.firebaseapp.com",
-    firestoreDatabaseId: "ai-studio-nahj-e90f35fb-7117-4f9a-abe6-290a5889fc88",
-    storageBucket: "nahj-a27a4.firebasestorage.app",
-    messagingSenderId: "447946287034",
-  };
+  return null;
 }
 
 export function initFirebase() {
   if (firestoreDb) return { app: firebaseApp, db: firestoreDb };
   try {
+    /*
+     * مفتاح إيقافٍ صريح، تضبطه الاختبارات على `off`.
+     *
+     * `npm test` كان يتصل بمشروع الإنتاج ويحاول الكتابة إليه: أيّ اختبارٍ يمرّ
+     * بـ`auth.ts` يكتب حدث تدقيق، و`db.ts` يزامن كل حدث تدقيق. فرصدنا في تشغيلٍ
+     * واحد أربعًا وستين محاولة كتابة على `nahj-a27a4`. رُفضت كلها بقواعد
+     * Firestore فلم يُكتب شيء — لكن اختبارًا يعتمد على قواعد الإنتاج ليمتنع عن
+     * إفساد الإنتاج ليس اختبارًا معزولًا، وإنما مصادفةٌ محظوظة.
+     *
+     * والمفتاح في هذه الدالة وحدها لا عند كل نداء: المزامنة تُنادى من مواضع
+     * متفرّقة في `db.ts`، وحارسٌ عند كل موضع يُنسى واحدُه.
+     */
+    if (String(process.env.NAHJ_FIREBASE_SYNC || "").toLowerCase() === "off") {
+      connectionError = "FIREBASE_SYNC_DISABLED";
+      console.warn("[Firebase] المزامنة موقوفة بـ NAHJ_FIREBASE_SYNC=off.");
+      return { app: null, db: null };
+    }
     const config = getFirebaseConfig();
+    if (!config?.projectId) {
+      /* يُقال صراحةً، ولا يُترك صمتًا يُظنّ معه أن المزامنة تعمل. */
+      connectionError = "FIREBASE_UNCONFIGURED";
+      console.warn("[Firebase] لا ملف إعداد — المزامنة معطّلة. كل شيء يبقى في القاعدة المحلية.");
+      return { app: null, db: null };
+    }
     firebaseApp = getApps().length > 0 ? getApp() : initializeApp(config);
     
     // Attempt with specified custom database ID, fallback to default if not available
@@ -79,8 +112,9 @@ export function getFirebaseStatus() {
   const config = getFirebaseConfig();
   return {
     connected: isConnected && !!firestoreDb,
-    projectId: config.projectId || "nahj-a27a4",
-    databaseId: config.firestoreDatabaseId || "(default)",
+    /* بلا إعداد لا يُذكر مشروعٌ بعينه: ذكرُه يوحي بوصلٍ غير قائم. */
+    projectId: config?.projectId || "",
+    databaseId: config?.firestoreDatabaseId || "",
     lastSyncTime,
     error: connectionError,
   };

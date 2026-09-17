@@ -21,6 +21,8 @@ type ShellProps = {
   onEnterDemo?: () => void;
   onResetDemo?: () => void;
   onExitDemo?: () => void;
+  onSignOut?: () => void;
+  signingOut?: boolean;
   children: React.ReactNode;
 };
 
@@ -41,7 +43,8 @@ const nav: { id: SectionId; ar: string; en: string; icon: React.ElementType; gro
 
 export function Shell({
   section, onSection, organization, user, lang, onToggleLang, alerts, onAlert, serverLive = false,
-  demoEnabled = false, demoActive = false, demoBusy = false, onEnterDemo, onResetDemo, onExitDemo, children,
+  demoEnabled = false, demoActive = false, demoBusy = false, onEnterDemo, onResetDemo, onExitDemo,
+  onSignOut, signingOut = false, children,
 }: ShellProps) {
   const ar = lang === "ar";
   let lastGroup: string | undefined;
@@ -130,6 +133,30 @@ export function Shell({
               <div>{user.name.slice(0,1)}</div>
               <span><strong>{user.name.split(" ")[0]}</strong><small>{user.department}</small></span>
             </div>
+            {/*
+              * تسجيل الخروج — لم يكن له مدخل إطلاقًا.
+              *
+              * المسار `POST /api/auth/logout` موجود ومكتمل منذ البداية: يحذف
+              * صفّ الجلسة ويمسح الكوكي. و`authApi.logout` موجودة في العميل.
+              * لكن لا شيء في الواجهة كان يناديها — فالحساب يبقى مفتوحًا حتى
+              * تنتهي مهلته، ولا سبيل إلى تركه على جهازٍ مشترك.
+              *
+              * ولا يظهر داخل البيئة التجريبية: هناك لا حساب يُخرَج منه، وزرّ
+              * «الخروج من البيئة» في الشارة أعلاه هو الخروج المقصود. وأيقونتان
+              * بالمعنى نفسه في شريطٍ واحد تُربك لا تُعين.
+            */}
+            {!demoActive && onSignOut ? (
+              <button
+                type="button"
+                className="top-icon"
+                onClick={onSignOut}
+                disabled={signingOut}
+                title={ar ? "تسجيل الخروج" : "Sign out"}
+                aria-label={ar ? "تسجيل الخروج" : "Sign out"}
+              >
+                <LogOut aria-hidden="true"/>
+              </button>
+            ) : null}
           </div>
         </header>
         <main className="content-stage">{children}</main>
