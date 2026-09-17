@@ -1,0 +1,105 @@
+# ينشر نهج عند كل دفع إلى main.
+#
+# لماذا هذا الملف موجود:
+#   المستودع يحمل سكربت نشر مكتملاً (`scripts/deploy-vm.sh`) لكنه كان يُشغَّل
+#   باليد فقط. فكل ما يُدمج في main يبقى في GitHub ولا يصل إلى أحد — ومنه
+#   البيئة التجريبية: تُدمج، ولا تظهر على الموقع الحيّ أبداً.
+#
+# ولماذا خادم لا Cloud Run — بخلاف بقية البرامج:
+#   كل حالة نهج في ملف SQLite واحد. Cloud Run بلا وحدة تخزين قرصُه مؤقت،
+#   فتضيع الحالة كلها مع كل نشر: الحسابات، الموافقات، سجل الأثر، المهارات
+#   المرقّاة. والبدائل التي تُبقيها (Filestore) تتجاوز ٢٠٠$ شهرياً، وGCS FUSE
+#   بلا قفل ملفات حقيقي أي خطر تلفٍ للقاعدة. الجدول كاملاً في CONNECT.md.
+#
+#   فالنشر هنا يمرّ بسكربت المستودع نفسه لا بأمرٍ يُعاد كتابته هنا: هو يحمل
+#   قرارات لا يجوز أن تُفقد — لا يحذف القرص الدائم ولا يمسّ بياناته، ويوقف
+#   الحاوية بـ SIGTERM ومهلة حتى يدفق الخادم حالته ويغلق القاعدة، ويرفض إعلان
+#   النجاح حتى يردّ الخادم فعلاً. إعادة كتابته هنا كانت ستفقدها بصمت.
+
+name: نشر نهج
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write
+
+# خادمٌ واحد وقرصٌ واحد: نشران متوازيان يتنازعان الحاوية نفسها.
+concurrency:
+  group: nahj-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 22 ليس اختياراً: التخزين يستعمل `node:sqlite` المدمج، وهو غير موجود
+          # في الأقدم. الأقدم لا يفشل في البناء — يفشل في الاختبارات بغموض.
+          node-version: 22
+          cache: 'npm'
+
+      - name: تثبيت الحزم
+        run: npm ci
+
+      # لا نشر فوق فحصٍ أحمر.
+      - name: فحص الأنواع
+        run: npm run typecheck
+
+      - name: الاختبارات
+        run: npm test
+
+      - name: التحقق من إعداد النشر
+        shell: bash
+        env:
+          WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          MISSING=""
+          [[ -z "$WIF_PROVIDER" ]] && MISSING="$MISSING GCP_WORKLOAD_IDENTITY_PROVIDER"
+          [[ -z "$DEPLOY_SERVICE_ACCOUNT" ]] && MISSING="$MISSING GCP_DEPLOY_SERVICE_ACCOUNT"
+          # المشروع لا يُخمَّن: نشرٌ في مشروعٍ خاطئ ينشئ خادماً وقرصاً لا يريدهما
+          # أحد، ويترك الموقع الحيّ كما هو — فشلٌ صامت ومكلف معاً.
+          [[ -z "$PROJECT_ID" ]] && MISSING="$MISSING GCP_PROJECT_ID"
+          if [[ -n "$MISSING" ]]; then
+            echo "إعداد النشر ناقص، فلا يمكن النشر. الناقص:$MISSING" >&2
+            echo "يُضبط مرة واحدة فقط — الخطوات في docs/deploy-nahj.md" >&2
+            echo "ثم يُضاف في GitHub → Settings → Secrets and variables → Actions → Variables" >&2
+            exit 1
+          fi
+
+      - name: مصادقة Google Cloud بلا مفتاح دائم
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+
+      # السكربت نفسه يتحقق بعد النشر أن الخادم يردّ، ويخرج بـ 1 إن لم يردّ —
+      # فلا حاجة إلى خطوة تحقّقٍ ثانية هنا، ولا يجوز أن نعلن نجاحاً دونه.
+      - name: النشر عبر سكربت المستودع
+        shell: bash
+        env:
+          PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          ZONE: ${{ vars.GCP_ZONE }}
+          NAHJ_DOMAIN: ${{ vars.NAHJ_DOMAIN }}
+        run: |
+          set -euo pipefail
+          # اختياريان: للسكربت افتراضٌ لكلٍّ منهما، وتمرير متغيّرٍ فارغ يدهسه.
+          # فيسقط اشتقاق الاسم عبر sslip.io، وتفشل شهادة Let's Encrypt.
+          [[ -n "${ZONE:-}" ]] || unset ZONE
+          [[ -n "${NAHJ_DOMAIN:-}" ]] || unset NAHJ_DOMAIN
+          bash scripts/deploy-vm.sh
