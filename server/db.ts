@@ -182,78 +182,64 @@ export class Store {
     // A sandbox never publishes. Reporting success keeps the demo's own
     // "sync" screen honest-looking without a single document being written.
     if (this.isDemo) return { success: true, count: 0, status: getFirebaseStatus() };
-    try {
-      let count = 0;
-      // 1. Organization & Users
-      await syncDocToFirestore("organization", "current", this.organization);
-      count++;
-      for (const u of this.users) {
-        await syncDocToFirestore("users", u.id, u);
-        count++;
-      }
-      // 2. Skills
-      for (const s of this.skills) {
-        await syncDocToFirestore("skills", s.id, s);
-        count++;
-      }
-      // 3. Work items
-      for (const w of this.workItems) {
-        await syncDocToFirestore("workItems", w.id, w);
-        count++;
-      }
-      // 4. Learning proposals
-      for (const p of this.learningProposals) {
-        await syncDocToFirestore("learningProposals", p.id, p);
-        count++;
-      }
-      // 5. Approvals
-      for (const a of this.approvalRequests) {
-        await syncDocToFirestore("approvalRequests", a.id, a);
-        count++;
-      }
-      // 6. Connectors
-      for (const c of this.connectors) {
-        await syncDocToFirestore("connectors", c.id, c);
-        count++;
-      }
-      // 7. Audit events
-      for (const e of this.auditEvents.slice(0, 30)) {
-        await syncDocToFirestore("auditEvents", e.id, e);
-        count++;
-      }
-      // 8. Test cases & Shadow comparisons
-      for (const t of this.testCases) {
-        await syncDocToFirestore("testCases", t.id, t);
-        count++;
-      }
-      for (const sc of this.shadowComparisons) {
-        await syncDocToFirestore("shadowComparisons", sc.id, sc);
-        count++;
-      }
-      // 9. Simulator state
-      await syncDocToFirestore("simulator", "state", this.simulatorState);
-      count++;
 
-      console.log(`[Firebase nahj-a27a4] Successfully synced ${count} entities to Firestore.`);
-      return { success: true, count, status: getFirebaseStatus() };
+    /*
+     * `syncDocToFirestore` يبتلع أخطاءه ويُعيد false، فلا يصل شيء إلى try/catch.
+     * عدّ المحاولات هنا كان يُبلّغ success:true و count:32 بينما رُفضت الكتابات
+     * الاثنتان والثلاثون كلها بـ PERMISSION_DENIED — وهو بالضبط الكذب الذي أزلناه
+     * من الواجهة. نعدّ ما نجح فعلاً، ونحتفظ بأول فشل سبباً.
+     */
+    const documents: Array<[string, string, Record<string, any>]> = [
+      ["organization", "current", this.organization],
+      ...this.users.map((u) => ["users", u.id, u] as [string, string, any]),
+      ...this.skills.map((s) => ["skills", s.id, s] as [string, string, any]),
+      ...this.workItems.map((w) => ["workItems", w.id, w] as [string, string, any]),
+      ...this.learningProposals.map((p) => ["learningProposals", p.id, p] as [string, string, any]),
+      ...this.approvalRequests.map((a) => ["approvalRequests", a.id, a] as [string, string, any]),
+      ...this.connectors.map((c) => ["connectors", c.id, c] as [string, string, any]),
+      ...this.auditEvents.slice(0, 30).map((e) => ["auditEvents", e.id, e] as [string, string, any]),
+      ...this.testCases.map((t) => ["testCases", t.id, t] as [string, string, any]),
+      ...this.shadowComparisons.map((sc) => ["shadowComparisons", sc.id, sc] as [string, string, any]),
+      ["simulator", "state", this.simulatorState],
+    ];
+
+    let count = 0;
+    let failed = 0;
+    try {
+      for (const [collectionName, docId, data] of documents) {
+        if (await syncDocToFirestore(collectionName, docId, data)) count++;
+        else failed++;
+      }
     } catch (err: any) {
-      /*
-       * قواعد Firestore تمنع وصول العملاء (وهو المقصود: نهج بلا مصادقة على مستوى
-       * Firestore). المزامنة الحالية تستعمل SDK العميل، فتُرفض دائماً. نُعيد السبب
-       * صراحةً بدل رقم صفر صامت يقرؤه العميل كنجاح.
-       */
-      const message = String(err?.message || err);
-      const denied = /permission|PERMISSION_DENIED|insufficient/i.test(message);
-      console.warn("[Firebase nahj-a27a4] Sync error:", message);
-      return {
-        success: false,
-        count: 0,
-        status: getFirebaseStatus(),
-        reason: denied
-          ? "المرآة مقفلة: قواعد Firestore تمنع وصول العملاء. تفعيلها يحتاج نقل الخادم إلى Admin SDK بحساب خدمة."
-          : `تعذّرت المزامنة: ${message.slice(0, 200)}`,
-      };
+      return this.syncFailure(String(err?.message || err), count);
     }
+
+    if (failed > 0) {
+      const status = getFirebaseStatus();
+      return this.syncFailure(String(status.error || "سبب غير معروف"), count, failed, documents.length);
+    }
+
+    console.log(`[Firebase nahj-a27a4] Successfully synced ${count} entities to Firestore.`);
+    return { success: true, count, status: getFirebaseStatus() };
+  }
+
+  private syncFailure(message: string, count: number, failed?: number, total?: number) {
+    /*
+     * قواعد Firestore تمنع وصول العملاء (وهو المقصود: نهج بلا مصادقة على مستوى
+     * Firestore). المزامنة الحالية تستعمل SDK العميل، فتُرفض دائماً. نُعيد السبب
+     * صراحةً بدل رقم يقرؤه العميل كنجاح.
+     */
+    const denied = /permission|PERMISSION_DENIED|insufficient/i.test(message);
+    const scope = failed !== undefined && total !== undefined ? ` (${failed} من ${total})` : "";
+    console.warn(`[Firebase nahj-a27a4] Sync failed${scope}:`, message);
+    return {
+      success: false,
+      count,
+      status: getFirebaseStatus(),
+      reason: denied
+        ? `المرآة مقفلة: قواعد Firestore تمنع وصول العملاء، فرُفضت الكتابة${scope}. تفعيلها يحتاج نقل الخادم إلى Admin SDK بحساب خدمة.`
+        : `تعذّرت المزامنة${scope}: ${message.slice(0, 200)}`,
+    };
   }
 }
 
