@@ -54,7 +54,7 @@ authRouter.post("/setup", async (req: Request, res: Response) => {
     });
     // تسجيل دخول فوري: مطالبة المستخدم بإعادة إدخال ما كتبه للتو خطوة بلا فائدة.
     const session = await login(account.email, req.body?.password);
-    setSessionCookies(res, session.sessionToken, session.csrfToken);
+    setSessionCookies(req, res, session.sessionToken, session.csrfToken);
     res.status(201).json({ account: session.account, csrfToken: session.csrfToken, expiresAt: session.expiresAt });
   } catch (error) {
     const status = Number((error as { status?: number })?.status) || 400;
@@ -65,7 +65,7 @@ authRouter.post("/setup", async (req: Request, res: Response) => {
 authRouter.post("/login", async (req: Request, res: Response) => {
   try {
     const result = await login(req.body?.email, req.body?.password);
-    setSessionCookies(res, result.sessionToken, result.csrfToken);
+    setSessionCookies(req, res, result.sessionToken, result.csrfToken);
     res.json({ account: result.account, csrfToken: result.csrfToken, expiresAt: result.expiresAt });
   } catch (error) {
     const status = Number((error as { status?: number })?.status) || 401;
@@ -77,7 +77,7 @@ authRouter.post("/logout", (req: Request, res: Response) => {
   const cookies = req.headers.cookie || "";
   const match = cookies.split(";").map((part) => part.trim().split("=")).find(([key]) => key === authCookieNames.session);
   logout(match ? decodeURIComponent(match.slice(1).join("=")) : undefined);
-  clearSessionCookies(res);
+  clearSessionCookies(req, res);
   res.status(204).end();
 });
 

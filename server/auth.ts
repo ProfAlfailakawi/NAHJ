@@ -251,16 +251,49 @@ function readCookie(req: Request, name: string) {
   return undefined;
 }
 
-export function setSessionCookies(res: Response, sessionToken: string, csrfToken: string) {
-  const secure = isProduction() ? "; Secure" : "";
+/*
+ * `Secure` يُشتق من بروتوكول الطلب الفعلي لا من NODE_ENV.
+ *
+ * المتصفح يرفض تخزين كوكي `Secure` وارد عبر http، فربطها بـ NODE_ENV كان يجعل
+ * كل نشر إنتاجي بلا TLS معطّلاً تماماً: الخادم ينشئ الجلسة ويردّ 201، والمتصفح
+ * يرمي الكوكي، فيأتي الطلب التالي بلا جلسة ويردّ 401 — فشل يبدو كأنه كلمة مرور
+ * خاطئة وهو ليس كذلك.
+ *
+ * والعَلَم لا يحمي شيئاً على http أصلاً: الكوكي يمرّ نصاً صريحاً بوجوده أو
+ * بدونه، وكل ما يفعله هو منع التطبيق من العمل. ما يحمي فعلاً هو TLS.
+ *
+ * وبمجرد وضع TLS أمام الخادم — مباشرةً أو عبر وسيط يضيف X-Forwarded-Proto —
+ * يعود `Secure` تلقائياً بلا تغيير إعدادات.
+ */
+function isSecureRequest(req: Request): boolean {
+  if (req.secure) return true;
+  const forwarded = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+  return forwarded.toLowerCase() === "https";
+}
+
+let warnedInsecure = false;
+function cookieSecureSuffix(req: Request): string {
+  if (isSecureRequest(req)) return "; Secure";
+  if (isProduction() && !warnedInsecure) {
+    warnedInsecure = true;
+    console.warn(
+      "[NAHJ] تحذير: الجلسات تُصدَر عبر http بلا تشفير. كلمات المرور ورموز الجلسات " +
+        "تمرّ نصاً صريحاً على الشبكة. ضع شهادة TLS أمام الخادم قبل أي استعمال حقيقي.",
+    );
+  }
+  return "";
+}
+
+export function setSessionCookies(req: Request, res: Response, sessionToken: string, csrfToken: string) {
+  const secure = cookieSecureSuffix(req);
   const maxAge = SESSION_HOURS * 60 * 60;
   res.append("Set-Cookie", `${SESSION_COOKIE}=${encodeURIComponent(sessionToken)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure}`);
   // رمز CSRF يجب أن يقرأه العميل ليعيده في ترويسة، فهو عمداً ليس HttpOnly.
   res.append("Set-Cookie", `${CSRF_COOKIE}=${encodeURIComponent(csrfToken)}; Path=/; SameSite=Strict; Max-Age=${maxAge}${secure}`);
 }
 
-export function clearSessionCookies(res: Response) {
-  const secure = isProduction() ? "; Secure" : "";
+export function clearSessionCookies(req: Request, res: Response) {
+  const secure = cookieSecureSuffix(req);
   res.append("Set-Cookie", `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`);
   res.append("Set-Cookie", `${CSRF_COOKIE}=; Path=/; SameSite=Strict; Max-Age=0${secure}`);
 }

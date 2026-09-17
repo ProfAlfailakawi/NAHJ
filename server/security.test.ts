@@ -12,7 +12,7 @@ import path from "node:path";
 
 import {
   adminSetPassword, changeOwnPassword, createAccount, createFirstAccount, listAccounts,
-  login, needsFirstRunSetup, revokeSessions, updateAccount, validatePassword,
+  login, needsFirstRunSetup, revokeSessions, setSessionCookies, updateAccount, validatePassword,
 } from "./auth.ts";
 import { closeDatabase, hasPersistedState, openDatabase, readState, startPersistenceWorker, writeState } from "./persistence.ts";
 
@@ -300,5 +300,48 @@ test("revoking sessions logs a device out without touching the password", async 
     assert.ok((await login("rev@nahj.test", fixturePassword())).sessionToken);
   } finally {
     closeDatabase();
+  }
+});
+
+/*
+ * ربط `Secure` بـ NODE_ENV جعل كل نشر إنتاجي بلا TLS معطّلاً: المتصفح يرفض
+ * تخزين كوكي Secure واردة عبر http، فيضيع الجلسة ويردّ ما بعدها 401. يجب أن
+ * يُشتق العَلَم من بروتوكول الطلب الفعلي.
+ */
+test("the session cookie is marked Secure only when the request actually arrived over https", async () => {
+  const previous = process.env.NODE_ENV;
+  process.env.NODE_ENV = "production";
+  try {
+    const collect = () => {
+      const headers: string[] = [];
+      return { res: { append: (_k: string, v: string) => headers.push(v) } as any, headers };
+    };
+
+    const plain = collect();
+    setSessionCookies({ secure: false, headers: {} } as any, plain.res, "tok", "csrf");
+    assert.ok(plain.headers.length > 0, "توقّعنا ترويسات كوكي");
+    for (const header of plain.headers) {
+      assert.ok(!header.includes("Secure"), `http يجب ألا يحمل Secure: ${header}`);
+    }
+
+    const tls = collect();
+    setSessionCookies({ secure: true, headers: {} } as any, tls.res, "tok", "csrf");
+    for (const header of tls.headers) {
+      assert.ok(header.includes("; Secure"), `https يجب أن يحمل Secure: ${header}`);
+    }
+
+    const proxied = collect();
+    setSessionCookies(
+      { secure: false, headers: { "x-forwarded-proto": "https,http" } } as any,
+      proxied.res,
+      "tok",
+      "csrf",
+    );
+    for (const header of proxied.headers) {
+      assert.ok(header.includes("; Secure"), `الوسيط المُشفَّر يجب أن يحمل Secure: ${header}`);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previous;
   }
 });
