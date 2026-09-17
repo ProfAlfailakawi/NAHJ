@@ -1,8 +1,24 @@
 rules_version = '2';
+
+/*
+ * NAHJ — قواعد Firestore.
+ *
+ * الوضع السابق كان `allow read, write: if true` على كل المستندات، بينما معرّف المشروع
+ * ومفتاح الويب منشوران في المستودع (`server/firebase.ts`, `firebase-applet-config.json`).
+ * أي شخص على الإنترنت كان يستطيع قراءة قاعدة البيانات كاملة أو محوها.
+ *
+ * المنصة لا تملك طبقة مصادقة بعد، فلا يوجد أي عميل موثوق يصحّ منحه وصولاً مباشراً.
+ * لذلك: منع كل وصول من العملاء. الوصول المشروع الوحيد هو من الخادم عبر Firebase
+ * Admin SDK بحساب خدمة، وهو يتجاوز هذه القواعد بحكم التصميم.
+ *
+ * المزامنة الحالية في `server/firebase.ts` تستخدم SDK العميل، فستفشل تحت هذه القواعد
+ * وتُسجَّل كتحذير دون إسقاط الخادم (المزامنة fire-and-forget بمعالجة أخطاء كاملة).
+ * لإعادة تفعيل المزامنة: انقل الخادم إلى Admin SDK بحساب خدمة.
+ */
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }
