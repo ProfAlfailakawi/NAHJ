@@ -106,9 +106,10 @@ export function Shell({
               /* The badge is deliberately loud. Anyone looking over a shoulder
                  during a walkthrough should be able to tell at a glance that
                  none of these records are real. */
-              <div className="demo-chip" role="status" aria-label={ar ? "بيئة تجريبية معزولة" : "Isolated demo environment"}>
+              /* أيقونات بلا كلام: الوسم يبقى ظاهرًا بلونه وأيقونته، والمعنى كاملٌ
+                 في `aria-label` لمن يقرأ بالشاشة ولمن يمرّ على الأيقونة. */
+              <div className="demo-chip demo-chip--icon" role="status" aria-label={ar ? "بيئة تجريبية معزولة — بيانات اصطناعية" : "Isolated demo environment — synthetic data"} title={ar ? "بيئة تجريبية معزولة — بيانات اصطناعية" : "Isolated demo environment — synthetic data"}>
                 <FlaskConical aria-hidden="true"/>
-                <span>{ar ? "بيئة تجريبية" : "DEMO"}</span>
                 <i aria-hidden="true"/>
                 <button type="button" onClick={onResetDemo} disabled={demoBusy} title={ar ? "إعادة تعيين البيانات التجريبية" : "Reset demo data"} aria-label={ar ? "إعادة تعيين البيانات التجريبية" : "Reset demo data"}><RefreshCw/></button>
                 <button type="button" onClick={onExitDemo} disabled={demoBusy} title={ar ? "الخروج من البيئة التجريبية" : "Exit demo"} aria-label={ar ? "الخروج من البيئة التجريبية" : "Exit demo"}><LogOut/></button>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { LogIn, PlayCircle, ShieldCheck, TriangleAlert } from "lucide-react";
+import { FlaskConical, LogIn, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ApiError, authApi } from "../lib/api";
 
 interface Props {
@@ -128,20 +128,31 @@ export function LoginScreen({ lang, needsSetup, demoEnabled = false, demoBusy = 
           * وزائر بلا حساب هو بالضبط من بُنيت له.
           */}
         {demoEnabled && onEnterDemo && (
-          <>
-            <div className="login-divider"><span>{ar ? "أو" : "or"}</span></div>
-            <button type="button" className="login-demo" onClick={onEnterDemo} disabled={busy || demoBusy}>
-              <PlayCircle />
-              {demoBusy
-                ? ar ? "جارٍ التحضير..." : "Preparing..."
-                : ar ? "جولة في بيئة تجريبية" : "Explore a demo environment"}
+          /*
+           * أيقونة صامتة، لا لافتة.
+           *
+           * كان المدخل زرًّا بعرض النموذج كله، يسبقه فاصل «أو» وتتبعه فقرةُ شرح —
+           * فيزاحم تسجيلَ الدخول ويبدو أنه الطريق المقصود، وهو ثانويّ. والمعنى
+           * كاملٌ في `title` و`aria-label`: من يمرّ عليه يقرأه، ومن يقرأ بالشاشة
+           * يسمعه، ولا يحتلّ النموذج شيء.
+           *
+           * والشكل هو شكل مدخل شريط الأدوات نفسه (`demo-enter--icon`): مدخلٌ
+           * واحد بهيئتين مختلفتين يبدو شيئين.
+           */
+          <div className="login-demo-row">
+            <button
+              type="button"
+              className="demo-enter demo-enter--icon"
+              onClick={onEnterDemo}
+              disabled={busy || demoBusy}
+              title={ar
+                ? "تجربة العرض — بيئة تجريبية معزولة ببيانات اصطناعية، لا تُقرأ ولا تُكتب أي بيانات مؤسسة"
+                : "Try the demo — isolated sandbox with synthetic data; no institution record is read or written"}
+              aria-label={ar ? "تجربة العرض" : "Try the demo"}
+            >
+              <FlaskConical aria-hidden="true" />
             </button>
-            <small className="login-rule">
-              {ar
-                ? "بيانات اصطناعية معزولة بالكامل. لا تُقرأ ولا تُكتب أي بيانات مؤسسة."
-                : "Fully isolated synthetic data. No institution record is read or written."}
-            </small>
-          </>
+          </div>
         )}
       </form>
     </div>
