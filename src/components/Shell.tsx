@@ -80,11 +80,14 @@ export function Shell({
               <div className="min-w-0">
                 <div className="org-name">{ar ? organization.name : organization.nameEn}</div>
                 <div className="org-meta flex items-center gap-2">
-                  <span className={`live-dot ${serverLive ? "on" : "demo"}`}/>
-                  <span>{serverLive ? (ar?"المحرك متصل":"Engine live") : (ar?"وضع العرض":"Demo mode")}</span>
-                  <span className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                    Firebase: nahj-a27a4
+                  <span className={`live-dot ${demoActive ? "demo" : serverLive ? "on" : "demo"}`}/>
+                  <span>{demoActive ? (ar?"صندوق معزول":"Isolated sandbox") : serverLive ? (ar?"المحرك متصل":"Engine live") : (ar?"وضع العرض":"Demo mode")}</span>
+                  {/* داخل الصندوق التجريبي لا تُكتب ولا تُقرأ وثيقةٌ واحدة من Firebase، فوسمُ
+                      «متصل» باسم المشروع الحقيقي كان يقول على الشاشة ما ليس صحيحًا — ويكشف
+                      اسم مشروعٍ داخلي أمام من يُعرض عليه المنتج. */}
+                  <span className={`hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border ${demoActive ? "bg-amber-500/15 text-amber-300 border-amber-500/30" : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${demoActive ? "bg-amber-400" : "bg-emerald-400"}`}></span>
+                    {demoActive ? (ar?"بلا اتصال بأي قاعدة بيانات":"No database connection") : "Firebase: nahj-a27a4"}
                   </span>
                 </div>
               </div>
