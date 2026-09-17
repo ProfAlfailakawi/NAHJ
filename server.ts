@@ -1,8 +1,9 @@
 import express from "express";
 import path from "path";
 import fs from "fs";
-import { apiRouter } from "./server/routes.ts";
-import { DemoSandbox, DEMO_SESSION_TTL_MS } from "./server/db.ts";
+import { apiRouter, authRouter } from "./server/routes.ts";
+import { bootstrapFirstAccount, purgeExpiredSessions } from "./server/auth.ts";
+import { DemoSandbox, DEMO_SESSION_TTL_MS, persistence } from "./server/db.ts";
 import { randomBytes } from "node:crypto";
 
 const DEMO_COOKIE = "nahj_demo";
@@ -107,12 +108,30 @@ async function startServer() {
     res.json({ ok: true });
   });
 
+  /*
+   * المصادقة. تأتي بعد ربط البيئة التجريبية مباشرة، لأن الزائر التجريبي لا يملك حساباً
+   * أصلاً — والحارس في routes.ts يمرّره لأن طلبه مقيّد بصندوقه الخاص في الذاكرة.
+   */
+  app.use("/api/auth", authRouter);
+
   // Mount domain API routes
   app.use("/api", apiRouter);
+
+  await bootstrapFirstAccount();
+  const sessionCleanup = setInterval(() => purgeExpiredSessions(), 30 * 60_000);
+  sessionCleanup.unref();
 
   const server = app.listen(PORT, "0.0.0.0", () => {
     console.log(`[NAHJ] Server running on http://0.0.0.0:${PORT}`);
   });
+
+  // إيقاف نظيف: آخر لقطة تُكتب قبل الخروج فلا تضيع ثوانٍ من العمل.
+  const shutdown = (signal: string) => {
+    console.log(`[NAHJ] ${signal} received — flushing state.`);
+    try { persistence.flush(); } finally { process.exit(0); }
+  };
+  process.once("SIGINT", () => shutdown("SIGINT"));
+  process.once("SIGTERM", () => shutdown("SIGTERM"));
 
   server.on("error", (err: any) => {
     console.error("[NAHJ] Server listen error:", err);

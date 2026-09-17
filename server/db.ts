@@ -28,6 +28,7 @@ import {
   LearningSession,
 } from "../src/types/index.ts";
 import { syncDocToFirestore, getFirebaseStatus } from "./firebase.ts";
+import { AUDIT_RETENTION, readState, startPersistenceWorker } from "./persistence.ts";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createDemoSandboxSeed, type DemoSandboxSeed } from "./demoSandbox.ts";
 
@@ -54,21 +55,35 @@ export interface SimulatorState {
   messages: SimulatorMessage[];
 }
 
+/*
+ * يُعيد ما حُفظ سابقاً إن وُجد، وإلا البذرة. هذا هو الفرق بين منتج يتذكّر ونموذج عرض
+ * يبدأ من الصفر عند كل إقلاع. يُستعمل للمخزن الحقيقي فقط — البيئة التجريبية لا تُحفظ
+ * ولا تُقرأ من القرص إطلاقاً.
+ */
+function hydrate<T>(key: string, seed: T): T {
+  const persisted = readState<T>(key);
+  return persisted === undefined ? seed : persisted;
+}
+
 export class Store {
   /**
    * `isDemo` is the one switch that keeps a visitor's synthetic activity out of
    * the institution's Firestore project. Every write path below checks it, so a
    * demo session can be as noisy as it likes without leaving a trace in real data.
+   *
+   * It is also what decides where this store's initial contents come from: a demo
+   * store clones the synthetic seed, while the real store hydrates from SQLite so
+   * a restart does not erase what the institution actually did.
    */
   public readonly isDemo: boolean;
   public organization: Organization;
   public users: User[];
-  public currentUserId: string = "usr_noura"; // Default to Noura Al-Sabah (Manager)
+  public currentUserId: string;
   public knowledgeSources: KnowledgeSource[];
   public policies: Policy[];
   public skills: Skill[];
   public learningProposals: LearningProposal[];
-  public learningSessions: LearningSession[] = [];
+  public learningSessions: LearningSession[];
   public workItems: WorkItem[];
   public approvalRequests: ApprovalRequest[];
   public auditEvents: AuditEvent[];
@@ -78,22 +93,25 @@ export class Store {
 
   constructor(seed?: DemoSandboxSeed) {
     this.isDemo = Boolean(seed);
-    this.organization = seed ? seed.organization : { ...initialOrganization };
-    this.users = seed ? seed.users : [...demoUsers];
-    this.knowledgeSources = seed ? seed.knowledgeSources : [...initialKnowledgeSources];
-    this.policies = seed ? seed.policies : [...initialPolicies];
-    this.skills = seed ? seed.skills : JSON.parse(JSON.stringify(initialSkills));
-    this.learningProposals = seed ? seed.learningProposals : JSON.parse(JSON.stringify(initialLearningProposals));
-    this.workItems = seed ? seed.workItems : JSON.parse(JSON.stringify(initialWorkItems));
-    this.approvalRequests = seed ? seed.approvalRequests : JSON.parse(JSON.stringify(initialApprovalRequests));
-    this.auditEvents = seed ? seed.auditEvents : JSON.parse(JSON.stringify(initialAuditEvents));
-    this.connectors = seed ? seed.connectors : JSON.parse(JSON.stringify(initialConnectors));
-    this.testCases = seed ? seed.testCases : JSON.parse(JSON.stringify(initialTestCases));
-    this.shadowComparisons = seed ? seed.shadowComparisons : JSON.parse(JSON.stringify(initialShadowComparisons));
-  }
+    const persisted = <T>(key: string, value: T): T => (seed ? value : hydrate(key, value));
 
-  public simulatorState: SimulatorState = {
-    step: "initial",
+    this.organization = seed ? seed.organization : persisted("organization", { ...initialOrganization });
+    this.users = seed ? seed.users : persisted("users", [...demoUsers]);
+    this.currentUserId = seed ? "usr_noura" : persisted("currentUserId", "usr_noura");
+    this.knowledgeSources = seed ? seed.knowledgeSources : persisted("knowledgeSources", [...initialKnowledgeSources]);
+    this.policies = seed ? seed.policies : persisted("policies", [...initialPolicies]);
+    this.skills = seed ? seed.skills : persisted("skills", JSON.parse(JSON.stringify(initialSkills)));
+    this.learningProposals = seed ? seed.learningProposals : persisted("learningProposals", JSON.parse(JSON.stringify(initialLearningProposals)));
+    this.learningSessions = seed ? [] : persisted("learningSessions", [] as LearningSession[]);
+    this.workItems = seed ? seed.workItems : persisted("workItems", JSON.parse(JSON.stringify(initialWorkItems)));
+    this.approvalRequests = seed ? seed.approvalRequests : persisted("approvalRequests", JSON.parse(JSON.stringify(initialApprovalRequests)));
+    this.auditEvents = seed ? seed.auditEvents : persisted("auditEvents", JSON.parse(JSON.stringify(initialAuditEvents)));
+    this.connectors = seed ? seed.connectors : persisted("connectors", JSON.parse(JSON.stringify(initialConnectors)));
+    this.testCases = seed ? seed.testCases : persisted("testCases", JSON.parse(JSON.stringify(initialTestCases)));
+    this.shadowComparisons = seed ? seed.shadowComparisons : persisted("shadowComparisons", JSON.parse(JSON.stringify(initialShadowComparisons)));
+
+    const freshSimulator: SimulatorState = {
+      step: "initial",
     messages: [
       {
         id: "msg_welcome",
@@ -102,7 +120,16 @@ export class Store {
         timestamp: "10:14 ص",
       },
     ],
-  };
+    };
+    this.simulatorState = seed ? freshSimulator : persisted("simulatorState", freshSimulator);
+  }
+
+  /*
+   * يُسنَد في الباني لا كمُهيّئ حقل: مُهيّئات الحقول تعمل قبل جسم الباني، فكانت
+   * `this.isDemo` ما تزال undefined وتأخذ كل بيئة تجريبية الحالة المحفوظة من القرص —
+   * أي العكس تماماً من الغرض.
+   */
+  public simulatorState: SimulatorState;
 
   public getCurrentUser(): User {
     return this.users.find((u) => u.id === this.currentUserId) || this.users[0];
@@ -126,6 +153,8 @@ export class Store {
       ...event,
     };
     this.auditEvents.unshift(newEvent);
+    // سجل التدقيق يُقصّ عند حدّ ثابت وإلا نما بلا سقف في الذاكرة وفي الملف معاً.
+    if (this.auditEvents.length > AUDIT_RETENTION) this.auditEvents.length = AUDIT_RETENTION;
     // Background sync to Firestore nahj-a27a4 — never from a demo sandbox.
     if (!this.isDemo) void syncDocToFirestore("auditEvents", newEvent.id, newEvent);
     return newEvent;
@@ -277,6 +306,33 @@ export const DemoSandbox = {
     return true;
   },
 };
+
+/*
+ * اللقطة التي يحفظها العامل الدوري. تقرأ من `baseStore` صراحةً لا من الوكيل `db`:
+ * الوكيل يتحوّل إلى صندوق الزائر التجريبي داخل طلبه، وقراءة منه هنا كانت ستكتب
+ * بيانات تجريبية مكان بيانات المؤسسة.
+ */
+export function snapshotState(): Record<string, unknown> {
+  return {
+    organization: baseStore.organization,
+    users: baseStore.users,
+    currentUserId: baseStore.currentUserId,
+    knowledgeSources: baseStore.knowledgeSources,
+    policies: baseStore.policies,
+    skills: baseStore.skills,
+    learningProposals: baseStore.learningProposals,
+    learningSessions: baseStore.learningSessions,
+    workItems: baseStore.workItems,
+    approvalRequests: baseStore.approvalRequests,
+    auditEvents: baseStore.auditEvents,
+    connectors: baseStore.connectors,
+    testCases: baseStore.testCases,
+    shadowComparisons: baseStore.shadowComparisons,
+    simulatorState: baseStore.simulatorState,
+  };
+}
+
+export const persistence = startPersistenceWorker(snapshotState);
 
 // Non-blocking background sync to Firebase project nahj-a27a4 after boot
 setTimeout(() => {

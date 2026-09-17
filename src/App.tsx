@@ -13,7 +13,8 @@ import { AnalyticsView,type AnalyticsData } from "./components/views/AnalyticsVi
 import { ControlView } from "./components/views/ControlView";
 import { AuditView } from "./components/views/AuditView";
 import { ApprovalModal } from "./components/ApprovalModal";
-import { apiOrNull } from "./lib/api";
+import { apiOrNull, authApi, UnauthorizedError } from "./lib/api";
+import { LoginScreen } from "./components/LoginScreen";
 import {
   demoUsers,initialOrganization,initialSkills,initialWorkItems,initialLearningProposals,
   initialApprovalRequests,initialAuditEvents,initialConnectors,initialTestCases,initialShadowComparisons
@@ -57,6 +58,9 @@ export default function App(){
   const [demoActive,setDemoActive]=useState(false);
   const [demoBusy,setDemoBusy]=useState(false);
   const [toast,setToast]=useState<{text:string;error?:boolean}|null>(null);
+  // "checking" حتى نعرف من /auth/me؛ لا يُعرض أي سطح تشغيلي قبل الحسم.
+  // "setup" = لا يوجد أي حساب بعد، فالشاشة تُنشئ حساب المشغّل بدل أن تطلب الدخول.
+  const [authState,setAuthState]=useState<"checking"|"setup"|"anonymous"|"authenticated">("checking");
 
   const notify=useCallback((text:string,error=false)=>{setToast({text,error});window.setTimeout(()=>setToast(null),2800)},[]);
   const refreshAudit=useCallback(async()=>{const d=await apiOrNull<{auditEvents:AuditEvent[]}>("/audit");if(d?.auditEvents)setAudit(d.auditEvents)},[]);
@@ -66,26 +70,45 @@ export default function App(){
   const refreshSimulator=useCallback(async()=>{const d=await apiOrNull<{state:SimulatorState}>("/simulator/state");if(d?.state)setSim(d.state)},[]);
 
   useEffect(()=>{document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.documentElement.lang=lang},[lang]);
+  /*
+   * فحص الهوية. قابل لإعادة النداء لأن الدخول إلى البيئة التجريبية يغيّر الجواب:
+   * الزائر التجريبي يمرّ من الحارس بلا حساب، فيصير "authenticated" داخل صندوقه.
+   */
+  const checkAuth=useCallback(async()=>{
+    try{ await authApi.me(); setAuthState("authenticated"); return true; }
+    catch{ /* لا جلسة — نفحص هل النظام مُهيَّأ أصلاً قبل عرض شاشة دخول لا تنفع. */ }
+    try{
+      const status=await authApi.status();
+      setAuthState(status.needsSetup?"setup":"anonymous");
+    }catch{ setAuthState("anonymous"); }
+    return false;
+  },[]);
+
   /* One loader, used on boot and again whenever the demo sandbox is entered or
      reset — every screen has to repopulate from the sandbox, not just the one
      the visitor happens to be looking at. */
   const loadAll=useCallback(async()=>{
-    const health=await apiOrNull<{status:string}>("/health"); setServerLive(health?.status==="ok");
-    const [context,learn,sk,wo,ap,co,au,an,si]=await Promise.all([
-      apiOrNull<ContextResponse>("/context"),
-      apiOrNull<{proposals:LearningProposal[]}>("/learn"),
-      apiOrNull<{skills:Skill[]}>("/skills"),
-      apiOrNull<{workItems:WorkItem[]}>("/work"),
-      apiOrNull<{approvalRequests:ApprovalRequest[]}>("/approvals"),
-      apiOrNull<{connectors:Connector[]}>("/connections"),
-      apiOrNull<{auditEvents:AuditEvent[]}>("/audit"),
-      apiOrNull<AnalyticsData>("/analytics"),
-      apiOrNull<{state:SimulatorState}>("/simulator/state"),
-    ]);
-    if(context){setOrganization(context.organization);setUser(context.currentUser)}
-    if(learn?.proposals)setProposals(learn.proposals); if(sk?.skills)setSkills(sk.skills); if(wo?.workItems)setWork(wo.workItems);
-    if(ap?.approvalRequests)setApprovals(ap.approvalRequests); if(co?.connectors)setConnectors(co.connectors); if(au?.auditEvents)setAudit(au.auditEvents);
-    if(an)setAnalytics(an); if(si?.state)setSim(si.state);
+    try{
+      const health=await apiOrNull<{status:string}>("/health"); setServerLive(health?.status==="ok");
+      const [context,learn,sk,wo,ap,co,au,an,si]=await Promise.all([
+        apiOrNull<ContextResponse>("/context"),
+        apiOrNull<{proposals:LearningProposal[]}>("/learn"),
+        apiOrNull<{skills:Skill[]}>("/skills"),
+        apiOrNull<{workItems:WorkItem[]}>("/work"),
+        apiOrNull<{approvalRequests:ApprovalRequest[]}>("/approvals"),
+        apiOrNull<{connectors:Connector[]}>("/connections"),
+        apiOrNull<{auditEvents:AuditEvent[]}>("/audit"),
+        apiOrNull<AnalyticsData>("/analytics"),
+        apiOrNull<{state:SimulatorState}>("/simulator/state"),
+      ]);
+      if(context){setOrganization(context.organization);setUser(context.currentUser)}
+      if(learn?.proposals)setProposals(learn.proposals); if(sk?.skills)setSkills(sk.skills); if(wo?.workItems)setWork(wo.workItems);
+      if(ap?.approvalRequests)setApprovals(ap.approvalRequests); if(co?.connectors)setConnectors(co.connectors); if(au?.auditEvents)setAudit(au.auditEvents);
+      if(an)setAnalytics(an); if(si?.state)setSim(si.state);
+    }catch(error){
+      // انتهاء الجلسة أثناء التحميل يعيدنا للبوابة بدل عرض بيانات بذرة كأنها سجلّ المؤسسة.
+      if(error instanceof UnauthorizedError)setAuthState("anonymous");
+    }
   },[]);
 
   const refreshDemoConfig=useCallback(async()=>{
@@ -94,12 +117,13 @@ export default function App(){
     return cfg;
   },[]);
 
-  useEffect(()=>{void refreshDemoConfig().then(()=>loadAll())},[refreshDemoConfig,loadAll]);
+  useEffect(()=>{void refreshDemoConfig();void checkAuth()},[refreshDemoConfig,checkAuth]);
+  useEffect(()=>{if(authState==="authenticated")void loadAll()},[authState,loadAll]);
 
   const enterDemo=async()=>{
     setDemoBusy(true);
     const d=await apiOrNull<{ok:boolean}>("/demo/enter",{method:"POST",body:"{}"});
-    if(d?.ok){await refreshDemoConfig();await loadAll();notify(lang==="ar"?"أنت الآن في بيئة تجريبية معزولة — لا تتأثر بيانات المؤسسة":"You are in an isolated demo environment")}
+    if(d?.ok){await refreshDemoConfig();await checkAuth();await loadAll();notify(lang==="ar"?"أنت الآن في بيئة تجريبية معزولة — لا تتأثر بيانات المؤسسة":"You are in an isolated demo environment")}
     else notify(lang==="ar"?"تعذّر فتح البيئة التجريبية":"Could not start the demo",true);
     setDemoBusy(false);
   };
@@ -113,7 +137,7 @@ export default function App(){
   const exitDemo=async()=>{
     setDemoBusy(true);
     await apiOrNull<{ok:boolean}>("/demo/exit",{method:"POST",body:"{}"});
-    await refreshDemoConfig(); await loadAll();
+    await refreshDemoConfig(); await checkAuth();
     setDemoBusy(false);
     notify(lang==="ar"?"تم الخروج من البيئة التجريبية":"Left the demo environment");
   };
@@ -146,6 +170,11 @@ export default function App(){
   const approvalByWork=useMemo(()=>Object.fromEntries(approvals.filter(a=>a.status==="pending").map(a=>[a.workItemId,a.id])),[approvals]);
   const activeApprovalObj=approvals.find(a=>a.id===activeApproval&&a.status==="pending")||null;
   const alertCount=approvals.filter(a=>a.status==="pending").length+proposals.filter(p=>p.status==="pending").length;
+
+  if(authState==="checking")return <div className="boot-gate"/>;
+  if(authState==="anonymous"||authState==="setup")
+    return <LoginScreen lang={lang} needsSetup={authState==="setup"} demoEnabled={demoEnabled} demoBusy={demoBusy}
+      onEnterDemo={()=>void enterDemo()} onAuthenticated={()=>setAuthState("authenticated")}/>;
 
   let view:React.ReactNode;
   switch(section){
