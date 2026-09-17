@@ -29,6 +29,7 @@ INSTANCE="${INSTANCE:-nahj}"
 DATA_DISK="${DATA_DISK:-nahj-data}"
 DATA_DISK_GB="${DATA_DISK_GB:-10}"
 MACHINE_TYPE="${MACHINE_TYPE:-e2-small}"
+NAHJ_DOMAIN="${NAHJ_DOMAIN:-}"   # نطاقك إن ملكته؛ وإلا يُشتق اسم من العنوان عبر sslip.io
 REPO="${REPO:-nahj}"
 REGION="${REGION:-${ZONE%-*}}"
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/nahj:$(date +%Y%m%d-%H%M%S)"
@@ -79,25 +80,57 @@ mountpoint -q "$MOUNT" || mount -o discard,defaults "$DEV" "$MOUNT"
 grep -q "$MOUNT" /etc/fstab || echo "$DEV $MOUNT ext4 discard,defaults,nofail 0 2" >> /etc/fstab
 chown -R 1000:1000 "$MOUNT"
 
-IMAGE=$(curl -sf -H "Metadata-Flavor: Google" \
-  http://metadata.google.internal/computeMetadata/v1/instance/attributes/nahj-image)
+md() { curl -sf -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/$1"; }
+IMAGE=$(md instance/attributes/nahj-image)
+
+# اسم النطاق للشهادة. إن لم يُضبط نطاق خاص، نشتقّ اسماً من العنوان الخارجي عبر
+# sslip.io — خدمة DNS تُرجع العنوان المضمَّن في الاسم نفسه. Let's Encrypt تصدر
+# له شهادة حقيقية موثوقة، فنحصل على TLS بلا شراء نطاق.
+DOMAIN=$(md instance/attributes/nahj-domain || true)
+if [[ -z "$DOMAIN" ]]; then
+  EXTERNAL_IP=$(md instance/network-interfaces/0/access-configs/0/external-ip)
+  DOMAIN="${EXTERNAL_IP//./-}.sslip.io"
+fi
+
 # جذر COS للقراءة فقط، فـ `docker-credential-gcr` لا يستطيع كتابة /root/.docker
-# ويفشل صامتاً (`|| true`)، فيخرج السحب بلا اعتماد ويُرفض بـ "Unauthenticated
-# request". نوجّه HOME إلى مسار قابل للكتابة فيقرؤه المُعتمِد وعميل docker معاً.
+# ويفشل صامتاً، فيخرج السحب بلا اعتماد ويُرفض بـ "Unauthenticated request".
+# نوجّه HOME إلى مسار قابل للكتابة يقرؤه المُعتمِد وعميل docker معاً.
 export HOME=/var/lib/nahj-docker
 mkdir -p "$HOME"
 docker-credential-gcr configure-docker --registries "$(echo "$IMAGE" | cut -d/ -f1)"
 docker pull "$IMAGE"
+
+docker network inspect nahjnet >/dev/null 2>&1 || docker network create nahjnet
+
+# نهج لم يعد ينشر منفذاً على المضيف: Caddy وحده يواجه الإنترنت، ويمرّر الطلبات
+# داخل الشبكة الخاصة. فلا يبقى أي مسار يصل إلى التطبيق بلا تشفير.
 # SIGTERM ثم مهلة: الخادم يلتقطها ويدفق الحالة ويغلق القاعدة. `docker rm -f`
-# يرسل SIGKILL مباشرة، فيتخطّى ذلك ويضيّع حتى ٣ ثوانٍ من آخر تغييرات.
+# يرسل SIGKILL مباشرة فيتخطّى ذلك ويضيّع حتى ٣ ثوانٍ من آخر التغييرات.
 docker stop -t 30 nahj 2>/dev/null || true
 docker rm nahj 2>/dev/null || true
-docker run -d --name nahj --restart always \
-  -p 80:3000 \
+docker run -d --name nahj --restart always --network nahjnet \
   -v /var/nahj:/var/nahj \
   -e NODE_ENV=production \
   -e NAHJ_DATABASE_PATH=/var/nahj/nahj.sqlite \
   "$IMAGE"
+
+# الشهادات تُخزَّن على /var الدائم لا داخل الحاوية: إعادة النشر لا تعيد طلبها،
+# فلا نصطدم بحدود إصدار Let's Encrypt.
+mkdir -p /var/caddy/data /var/caddy/config
+cat > /var/caddy/Caddyfile <<CADDYFILE
+${DOMAIN} {
+	reverse_proxy nahj:3000
+}
+CADDYFILE
+
+docker stop -t 10 caddy 2>/dev/null || true
+docker rm caddy 2>/dev/null || true
+docker run -d --name caddy --restart always --network nahjnet \
+  -p 80:80 -p 443:443 \
+  -v /var/caddy/Caddyfile:/etc/caddy/Caddyfile:ro \
+  -v /var/caddy/data:/data \
+  -v /var/caddy/config:/config \
+  caddy:2
 EOF
 )
 
@@ -105,7 +138,7 @@ step "٥/٧  الخادم"
 if gcloud compute instances describe "$INSTANCE" --zone "$ZONE" >/dev/null 2>&1; then
   echo "موجود — تحديث الصورة وإعادة تشغيل الحاوية."
   gcloud compute instances add-metadata "$INSTANCE" --zone "$ZONE" --quiet \
-    --metadata "nahj-image=$IMAGE" \
+    --metadata "nahj-image=$IMAGE${NAHJ_DOMAIN:+,nahj-domain=$NAHJ_DOMAIN}" \
     --metadata-from-file "startup-script=/dev/stdin" <<< "$STARTUP"
   # لا `instances reset`: هو قطع تيار، يتخطّى SIGTERM الذي يدفق به الخادم حالته.
   # نُعيد تشغيل سكربت الإقلاع داخل الخادم بدل إعادة تشغيل الخادم كله.
@@ -130,16 +163,23 @@ else
     --disk "name=${DATA_DISK},device-name=nahj-data,mode=rw,auto-delete=no" \
     --scopes https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write \
     --tags nahj-web \
-    --metadata "nahj-image=$IMAGE" \
+    --metadata "nahj-image=$IMAGE${NAHJ_DOMAIN:+,nahj-domain=$NAHJ_DOMAIN}" \
     --metadata-from-file "startup-script=/dev/stdin" \
     --quiet <<< "$STARTUP"
 fi
 
 step "٦/٧  جدار الحماية"
-gcloud compute firewall-rules describe nahj-allow-http >/dev/null 2>&1 ||
+# 443 للموقع، و80 يبقى مفتوحاً لأن Let's Encrypt تتحقق عبره ثم يُحوّل Caddy
+# كل طلب http إلى https.
+if gcloud compute firewall-rules describe nahj-allow-http >/dev/null 2>&1; then
+  gcloud compute firewall-rules update nahj-allow-http \
+    --allow tcp:80,tcp:443 --quiet >/dev/null
+  echo "✓ محدّثة: 80 و443"
+else
   gcloud compute firewall-rules create nahj-allow-http \
-    --allow tcp:80 --target-tags nahj-web \
-    --description "NAHJ HTTP" --quiet
+    --allow tcp:80,tcp:443 --target-tags nahj-web \
+    --description "NAHJ HTTP/HTTPS" --quiet
+fi
 
 step "٧/٧  عنوان ثابت"
 # بدون عنوان محجوز، كل إيقاف/تشغيل يبدّل العنوان — فينكسر أي DNS أو شهادة تربطها به.
@@ -161,12 +201,18 @@ IP=$(gcloud compute instances describe "$INSTANCE" --zone "$ZONE" \
 # لا نُعلن النجاح لمجرد أن gcloud رجع بلا خطأ: أول تشغيل حقيقي لهذا السكربت أنشأ
 # كل الموارد بنجاح بينما فشل سكربت الإقلاع داخل الخادم ولم تقم الحاوية إطلاقاً،
 # فطُبع عنوان لا يرد. نسأل الخادم نفسه.
+DOMAIN="${NAHJ_DOMAIN:-${IP//./-}.sslip.io}"
+
+# لا نُعلن النجاح لمجرد أن gcloud رجع بلا خطأ: أول تشغيل حقيقي لهذا السكربت أنشأ
+# كل الموارد بنجاح بينما فشل سكربت الإقلاع داخل الخادم ولم تقم الحاوية إطلاقاً،
+# فطُبع عنوان لا يرد. نسأل الخادم نفسه — وعبر https تحديداً، فالوصول وحده لا
+# يثبت أن الشهادة صدرت.
 echo
 echo "── التحقق ────────────────────────────────"
-echo "انتظار إقلاع الحاوية (حتى ٣ دقائق)…"
+echo "انتظار الحاوية وإصدار شهادة Let's Encrypt (حتى ٥ دقائق)…"
 UP=""
-for _ in $(seq 1 18); do
-  CODE=$(curl -s -o /dev/null -m 5 -w '%{http_code}' "http://${IP}/" 2>/dev/null || true)
+for _ in $(seq 1 30); do
+  CODE=$(curl -s -o /dev/null -m 8 -w '%{http_code}' "https://${DOMAIN}/" 2>/dev/null || true)
   if [[ "$CODE" == "200" ]]; then UP="yes"; break; fi
   sleep 10
 done
@@ -174,21 +220,24 @@ done
 if [[ -z "$UP" ]]; then
   cat >&2 <<FAIL
 
-❌ الموارد أُنشئت، لكن نهج لا يرد على http://${IP}
+❌ الموارد أُنشئت، لكن نهج لا يرد على https://${DOMAIN}
 
-هذا فشل، لا تأخّر. سجلّ سكربت الإقلاع يقول السبب:
+هذا فشل، لا تأخّر. السبب الأشيع تعثّر إصدار الشهادة. اقرأ سجلّ Caddy:
 
-  gcloud compute ssh ${INSTANCE} --zone ${ZONE} --project ${PROJECT_ID} \
-    --command 'docker ps -a; docker logs nahj 2>&1 | tail -30; sudo journalctl -u google-startup-scripts --no-pager | tail -30'
+  gcloud compute ssh ${INSTANCE} --zone ${ZONE} --project ${PROJECT_ID} \\
+    --command 'docker logs caddy 2>&1 | tail -30; docker ps -a'
 
-أعد تشغيل هذا السكربت بعد معالجة السبب — لن يُنشئ شيئاً مرتين ولن يمسّ القرص.
+أعد تشغيل هذا السكربت بعد معالجة السبب — لن يُنشئ شيئاً مرتين ولن يمسّ القرص،
+والشهادة الصادرة محفوظة على القرص فلا تُطلب من جديد.
 FAIL
   exit 1
 fi
 
 cat <<EOM
 
-✅ تم التحقق: نهج يرد على  http://${IP}
+✅ تم التحقق: نهج يعمل على  https://${DOMAIN}
+
+الاتصال مشفَّر بشهادة Let's Encrypt، ويتجدّد تلقائياً. طلبات http تُحوَّل إلى https.
 
 افتح المتصفح وأنشئ حساب المشغّل الأول.
 
@@ -199,6 +248,6 @@ cat <<EOM
 الاختبار الوحيد الذي يثبت أن القرص دائم: غيّر شيئاً (رقِّ مهارة)، ثم أعد تشغيل
 هذا السكربت نفسه، ثم تأكد أن التغيير باقٍ.
 
-⚠ هذا HTTP بلا شهادة. قبل أي استعمال حقيقي ضع اسم نطاق وشهادة TLS أمامه
-  (موازن حِمل، أو Caddy على الخادم نفسه). كلمات المرور تمرّ من هنا.
+ℹ العنوان مشتقّ من IP الخادم عبر sslip.io. يعمل ومشفَّر، لكنه ليس اسماً تجارياً.
+  حين تملك نطاقاً، وجّهه إلى ${IP} ثم شغّل:  NAHJ_DOMAIN=your-domain.com bash scripts/deploy-vm.sh
 EOM
