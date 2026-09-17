@@ -13,7 +13,8 @@ import { AnalyticsView,type AnalyticsData } from "./components/views/AnalyticsVi
 import { ControlView } from "./components/views/ControlView";
 import { AuditView } from "./components/views/AuditView";
 import { ApprovalModal } from "./components/ApprovalModal";
-import { apiOrNull } from "./lib/api";
+import { apiOrNull, authApi, UnauthorizedError } from "./lib/api";
+import { LoginScreen } from "./components/LoginScreen";
 import {
   demoUsers,initialOrganization,initialSkills,initialWorkItems,initialLearningProposals,
   initialApprovalRequests,initialAuditEvents,initialConnectors,initialTestCases,initialShadowComparisons
@@ -54,6 +55,9 @@ export default function App(){
   const [paused,setPaused]=useState(false);
   const [serverLive,setServerLive]=useState(false);
   const [toast,setToast]=useState<{text:string;error?:boolean}|null>(null);
+  // "checking" حتى نعرف من /auth/me؛ لا يُعرض أي سطح تشغيلي قبل الحسم.
+  // "setup" = لا يوجد أي حساب بعد، فالشاشة تُنشئ حساب المشغّل بدل أن تطلب الدخول.
+  const [authState,setAuthState]=useState<"checking"|"setup"|"anonymous"|"authenticated">("checking");
 
   const notify=useCallback((text:string,error=false)=>{setToast({text,error});window.setTimeout(()=>setToast(null),2800)},[]);
   const refreshAudit=useCallback(async()=>{const d=await apiOrNull<{auditEvents:AuditEvent[]}>("/audit");if(d?.auditEvents)setAudit(d.auditEvents)},[]);
@@ -63,9 +67,25 @@ export default function App(){
   const refreshSimulator=useCallback(async()=>{const d=await apiOrNull<{state:SimulatorState}>("/simulator/state");if(d?.state)setSim(d.state)},[]);
 
   useEffect(()=>{document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.documentElement.lang=lang},[lang]);
+
   useEffect(()=>{
     let cancelled=false;
     (async()=>{
+      try{ await authApi.me(); if(!cancelled)setAuthState("authenticated"); return; }
+      catch{ /* لا جلسة — نفحص هل النظام مُهيَّأ أصلاً قبل عرض شاشة دخول لا تنفع. */ }
+      try{
+        const status=await authApi.status();
+        if(!cancelled)setAuthState(status.needsSetup?"setup":"anonymous");
+      }catch{ if(!cancelled)setAuthState("anonymous"); }
+    })();
+    return()=>{cancelled=true};
+  },[]);
+
+  useEffect(()=>{
+    if(authState!=="authenticated")return;
+    let cancelled=false;
+    (async()=>{
+      try{
       const health=await apiOrNull<{status:string}>("/health"); if(!cancelled)setServerLive(health?.status==="ok");
       const [context,learn,sk,wo,ap,co,au,an,si]=await Promise.all([
         apiOrNull<ContextResponse>("/context"),
@@ -83,9 +103,13 @@ export default function App(){
       if(learn?.proposals)setProposals(learn.proposals); if(sk?.skills)setSkills(sk.skills); if(wo?.workItems)setWork(wo.workItems);
       if(ap?.approvalRequests)setApprovals(ap.approvalRequests); if(co?.connectors)setConnectors(co.connectors); if(au?.auditEvents)setAudit(au.auditEvents);
       if(an)setAnalytics(an); if(si?.state)setSim(si.state);
+      }catch(error){
+        // انتهاء الجلسة أثناء التحميل يعيدنا لشاشة الدخول بدل عرض بيانات بذرة.
+        if(error instanceof UnauthorizedError && !cancelled)setAuthState("anonymous");
+      }
     })();
     return()=>{cancelled=true};
-  },[]);
+  },[authState]);
 
   const resolve=async(proposalId:string,clarificationId:string,answer:string)=>{
     const d=await apiOrNull<{proposal:LearningProposal}>("/learn/clarify",{method:"POST",body:JSON.stringify({proposalId,clarificationId,selectedAnswer:answer})});
@@ -115,6 +139,10 @@ export default function App(){
   const approvalByWork=useMemo(()=>Object.fromEntries(approvals.filter(a=>a.status==="pending").map(a=>[a.workItemId,a.id])),[approvals]);
   const activeApprovalObj=approvals.find(a=>a.id===activeApproval&&a.status==="pending")||null;
   const alertCount=approvals.filter(a=>a.status==="pending").length+proposals.filter(p=>p.status==="pending").length;
+
+  if(authState==="checking")return <div className="boot-gate"/>;
+  if(authState==="anonymous"||authState==="setup")
+    return <LoginScreen lang={lang} needsSetup={authState==="setup"} onAuthenticated={()=>setAuthState("authenticated")}/>;
 
   let view:React.ReactNode;
   switch(section){

@@ -7,8 +7,83 @@ import { McpEngine } from "./engine/mcpEngine.ts";
 import { generateAiResponse } from "./gemini.ts";
 import { AutonomyLevel, SkillStep, LearningSession, Skill } from "../src/types/index.ts";
 import { getFirebaseStatus } from "./firebase.ts";
+import {
+  AuthenticatedRequest,
+  clearSessionCookies,
+  createFirstAccount,
+  login,
+  logout,
+  needsFirstRunSetup,
+  requireAuth,
+  requireRole,
+  setSessionCookies,
+  authCookieNames,
+} from "./auth.ts";
 
 export const apiRouter = Router();
+
+/*
+ * مسارات المصادقة — الوحيدة المتاحة بلا جلسة. كل ما بعدها محروس.
+ */
+export const authRouter = Router();
+
+/*
+ * حالة التهيئة. تُقرأ بلا جلسة عمداً: الواجهة تحتاج أن تعرف قبل أي شيء هل تعرض شاشة
+ * «أنشئ حساب المشغّل» أم شاشة الدخول. لا تكشف إلا أن النظام مُهيَّأ أم لا.
+ */
+authRouter.get("/status", (_req: Request, res: Response) => {
+  res.json({ needsSetup: needsFirstRunSetup() });
+});
+
+/*
+ * التهيئة الأولى: تُنشئ حساب المشرف الأول وتفتح له جلسة مباشرة.
+ * مفتوحة فقط ما دام لا يوجد أي حساب، والشرط مفروض ذرّياً داخل جملة الإدراج نفسها.
+ */
+authRouter.post("/setup", async (req: Request, res: Response) => {
+  try {
+    const account = await createFirstAccount({
+      email: req.body?.email,
+      name: req.body?.name,
+      password: req.body?.password,
+    });
+    // تسجيل دخول فوري: مطالبة المستخدم بإعادة إدخال ما كتبه للتو خطوة بلا فائدة.
+    const session = await login(account.email, req.body?.password);
+    setSessionCookies(res, session.sessionToken, session.csrfToken);
+    res.status(201).json({ account: session.account, csrfToken: session.csrfToken, expiresAt: session.expiresAt });
+  } catch (error) {
+    const status = Number((error as { status?: number })?.status) || 400;
+    res.status(status).json({ error: (error as Error)?.message || "تعذّرت التهيئة.", code: "SETUP_FAILED" });
+  }
+});
+
+authRouter.post("/login", async (req: Request, res: Response) => {
+  try {
+    const result = await login(req.body?.email, req.body?.password);
+    setSessionCookies(res, result.sessionToken, result.csrfToken);
+    res.json({ account: result.account, csrfToken: result.csrfToken, expiresAt: result.expiresAt });
+  } catch (error) {
+    const status = Number((error as { status?: number })?.status) || 401;
+    res.status(status).json({ error: (error as Error)?.message || "تعذّر تسجيل الدخول.", code: "LOGIN_FAILED" });
+  }
+});
+
+authRouter.post("/logout", (req: Request, res: Response) => {
+  const cookies = req.headers.cookie || "";
+  const match = cookies.split(";").map((part) => part.trim().split("=")).find(([key]) => key === authCookieNames.session);
+  logout(match ? decodeURIComponent(match.slice(1).join("=")) : undefined);
+  clearSessionCookies(res);
+  res.status(204).end();
+});
+
+authRouter.get("/me", requireAuth, (req: AuthenticatedRequest, res: Response) => {
+  res.json({ account: req.account });
+});
+
+/*
+ * كل مسار تشغيلي يمرّ بالمصادقة وحماية CSRF. المنصة تدير مفاتيح إيقاف ومستويات
+ * استقلالية وموافقات، فلا معنى لأي منها على سطح مفتوح.
+ */
+apiRouter.use(requireAuth);
 
 // 1. Context & User Switching
 apiRouter.get("/context", (req: Request, res: Response) => {
@@ -22,7 +97,12 @@ apiRouter.get("/context", (req: Request, res: Response) => {
   });
 });
 
-apiRouter.post("/switch-role", (req: Request, res: Response) => {
+/*
+ * تبديل الملف التشغيلي المعروض. كان هذا المسار مفتوحاً يسمح لأي زائر بانتحال أي دور؛
+ * صار محصوراً بالمشرف، ولا يمنح صلاحية إطلاقاً — الصلاحية من الجلسة وحدها، وهذا يبدّل
+ * الملف التشغيلي المعروض في الواجهة فقط.
+ */
+apiRouter.post("/switch-role", requireRole("admin"), (req: Request, res: Response) => {
   const { userId } = req.body;
   const user = db.setCurrentUser(userId);
   res.json({ success: true, currentUser: user });

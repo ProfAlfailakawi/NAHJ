@@ -28,6 +28,7 @@ import {
   LearningSession,
 } from "../src/types/index.ts";
 import { syncDocToFirestore, getFirebaseStatus } from "./firebase.ts";
+import { AUDIT_RETENTION, readState, startPersistenceWorker } from "./persistence.ts";
 
 export interface SimulatorMessage {
   id: string;
@@ -52,24 +53,33 @@ export interface SimulatorState {
   messages: SimulatorMessage[];
 }
 
-class Store {
-  public organization: Organization = { ...initialOrganization };
-  public users: User[] = [...demoUsers];
-  public currentUserId: string = "usr_noura"; // Default to Noura Al-Sabah (Manager)
-  public knowledgeSources: KnowledgeSource[] = [...initialKnowledgeSources];
-  public policies: Policy[] = [...initialPolicies];
-  public skills: Skill[] = JSON.parse(JSON.stringify(initialSkills));
-  public learningProposals: LearningProposal[] = JSON.parse(JSON.stringify(initialLearningProposals));
-  public learningSessions: LearningSession[] = [];
-  public workItems: WorkItem[] = JSON.parse(JSON.stringify(initialWorkItems));
-  public approvalRequests: ApprovalRequest[] = JSON.parse(JSON.stringify(initialApprovalRequests));
-  public auditEvents: AuditEvent[] = JSON.parse(JSON.stringify(initialAuditEvents));
-  public connectors: Connector[] = JSON.parse(JSON.stringify(initialConnectors));
-  public testCases: TestCase[] = JSON.parse(JSON.stringify(initialTestCases));
-  public shadowComparisons: ShadowComparison[] = JSON.parse(JSON.stringify(initialShadowComparisons));
+/*
+ * يُعيد ما حُفظ سابقاً إن وُجد، وإلا البذرة. هذا هو الفرق بين منتج يتذكّر ونموذج عرض
+ * يبدأ من الصفر عند كل إقلاع.
+ */
+function hydrate<T>(key: string, seed: T): T {
+  const persisted = readState<T>(key);
+  return persisted === undefined ? seed : persisted;
+}
 
-  public simulatorState: SimulatorState = {
-    step: "initial",
+class Store {
+  public organization: Organization = hydrate("organization", { ...initialOrganization });
+  public users: User[] = hydrate("users", [...demoUsers]);
+  public currentUserId: string = hydrate("currentUserId", "usr_noura");
+  public knowledgeSources: KnowledgeSource[] = hydrate("knowledgeSources", [...initialKnowledgeSources]);
+  public policies: Policy[] = hydrate("policies", [...initialPolicies]);
+  public skills: Skill[] = hydrate("skills", JSON.parse(JSON.stringify(initialSkills)));
+  public learningProposals: LearningProposal[] = hydrate("learningProposals", JSON.parse(JSON.stringify(initialLearningProposals)));
+  public learningSessions: LearningSession[] = hydrate("learningSessions", [] as LearningSession[]);
+  public workItems: WorkItem[] = hydrate("workItems", JSON.parse(JSON.stringify(initialWorkItems)));
+  public approvalRequests: ApprovalRequest[] = hydrate("approvalRequests", JSON.parse(JSON.stringify(initialApprovalRequests)));
+  public auditEvents: AuditEvent[] = hydrate("auditEvents", JSON.parse(JSON.stringify(initialAuditEvents)));
+  public connectors: Connector[] = hydrate("connectors", JSON.parse(JSON.stringify(initialConnectors)));
+  public testCases: TestCase[] = hydrate("testCases", JSON.parse(JSON.stringify(initialTestCases)));
+  public shadowComparisons: ShadowComparison[] = hydrate("shadowComparisons", JSON.parse(JSON.stringify(initialShadowComparisons)));
+
+  public simulatorState: SimulatorState = hydrate("simulatorState", {
+    step: "initial" as const,
     messages: [
       {
         id: "msg_welcome",
@@ -78,7 +88,7 @@ class Store {
         timestamp: "10:14 ص",
       },
     ],
-  };
+  });
 
   public getCurrentUser(): User {
     return this.users.find((u) => u.id === this.currentUserId) || this.users[0];
@@ -102,7 +112,8 @@ class Store {
       ...event,
     };
     this.auditEvents.unshift(newEvent);
-    // Background sync to Firestore nahj-a27a4
+    // سجل التدقيق يُقصّ عند حدّ ثابت وإلا نما بلا سقف في الذاكرة وفي الملف معاً.
+    if (this.auditEvents.length > AUDIT_RETENTION) this.auditEvents.length = AUDIT_RETENTION;
     void syncDocToFirestore("auditEvents", newEvent.id, newEvent);
     return newEvent;
   }
@@ -189,9 +200,25 @@ class Store {
 
 export const db = new Store();
 
-// Non-blocking background sync to Firebase project nahj-a27a4 after boot
-setTimeout(() => {
-  void db.syncAllToFirebase().catch((err) => {
-    console.warn("[Firebase] Background initial sync handled:", err);
-  });
-}, 8000);
+/** اللقطة التي يحفظها العامل الدوري. كل مفتاح هنا يقابل مفتاحاً في hydrate أعلاه. */
+export function snapshotState(): Record<string, unknown> {
+  return {
+    organization: db.organization,
+    users: db.users,
+    currentUserId: db.currentUserId,
+    knowledgeSources: db.knowledgeSources,
+    policies: db.policies,
+    skills: db.skills,
+    learningProposals: db.learningProposals,
+    learningSessions: db.learningSessions,
+    workItems: db.workItems,
+    approvalRequests: db.approvalRequests,
+    auditEvents: db.auditEvents,
+    connectors: db.connectors,
+    testCases: db.testCases,
+    shadowComparisons: db.shadowComparisons,
+    simulatorState: db.simulatorState,
+  };
+}
+
+export const persistence = startPersistenceWorker(snapshotState);
