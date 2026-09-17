@@ -12,6 +12,7 @@ import { ConnectionsView } from "./components/views/ConnectionsView";
 import { AnalyticsView,type AnalyticsData } from "./components/views/AnalyticsView";
 import { ControlView } from "./components/views/ControlView";
 import { AuditView } from "./components/views/AuditView";
+import { AccountsView } from "./components/views/AccountsView";
 import { ApprovalModal } from "./components/ApprovalModal";
 import { apiOrNull, authApi, UnauthorizedError } from "./lib/api";
 import { LoginScreen } from "./components/LoginScreen";
@@ -61,6 +62,7 @@ export default function App(){
   // "checking" حتى نعرف من /auth/me؛ لا يُعرض أي سطح تشغيلي قبل الحسم.
   // "setup" = لا يوجد أي حساب بعد، فالشاشة تُنشئ حساب المشغّل بدل أن تطلب الدخول.
   const [authState,setAuthState]=useState<"checking"|"setup"|"anonymous"|"authenticated">("checking");
+  const [account,setAccount]=useState<{id:string;role:string}|null>(null);
 
   const notify=useCallback((text:string,error=false)=>{setToast({text,error});window.setTimeout(()=>setToast(null),2800)},[]);
   const refreshAudit=useCallback(async()=>{const d=await apiOrNull<{auditEvents:AuditEvent[]}>("/audit");if(d?.auditEvents)setAudit(d.auditEvents)},[]);
@@ -75,7 +77,7 @@ export default function App(){
    * الزائر التجريبي يمرّ من الحارس بلا حساب، فيصير "authenticated" داخل صندوقه.
    */
   const checkAuth=useCallback(async()=>{
-    try{ await authApi.me(); setAuthState("authenticated"); return true; }
+    try{ const me=await authApi.me(); setAccount({id:me.account.id,role:me.account.role}); setAuthState("authenticated"); return true; }
     catch{ /* لا جلسة — نفحص هل النظام مُهيَّأ أصلاً قبل عرض شاشة دخول لا تنفع. */ }
     try{
       const status=await authApi.status();
@@ -189,6 +191,7 @@ export default function App(){
     case "analytics":view=<AnalyticsView lang={lang} data={analytics}/>;break;
     case "control":view=<ControlView lang={lang} paused={paused} onPause={()=>{setPaused(v=>!v);notify(!paused?(lang==="ar"?"تم إيقاف التنفيذ الآلي":"Execution paused"):(lang==="ar"?"تم الاستئناف":"Execution resumed"))}}/>;break;
     case "audit":view=<AuditView lang={lang} events={audit}/>;break;
+    case "accounts":view=<AccountsView lang={lang} currentAccountId={account?.id||""} isAdmin={account?.role==="admin"} notify={notify}/>;break;
   }
 
   return <>

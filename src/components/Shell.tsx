@@ -1,12 +1,9 @@
 import React from "react";
-import {
-  Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, GraduationCap,
-  History, Languages, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Workflow, FlaskConical, LogOut
-} from "lucide-react";
+import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, FlaskConical, GraduationCap, History, Languages, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
 import { BrandLockup, NahjMark } from "./Brand";
 import type { Organization, User } from "../types";
 
-export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit";
+export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts";
 
 type ShellProps = {
   section: SectionId;
@@ -39,6 +36,7 @@ const nav: { id: SectionId; ar: string; en: string; icon: React.ElementType; gro
   { id: "analytics", ar: "الأثر", en: "Impact", icon: BarChart3, group:"govern" },
   { id: "control", ar: "الحوكمة", en: "Control", icon: ShieldCheck, group:"govern" },
   { id: "audit", ar: "السجل", en: "Audit", icon: History, group:"govern" },
+  { id: "accounts", ar: "الحسابات", en: "Accounts", icon: Users, group:"govern" },
 ];
 
 export function Shell({
