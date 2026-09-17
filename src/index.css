@@ -135,6 +135,8 @@
  * already goes, and carries the reset and exit actions with it. */
 .demo-enter{height:38px;padding:0 12px;display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(190,138,42,.34);border-radius:14px;background:rgba(190,138,42,.09);color:#8a641c;font-size:10px;font-weight:900;letter-spacing:.04em;cursor:pointer;transition:.2s var(--ease);white-space:nowrap}
 .demo-enter svg{width:14px;height:14px;stroke-width:2}
+/* المدخل أيقونةٌ بلا نص: مربّع بحجم اللمس الكامل كبقية أزرار الشريط. */
+.demo-enter--icon{width:38px;padding:0;display:grid;place-items:center;gap:0}
 .demo-enter:hover:not(:disabled){background:rgba(190,138,42,.16);border-color:rgba(190,138,42,.5)}
 .demo-enter:disabled{opacity:.55;cursor:default}
 .demo-chip{height:38px;padding:0 5px 0 11px;display:inline-flex;align-items:center;gap:7px;border:1px solid rgba(190,138,42,.4);border-radius:999px;background:rgba(190,138,42,.12);color:#8a641c;font-size:10px;font-weight:900;letter-spacing:.06em;white-space:nowrap}
