@@ -2,6 +2,31 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { apiRouter } from "./server/routes.ts";
+import { DemoSandbox, DEMO_SESSION_TTL_MS } from "./server/db.ts";
+import { randomBytes } from "node:crypto";
+
+const DEMO_COOKIE = "nahj_demo";
+/** Demo is on by default; a deployment that must never show it sets NAHJ_DEMO_ENABLED=false. */
+const demoEnabled = () => process.env.NAHJ_DEMO_ENABLED !== "false";
+
+function readDemoCookie(req: express.Request): string {
+  const raw = req.headers.cookie || "";
+  for (const part of raw.split(";")) {
+    const [name, ...rest] = part.trim().split("=");
+    if (name === DEMO_COOKIE) return decodeURIComponent(rest.join("="));
+  }
+  return "";
+}
+
+function setDemoCookie(res: express.Response, sessionId: string): void {
+  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+  res.setHeader(
+    "Set-Cookie",
+    sessionId
+      ? `${DEMO_COOKIE}=${encodeURIComponent(sessionId)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(DEMO_SESSION_TTL_MS / 1000)}${secure}`
+      : `${DEMO_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${secure}`,
+  );
+}
 
 async function startServer() {
   const app = express();
@@ -32,6 +57,54 @@ async function startServer() {
   });
   app.get("/_health", (req, res) => {
     res.status(200).send("ok");
+  });
+
+  /**
+   * Demo binding. This sits AHEAD of every API route, so a request carrying a
+   * demo cookie can only ever reach that visitor's own in-memory sandbox — it
+   * cannot fall through to the institution's real store, and it never writes to
+   * Firestore. Requests without the cookie bypass this entirely.
+   */
+  app.use("/api", (req, res, next) => {
+    const sessionId = readDemoCookie(req);
+    if (!sessionId.startsWith("demo_")) { next(); return; }
+    if (!DemoSandbox.run(sessionId, DEMO_SESSION_TTL_MS, next)) {
+      // The sandbox aged out. Clear the cookie rather than silently serving real data.
+      setDemoCookie(res, "");
+      next();
+    }
+  });
+
+  app.get("/api/demo/config", (req, res) => {
+    res.json({
+      enabled: demoEnabled(),
+      active: DemoSandbox.isDemoRequest(),
+      ttlMs: DEMO_SESSION_TTL_MS,
+    });
+  });
+
+  app.post("/api/demo/enter", (req, res) => {
+    if (!demoEnabled()) { res.status(404).json({ error: "البيئة التجريبية غير مفعّلة في هذا النشر" }); return; }
+    const sessionId = `demo_${randomBytes(32).toString("hex")}`;
+    DemoSandbox.create(sessionId, DEMO_SESSION_TTL_MS);
+    setDemoCookie(res, sessionId);
+    res.json({ ok: true, demo: true, ttlMs: DEMO_SESSION_TTL_MS });
+  });
+
+  app.post("/api/demo/reset", (req, res) => {
+    const sessionId = readDemoCookie(req);
+    if (!DemoSandbox.reset(sessionId, DEMO_SESSION_TTL_MS)) {
+      res.status(410).json({ error: "انتهت الجلسة التجريبية" });
+      return;
+    }
+    res.json({ ok: true });
+  });
+
+  app.post("/api/demo/exit", (req, res) => {
+    const sessionId = readDemoCookie(req);
+    if (sessionId) DemoSandbox.destroy(sessionId);
+    setDemoCookie(res, "");
+    res.json({ ok: true });
   });
 
   // Mount domain API routes
