@@ -27,12 +27,44 @@ export function resolveDatabasePath() {
 
 let database: DatabaseSync | null = null;
 
+/*
+ * WAL يحتاج ذاكرة مشتركة (mmap) بين العمليات، وهي غير متاحة على أنظمة الملفات
+ * الشبكية: NFS/Filestore، وGCS FUSE. على تلك الأنظمة لا يفشل SQLite بصوت مرتفع —
+ * يتجاهل الطلب ويبقى على الوضع القديم. فنقرأ الوضع الفعلي بعد الضبط بدل افتراضه.
+ *
+ * TRUNCATE هو البديل الآمن هناك: أبطأ في الكتابة، لكنه لا يعتمد على الذاكرة
+ * المشتركة. الكتابة عندنا نادرة (دفقة كل ٣ ثوانٍ عند تغيّر المحتوى فقط)، فالفارق
+ * غير محسوس — بخلاف قاعدة بيانات تالفة.
+ */
+function applyJournalMode(db: DatabaseSync, filename: string) {
+  if (filename === ":memory:") return;
+  let mode = "";
+  try {
+    const row = db.prepare("PRAGMA journal_mode = WAL").get() as { journal_mode?: string } | undefined;
+    mode = String(row?.journal_mode ?? "").toLowerCase();
+  } catch {
+    mode = "";
+  }
+  if (mode === "wal") return;
+
+  try {
+    db.prepare("PRAGMA journal_mode = TRUNCATE").get();
+  } catch {
+    /* نُبقي الوضع الافتراضي؛ التحذير أدناه يبقى هو الإشارة. */
+  }
+  console.warn(
+    `[NAHJ] تعذّر تفعيل WAL على ${filename} (الوضع الفعلي: ${mode || "غير معروف"}). ` +
+      "هذا يعني غالباً أن القاعدة على نظام ملفات شبكي (NFS/Filestore أو GCS FUSE). " +
+      "تعمل المنصة، لكن قرصاً كتلياً دائماً (Persistent Disk على VM) أكثر أماناً بكثير لـ SQLite.",
+  );
+}
+
 export function openDatabase(): DatabaseSync {
   if (database) return database;
   const filename = resolveDatabasePath();
   if (filename !== ":memory:") fs.mkdirSync(path.dirname(filename), { recursive: true });
   const db = new DatabaseSync(filename);
-  db.exec("PRAGMA journal_mode = WAL");
+  applyJournalMode(db, filename);
   db.exec("PRAGMA foreign_keys = ON");
   db.exec(`
     CREATE TABLE IF NOT EXISTS operational_state (
