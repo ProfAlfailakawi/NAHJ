@@ -120,7 +120,10 @@ else
     --machine-type "$MACHINE_TYPE" \
     --image-family cos-stable --image-project cos-cloud \
     --disk "name=${DATA_DISK},device-name=nahj-data,mode=rw,auto-delete=no" \
-    --scopes cloud-platform \
+    `# أضيق نطاق يكفي: قراءة الصور من Artifact Registry، وكتابة السجلات والقياسات.` \
+    `# cloud-platform كان يعني أن أي اختراق للخادم المكشوف يُسلّم رمزاً بصلاحية` \
+    `# المشروع كله عبر خادم البيانات الوصفية.` \
+    --scopes https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write \
     --tags nahj-web \
     --metadata "nahj-image=$IMAGE" \
     --metadata-from-file "startup-script=/dev/stdin" \
