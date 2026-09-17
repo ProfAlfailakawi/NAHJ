@@ -56,7 +56,14 @@ jobs:
       - name: الاختبارات
         run: npm test
 
-      - name: التحقق من إعداد النشر
+      # إعدادٌ لمرة واحدة لم يُنفَّذ بعد ليس عطبًا في هذا التغيير: لا شيء انكسر، ولا
+      # شيء يُصلَح في الشيفرة. و`exit 1` كان يضع علامةً حمراء على كل دمجٍ إلى الأبد،
+      # فتفقد العلامة معناها ولا يُميَّز بعدها فشلٌ حقيقي حين يقع.
+      #
+      # فتقف المهمة وتقول لماذا — تنبيهٌ على صفحة التشغيل وملخّصٌ مقروء — ولا تدّعي
+      # نشرًا لم يقع: كل خطوة بعدها مشروطة بأن الهوية مضبوطة.
+      - name: التحقق من إعداد هوية النشر
+        id: identity
         shell: bash
         env:
           WIF_PROVIDER: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
@@ -65,19 +72,31 @@ jobs:
         run: |
           set -euo pipefail
           MISSING=""
-          [[ -z "$WIF_PROVIDER" ]] && MISSING="$MISSING GCP_WORKLOAD_IDENTITY_PROVIDER"
-          [[ -z "$DEPLOY_SERVICE_ACCOUNT" ]] && MISSING="$MISSING GCP_DEPLOY_SERVICE_ACCOUNT"
-          # المشروع لا يُخمَّن: نشرٌ في مشروعٍ خاطئ ينشئ خادماً وقرصاً لا يريدهما
-          # أحد، ويترك الموقع الحيّ كما هو — فشلٌ صامت ومكلف معاً.
-          [[ -z "$PROJECT_ID" ]] && MISSING="$MISSING GCP_PROJECT_ID"
+          if [[ -z "$WIF_PROVIDER" ]]; then MISSING="$MISSING GCP_WORKLOAD_IDENTITY_PROVIDER"; fi
+          if [[ -z "$DEPLOY_SERVICE_ACCOUNT" ]]; then MISSING="$MISSING GCP_DEPLOY_SERVICE_ACCOUNT"; fi
+          if [[ -z "$PROJECT_ID" ]]; then MISSING="$MISSING GCP_PROJECT_ID"; fi
           if [[ -n "$MISSING" ]]; then
-            echo "إعداد النشر ناقص، فلا يمكن النشر. الناقص:$MISSING" >&2
-            echo "يُضبط مرة واحدة فقط — الخطوات في docs/deploy-nahj.md" >&2
-            echo "ثم يُضاف في GitHub → Settings → Secrets and variables → Actions → Variables" >&2
-            exit 1
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=لم يُنشر شيء::هوية النشر غير مُعدّة بعد. الخطوات في docs/deploy-nahj.md"
+            {
+              echo "## لم يُنشر شيء — والتغيير سليم"
+              echo ""
+              echo "الفحوص مرّت، ولم يُنشر شيء لأن **هوية النشر غير مُعدّة بعد**."
+              echo "هذا إعدادٌ لمرة واحدة على صاحب المستودع، لا عطبٌ في هذا التغيير."
+              echo ""
+              echo "الناقص:$MISSING"
+              echo ""
+              echo "الخطوات في \`docs/deploy-nahj.md\`، ثم تُضاف القيم في:"
+              echo "Settings → Secrets and variables → Actions → **Variables**"
+              echo ""
+              echo "وبمجرد إضافتها يمضي النشر تلقائيًا عند الدمج التالي بلا تعديلٍ هنا."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
+          echo "configured=true" >> "$GITHUB_OUTPUT"
 
       - name: مصادقة Google Cloud بلا مفتاح دائم
+        if: steps.identity.outputs.configured == 'true'
         uses: google-github-actions/auth@v2
         with:
           project_id: ${{ vars.GCP_PROJECT_ID }}
@@ -85,12 +104,14 @@ jobs:
           service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
 
       - uses: google-github-actions/setup-gcloud@v2
+        if: steps.identity.outputs.configured == 'true'
         with:
           project_id: ${{ vars.GCP_PROJECT_ID }}
 
       # السكربت نفسه يتحقق بعد النشر أن الخادم يردّ، ويخرج بـ 1 إن لم يردّ —
       # فلا حاجة إلى خطوة تحقّقٍ ثانية هنا، ولا يجوز أن نعلن نجاحاً دونه.
       - name: النشر عبر سكربت المستودع
+        if: steps.identity.outputs.configured == 'true'
         shell: bash
         env:
           PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
