@@ -1,7 +1,7 @@
 import React from "react";
 import {
   Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, GraduationCap,
-  History, Languages, MessagesSquare, PlugZap, Search, ShieldCheck, Sparkles, Workflow
+  History, Languages, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Workflow, FlaskConical, LogOut
 } from "lucide-react";
 import { BrandLockup, NahjMark } from "./Brand";
 import type { Organization, User } from "../types";
@@ -18,6 +18,12 @@ type ShellProps = {
   alerts: number;
   onAlert: () => void;
   serverLive?: boolean;
+  demoEnabled?: boolean;
+  demoActive?: boolean;
+  demoBusy?: boolean;
+  onEnterDemo?: () => void;
+  onResetDemo?: () => void;
+  onExitDemo?: () => void;
   children: React.ReactNode;
 };
 
@@ -35,7 +41,10 @@ const nav: { id: SectionId; ar: string; en: string; icon: React.ElementType; gro
   { id: "audit", ar: "السجل", en: "Audit", icon: History, group:"govern" },
 ];
 
-export function Shell({ section, onSection, organization, user, lang, onToggleLang, alerts, onAlert, serverLive = false, children }: ShellProps) {
+export function Shell({
+  section, onSection, organization, user, lang, onToggleLang, alerts, onAlert, serverLive = false,
+  demoEnabled = false, demoActive = false, demoBusy = false, onEnterDemo, onResetDemo, onExitDemo, children,
+}: ShellProps) {
   const ar = lang === "ar";
   let lastGroup: string | undefined;
   return (
@@ -89,6 +98,23 @@ export function Shell({ section, onSection, organization, user, lang, onToggleLa
             <kbd>⌘K</kbd>
           </div>
           <div className="top-actions">
+            {demoActive ? (
+              /* The badge is deliberately loud. Anyone looking over a shoulder
+                 during a walkthrough should be able to tell at a glance that
+                 none of these records are real. */
+              <div className="demo-chip" role="status" aria-label={ar ? "بيئة تجريبية معزولة" : "Isolated demo environment"}>
+                <FlaskConical aria-hidden="true"/>
+                <span>{ar ? "بيئة تجريبية" : "DEMO"}</span>
+                <i aria-hidden="true"/>
+                <button type="button" onClick={onResetDemo} disabled={demoBusy} title={ar ? "إعادة تعيين البيانات التجريبية" : "Reset demo data"} aria-label={ar ? "إعادة تعيين البيانات التجريبية" : "Reset demo data"}><RefreshCw/></button>
+                <button type="button" onClick={onExitDemo} disabled={demoBusy} title={ar ? "الخروج من البيئة التجريبية" : "Exit demo"} aria-label={ar ? "الخروج من البيئة التجريبية" : "Exit demo"}><LogOut/></button>
+              </div>
+            ) : demoEnabled ? (
+              <button type="button" className="demo-enter" onClick={onEnterDemo} disabled={demoBusy}>
+                <FlaskConical aria-hidden="true"/>
+                <span>{ar ? "تجربة العرض" : "Try the demo"}</span>
+              </button>
+            ) : null}
             <button className="top-icon" onClick={onToggleLang} aria-label="Language"><Languages/></button>
             <button className="top-icon notification" onClick={onAlert} aria-label="Alerts"><Bell/>{alerts>0&&<b>{alerts>9?"9+":alerts}</b>}</button>
             <div className="user-chip">

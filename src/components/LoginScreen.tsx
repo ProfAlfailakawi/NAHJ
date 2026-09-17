@@ -1,11 +1,15 @@
 import React, { useState } from "react";
-import { LogIn, ShieldCheck, TriangleAlert } from "lucide-react";
+import { LogIn, PlayCircle, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ApiError, authApi } from "../lib/api";
 
 interface Props {
   lang: "ar" | "en";
   /** true عند أول تشغيل: لا يوجد أي حساب بعد، فنُنشئ حساب المشغّل بدل طلب الدخول. */
   needsSetup: boolean;
+  /** البيئة التجريبية مفعّلة في هذا النشر. */
+  demoEnabled?: boolean;
+  demoBusy?: boolean;
+  onEnterDemo?: () => void;
   onAuthenticated: () => void;
 }
 
@@ -13,7 +17,7 @@ interface Props {
  * بوابة الدخول. لا يُعرض أي سطح تشغيلي قبلها — المنصة تدير مفاتيح إيقاف وموافقات
  * ومستويات استقلالية، ولا معنى لأي منها على سطح مفتوح.
  */
-export function LoginScreen({ lang, needsSetup, onAuthenticated }: Props) {
+export function LoginScreen({ lang, needsSetup, demoEnabled = false, demoBusy = false, onEnterDemo, onAuthenticated }: Props) {
   const ar = lang === "ar";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -118,6 +122,27 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated }: Props) {
               ? ar ? "إنشاء الحساب والدخول" : "Create account and sign in"
               : ar ? "تسجيل الدخول" : "Sign in"}
         </button>
+
+        {/*
+          * مدخل البيئة التجريبية. بدونه لا يستطيع زائر بلا حساب أن يراها إطلاقاً —
+          * وزائر بلا حساب هو بالضبط من بُنيت له.
+          */}
+        {demoEnabled && onEnterDemo && (
+          <>
+            <div className="login-divider"><span>{ar ? "أو" : "or"}</span></div>
+            <button type="button" className="login-demo" onClick={onEnterDemo} disabled={busy || demoBusy}>
+              <PlayCircle />
+              {demoBusy
+                ? ar ? "جارٍ التحضير..." : "Preparing..."
+                : ar ? "جولة في بيئة تجريبية" : "Explore a demo environment"}
+            </button>
+            <small className="login-rule">
+              {ar
+                ? "بيانات اصطناعية معزولة بالكامل. لا تُقرأ ولا تُكتب أي بيانات مؤسسة."
+                : "Fully isolated synthetic data. No institution record is read or written."}
+            </small>
+          </>
+        )}
       </form>
     </div>
   );

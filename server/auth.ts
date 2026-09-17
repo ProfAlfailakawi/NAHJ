@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomUUID, scrypt as scryptCallback, timingSa
 import { promisify } from "node:util";
 import type { NextFunction, Request, Response } from "express";
 import { openDatabase } from "./persistence.ts";
+import { DemoSandbox } from "./db.ts";
 
 /*
  * المصادقة.
@@ -283,7 +284,30 @@ export function resolveSession(req: Request) {
   return { account: publicAccount(row), csrfHash: session.csrf_hash };
 }
 
+/**
+ * هوية اصطناعية للزائر التجريبي. لا تُخزَّن ولا تُمنح أي وصول حقيقي: الطلب مربوط أصلاً
+ * بصندوق الزائر في الذاكرة عبر AsyncLocalStorage، وكل مسار كتابة في `Store` يفحص
+ * `isDemo` قبل أي مزامنة. فدورها هو إرضاء حُرّاس الأدوار داخل الصندوق فقط.
+ */
+const DEMO_ACCOUNT: Account = {
+  id: "demo",
+  email: "demo@nahj.local",
+  name: "زائر البيئة التجريبية",
+  role: "admin",
+  status: "ACTIVE",
+};
+
 export function requireAuth(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  /*
+   * البيئة التجريبية مفتوحة بلا حساب عمداً — هذا كل الغرض منها. السماح هنا آمن لأن
+   * الطلب لا يستطيع بلوغ بيانات المؤسسة إطلاقاً: `db` وكيلٌ يتحوّل إلى نسخة الزائر
+   * الخاصة، ولا شيء منها يُكتب إلى Firestore ولا إلى القرص.
+   */
+  if (DemoSandbox.isDemoRequest()) {
+    req.account = DEMO_ACCOUNT;
+    return next();
+  }
+
   const session = resolveSession(req);
   if (!session) return res.status(401).json({ error: "يلزم تسجيل الدخول.", code: "AUTH_REQUIRED" });
   req.account = session.account;

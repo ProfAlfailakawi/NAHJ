@@ -54,6 +54,9 @@ export default function App(){
   const [testingConnector,setTestingConnector]=useState<string|null>(null);
   const [paused,setPaused]=useState(false);
   const [serverLive,setServerLive]=useState(false);
+  const [demoEnabled,setDemoEnabled]=useState(false);
+  const [demoActive,setDemoActive]=useState(false);
+  const [demoBusy,setDemoBusy]=useState(false);
   const [toast,setToast]=useState<{text:string;error?:boolean}|null>(null);
   // "checking" حتى نعرف من /auth/me؛ لا يُعرض أي سطح تشغيلي قبل الحسم.
   // "setup" = لا يوجد أي حساب بعد، فالشاشة تُنشئ حساب المشغّل بدل أن تطلب الدخول.
@@ -67,26 +70,26 @@ export default function App(){
   const refreshSimulator=useCallback(async()=>{const d=await apiOrNull<{state:SimulatorState}>("/simulator/state");if(d?.state)setSim(d.state)},[]);
 
   useEffect(()=>{document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.documentElement.lang=lang},[lang]);
-
-  useEffect(()=>{
-    let cancelled=false;
-    (async()=>{
-      try{ await authApi.me(); if(!cancelled)setAuthState("authenticated"); return; }
-      catch{ /* لا جلسة — نفحص هل النظام مُهيَّأ أصلاً قبل عرض شاشة دخول لا تنفع. */ }
-      try{
-        const status=await authApi.status();
-        if(!cancelled)setAuthState(status.needsSetup?"setup":"anonymous");
-      }catch{ if(!cancelled)setAuthState("anonymous"); }
-    })();
-    return()=>{cancelled=true};
+  /*
+   * فحص الهوية. قابل لإعادة النداء لأن الدخول إلى البيئة التجريبية يغيّر الجواب:
+   * الزائر التجريبي يمرّ من الحارس بلا حساب، فيصير "authenticated" داخل صندوقه.
+   */
+  const checkAuth=useCallback(async()=>{
+    try{ await authApi.me(); setAuthState("authenticated"); return true; }
+    catch{ /* لا جلسة — نفحص هل النظام مُهيَّأ أصلاً قبل عرض شاشة دخول لا تنفع. */ }
+    try{
+      const status=await authApi.status();
+      setAuthState(status.needsSetup?"setup":"anonymous");
+    }catch{ setAuthState("anonymous"); }
+    return false;
   },[]);
 
-  useEffect(()=>{
-    if(authState!=="authenticated")return;
-    let cancelled=false;
-    (async()=>{
-      try{
-      const health=await apiOrNull<{status:string}>("/health"); if(!cancelled)setServerLive(health?.status==="ok");
+  /* One loader, used on boot and again whenever the demo sandbox is entered or
+     reset — every screen has to repopulate from the sandbox, not just the one
+     the visitor happens to be looking at. */
+  const loadAll=useCallback(async()=>{
+    try{
+      const health=await apiOrNull<{status:string}>("/health"); setServerLive(health?.status==="ok");
       const [context,learn,sk,wo,ap,co,au,an,si]=await Promise.all([
         apiOrNull<ContextResponse>("/context"),
         apiOrNull<{proposals:LearningProposal[]}>("/learn"),
@@ -98,18 +101,46 @@ export default function App(){
         apiOrNull<AnalyticsData>("/analytics"),
         apiOrNull<{state:SimulatorState}>("/simulator/state"),
       ]);
-      if(cancelled)return;
       if(context){setOrganization(context.organization);setUser(context.currentUser)}
       if(learn?.proposals)setProposals(learn.proposals); if(sk?.skills)setSkills(sk.skills); if(wo?.workItems)setWork(wo.workItems);
       if(ap?.approvalRequests)setApprovals(ap.approvalRequests); if(co?.connectors)setConnectors(co.connectors); if(au?.auditEvents)setAudit(au.auditEvents);
       if(an)setAnalytics(an); if(si?.state)setSim(si.state);
-      }catch(error){
-        // انتهاء الجلسة أثناء التحميل يعيدنا لشاشة الدخول بدل عرض بيانات بذرة.
-        if(error instanceof UnauthorizedError && !cancelled)setAuthState("anonymous");
-      }
-    })();
-    return()=>{cancelled=true};
-  },[authState]);
+    }catch(error){
+      // انتهاء الجلسة أثناء التحميل يعيدنا للبوابة بدل عرض بيانات بذرة كأنها سجلّ المؤسسة.
+      if(error instanceof UnauthorizedError)setAuthState("anonymous");
+    }
+  },[]);
+
+  const refreshDemoConfig=useCallback(async()=>{
+    const cfg=await apiOrNull<{enabled:boolean;active:boolean}>("/demo/config");
+    setDemoEnabled(Boolean(cfg?.enabled)); setDemoActive(Boolean(cfg?.active));
+    return cfg;
+  },[]);
+
+  useEffect(()=>{void refreshDemoConfig();void checkAuth()},[refreshDemoConfig,checkAuth]);
+  useEffect(()=>{if(authState==="authenticated")void loadAll()},[authState,loadAll]);
+
+  const enterDemo=async()=>{
+    setDemoBusy(true);
+    const d=await apiOrNull<{ok:boolean}>("/demo/enter",{method:"POST",body:"{}"});
+    if(d?.ok){await refreshDemoConfig();await checkAuth();await loadAll();notify(lang==="ar"?"أنت الآن في بيئة تجريبية معزولة — لا تتأثر بيانات المؤسسة":"You are in an isolated demo environment")}
+    else notify(lang==="ar"?"تعذّر فتح البيئة التجريبية":"Could not start the demo",true);
+    setDemoBusy(false);
+  };
+  const resetDemo=async()=>{
+    setDemoBusy(true);
+    const d=await apiOrNull<{ok:boolean}>("/demo/reset",{method:"POST",body:"{}"});
+    if(d?.ok){await loadAll();notify(lang==="ar"?"تمت إعادة البيانات التجريبية":"Demo data reset")}
+    else{await refreshDemoConfig();notify(lang==="ar"?"انتهت الجلسة التجريبية":"Demo session expired",true)}
+    setDemoBusy(false);
+  };
+  const exitDemo=async()=>{
+    setDemoBusy(true);
+    await apiOrNull<{ok:boolean}>("/demo/exit",{method:"POST",body:"{}"});
+    await refreshDemoConfig(); await checkAuth();
+    setDemoBusy(false);
+    notify(lang==="ar"?"تم الخروج من البيئة التجريبية":"Left the demo environment");
+  };
 
   const resolve=async(proposalId:string,clarificationId:string,answer:string)=>{
     const d=await apiOrNull<{proposal:LearningProposal}>("/learn/clarify",{method:"POST",body:JSON.stringify({proposalId,clarificationId,selectedAnswer:answer})});
@@ -142,7 +173,8 @@ export default function App(){
 
   if(authState==="checking")return <div className="boot-gate"/>;
   if(authState==="anonymous"||authState==="setup")
-    return <LoginScreen lang={lang} needsSetup={authState==="setup"} onAuthenticated={()=>setAuthState("authenticated")}/>;
+    return <LoginScreen lang={lang} needsSetup={authState==="setup"} demoEnabled={demoEnabled} demoBusy={demoBusy}
+      onEnterDemo={()=>void enterDemo()} onAuthenticated={()=>setAuthState("authenticated")}/>;
 
   let view:React.ReactNode;
   switch(section){
@@ -160,7 +192,7 @@ export default function App(){
   }
 
   return <>
-    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive}>{paused&&<div className="pause-banner"><TriangleAlert/>{lang==="ar"?"التنفيذ الآلي متوقف. التعلم والمراجعة يعملان.":"Autonomous execution is paused. Learning and review remain active."}</div>}{view}</Shell>
+    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()}>{paused&&<div className="pause-banner"><TriangleAlert/>{lang==="ar"?"التنفيذ الآلي متوقف. التعلم والمراجعة يعملان.":"Autonomous execution is paused. Learning and review remain active."}</div>}{view}</Shell>
     <ApprovalModal lang={lang} approval={activeApprovalObj} busy={approvalBusy} onClose={()=>setActiveApproval(null)} onApprove={id=>void decideApproval(id,"approved")} onReject={(id,r)=>void decideApproval(id,"rejected",r)} onTakeOver={id=>void takeOver(id)}/>
     {toast&&<div className={`toast ${toast.error?"error":""}`}>{toast.error?<TriangleAlert/>:<CheckCircle2/>}<span>{toast.text}</span></div>}
   </>;
