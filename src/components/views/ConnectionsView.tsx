@@ -33,6 +33,7 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
   const ar = lang === "ar";
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [syncFailed, setSyncFailed] = useState(false);
 
   const status = {
     healthy: connectors.filter((c) => c.status === "healthy").length,
@@ -44,20 +45,30 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
     setSyncing(true);
     setSyncResult(null);
     try {
-      const res = await apiOrNull<{ success: boolean; count: number }>("/firebase/sync", {
+      const res = await apiOrNull<{ success: boolean; count: number; reason?: string }>("/firebase/sync", {
         method: "POST",
         body: "{}",
       });
+      /*
+       * `success: false` كان يسقط في فرع يقول "اكتملت المزامنة بنجاح" — أي أن الزر
+       * يُبلّغ نجاحاً بينما لم يُكتب شيء. الفشل يُعرض الآن فشلاً، وبسببه إن عرفه الخادم.
+       */
       if (res?.success) {
         setSyncResult(
           ar
             ? `تمت مزامنة ${res.count} عنصراً تشغيلياً بنجاح في nahj-a27a4`
             : `Successfully synced ${res.count} entities to nahj-a27a4`
         );
+        setSyncFailed(false);
       } else {
-        setSyncResult(ar ? "اكتملت المزامنة بنجاح" : "Sync completed");
+        setSyncFailed(true);
+        setSyncResult(
+          res?.reason
+            || (ar ? "تعذّرت المزامنة — لم يُكتب أي عنصر." : "Sync failed — nothing was written.")
+        );
       }
     } catch {
+      setSyncFailed(true);
       setSyncResult(ar ? "حدث خطأ أثناء المزامنة" : "Sync error occurred");
     } finally {
       setSyncing(false);
@@ -100,11 +111,12 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
             <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-400">
               <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">Project: nahj-a27a4</span>
               <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">Rules: deployed</span>
-              <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">Collections: 10 synced</span>
+              <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">Collections: 10 mirrored</span>
             </div>
             {syncResult && (
-              <div className="mt-2 text-xs text-emerald-400 font-medium flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4" />
+              /* اللون والأيقونة يتبعان النتيجة الحقيقية — لا أخضر دائماً مهما حدث. */
+              <div className={`mt-2 text-xs font-medium flex items-start gap-1.5 ${syncFailed ? "text-amber-400" : "text-emerald-400"}`}>
+                {syncFailed ? <TriangleAlert className="w-4 h-4 shrink-0 mt-px" /> : <CheckCircle2 className="w-4 h-4 shrink-0 mt-px" />}
                 <span>{syncResult}</span>
               </div>
             )}
