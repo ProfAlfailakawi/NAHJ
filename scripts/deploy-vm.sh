@@ -41,19 +41,19 @@ gcloud config set project "$PROJECT_ID" >/dev/null
 step() { echo; echo "── $* ────────────────────────────────"; }
 echo "المشروع: $PROJECT_ID · المنطقة: $ZONE · الخادم: $INSTANCE"
 
-step "١/٦  تفعيل الخدمات"
+step "١/٧  تفعيل الخدمات"
 gcloud services enable compute.googleapis.com artifactregistry.googleapis.com \
   cloudbuild.googleapis.com --quiet
 
-step "٢/٦  مستودع الصور"
+step "٢/٧  مستودع الصور"
 gcloud artifacts repositories describe "$REPO" --location "$REGION" >/dev/null 2>&1 ||
   gcloud artifacts repositories create "$REPO" --repository-format=docker \
     --location "$REGION" --description "NAHJ" --quiet
 
-step "٣/٦  بناء الصورة ورفعها"
+step "٣/٧  بناء الصورة ورفعها"
 gcloud builds submit --tag "$IMAGE" --quiet .
 
-step "٤/٦  القرص الدائم (${DATA_DISK_GB}GB)"
+step "٤/٧  القرص الدائم (${DATA_DISK_GB}GB)"
 # لا يُحذف ولا يُعاد إنشاؤه أبداً: هو كل ما تملكه المنصة من حالة.
 if gcloud compute disks describe "$DATA_DISK" --zone "$ZONE" >/dev/null 2>&1; then
   echo "موجود مسبقاً — لم يُمسّ."
@@ -83,7 +83,10 @@ IMAGE=$(curl -sf -H "Metadata-Flavor: Google" \
   http://metadata.google.internal/computeMetadata/v1/instance/attributes/nahj-image)
 docker-credential-gcr configure-docker --registries "$(echo "$IMAGE" | cut -d/ -f1)" || true
 docker pull "$IMAGE"
-docker rm -f nahj 2>/dev/null || true
+# SIGTERM ثم مهلة: الخادم يلتقطها ويدفق الحالة ويغلق القاعدة. `docker rm -f`
+# يرسل SIGKILL مباشرة، فيتخطّى ذلك ويضيّع حتى ٣ ثوانٍ من آخر تغييرات.
+docker stop -t 30 nahj 2>/dev/null || true
+docker rm nahj 2>/dev/null || true
 docker run -d --name nahj --restart always \
   -p 80:3000 \
   -v /var/nahj:/var/nahj \
@@ -93,31 +96,59 @@ docker run -d --name nahj --restart always \
 EOF
 )
 
-step "٥/٦  الخادم"
+step "٥/٧  الخادم"
 if gcloud compute instances describe "$INSTANCE" --zone "$ZONE" >/dev/null 2>&1; then
   echo "موجود — تحديث الصورة وإعادة تشغيل الحاوية."
   gcloud compute instances add-metadata "$INSTANCE" --zone "$ZONE" --quiet \
     --metadata "nahj-image=$IMAGE" \
     --metadata-from-file "startup-script=/dev/stdin" <<< "$STARTUP"
-  gcloud compute instances reset "$INSTANCE" --zone "$ZONE" --quiet
+  # لا `instances reset`: هو قطع تيار، يتخطّى SIGTERM الذي يدفق به الخادم حالته.
+  # نُعيد تشغيل سكربت الإقلاع داخل الخادم بدل إعادة تشغيل الخادم كله.
+  # صيغة الوسيط تختلف بين إصدارات COS، فنجرّب الاثنتين.
+  if gcloud compute ssh "$INSTANCE" --zone "$ZONE" --quiet --command \
+       'sudo google_metadata_script_runner startup || sudo google_metadata_script_runner --script-type startup' 2>/dev/null; then
+    echo "✓ حُدّثت الحاوية دون إعادة تشغيل."
+  else
+    # تعذّر SSH: إيقاف مرتّب (ACPI) ثم تشغيل — أبطأ، لكنه يمنح الخادم فرصة الإغلاق.
+    echo "تعذّر SSH — إيقاف مرتّب ثم تشغيل."
+    gcloud compute instances stop "$INSTANCE" --zone "$ZONE" --quiet
+    gcloud compute instances start "$INSTANCE" --zone "$ZONE" --quiet
+  fi
 else
+  # النطاقات أضيق ما يكفي: قراءة الصور من Artifact Registry، وكتابة السجلات
+  # والقياسات. cloud-platform كان يعني أن أي اختراق لهذا الخادم المكشوف يُسلّم
+  # رمزاً بصلاحية المشروع كله عبر خادم البيانات الوصفية.
   gcloud compute instances create "$INSTANCE" \
     --zone "$ZONE" \
     --machine-type "$MACHINE_TYPE" \
     --image-family cos-stable --image-project cos-cloud \
     --disk "name=${DATA_DISK},device-name=nahj-data,mode=rw,auto-delete=no" \
-    --scopes cloud-platform \
+    --scopes https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write \
     --tags nahj-web \
     --metadata "nahj-image=$IMAGE" \
     --metadata-from-file "startup-script=/dev/stdin" \
     --quiet <<< "$STARTUP"
 fi
 
-step "٦/٦  جدار الحماية"
+step "٦/٧  جدار الحماية"
 gcloud compute firewall-rules describe nahj-allow-http >/dev/null 2>&1 ||
   gcloud compute firewall-rules create nahj-allow-http \
     --allow tcp:80 --target-tags nahj-web \
     --description "NAHJ HTTP" --quiet
+
+step "٧/٧  عنوان ثابت"
+# بدون عنوان محجوز، كل إيقاف/تشغيل يبدّل العنوان — فينكسر أي DNS أو شهادة تربطها به.
+if gcloud compute addresses describe "${INSTANCE}-ip" --region "$REGION" >/dev/null 2>&1; then
+  echo "محجوز مسبقاً."
+else
+  CURRENT_IP=$(gcloud compute instances describe "$INSTANCE" --zone "$ZONE" \
+    --format='value(networkInterfaces[0].accessConfigs[0].natIP)')
+  # نحجز العنوان الحالي نفسه، فلا يتغيّر ما هو مفتوح الآن.
+  gcloud compute addresses create "${INSTANCE}-ip" --region "$REGION" \
+    --addresses "$CURRENT_IP" --quiet 2>/dev/null \
+    && echo "✓ حُجز $CURRENT_IP" \
+    || echo "⚠ تعذّر حجز العنوان — سيتغيّر مع كل إيقاف/تشغيل."
+fi
 
 IP=$(gcloud compute instances describe "$INSTANCE" --zone "$ZONE" \
   --format='value(networkInterfaces[0].accessConfigs[0].natIP)')
