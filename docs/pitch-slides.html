@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>نهج — شرائح العرض</title>
+<meta name="description" content="عرض شرائح لنهج: ذكاء يتعلّم مؤسستك ويكتسب حق التنفيذ بالدليل." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Plus+Jakarta+Sans:wght@600;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#F4F1E8; --paper2:#EBE7DA; --ink:#10251F; --soft:#54655e;
+    --moss:#2F7D65; --moss2:#1f5b49; --sky:#5E79E6; --amber:#E0A04B;
+    --rose:#E46F61; --violet:#8C6FE0; --line:rgba(16,37,31,.11);
+    --card:#FBFAF5; --sh:0 24px 60px -28px rgba(16,37,31,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#0b1a16}
+  body{font-family:'Cairo',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .en{font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.05em}
+  h1,h2,h3,h4{line-height:1.18;font-weight:900}
+
+  /* ---- stage: fixed 1600x900, scaled to fit ---- */
+  #fit{position:fixed;inset:0;display:grid;place-items:center}
+  #stage{width:1600px;height:900px;position:relative;transform-origin:center center;
+    border-radius:8px;overflow:hidden;box-shadow:0 40px 120px -40px rgba(0,0,0,.6)}
+  .slide{position:absolute;inset:0;padding:88px 96px;opacity:0;visibility:hidden;
+    transition:opacity .5s ease, transform .5s cubic-bezier(.2,.7,.2,1);transform:translateX(-28px)}
+  .slide.on{opacity:1;visibility:visible;transform:none}
+  .slide.dark{background:var(--ink);color:var(--paper)}
+  .slide.light{background:var(--paper);color:var(--ink)}
+  .slide.light2{background:var(--paper2);color:var(--ink)}
+  .slide.moss{background:var(--moss);color:var(--paper)}
+
+  /* ---- atoms ---- */
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:19px;font-weight:800;
+    color:var(--moss2);background:rgba(47,125,101,.11);padding:7px 18px;border-radius:99px}
+  .dark .eyebrow{color:#8FE0C6;background:rgba(143,224,198,.13)}
+  .moss .eyebrow{color:#DFF3EA;background:rgba(255,255,255,.14)}
+  .eyebrow i{width:7px;height:7px;border-radius:50%;background:currentColor;display:block}
+  .head{display:flex;flex-direction:column;gap:16px;margin-bottom:44px}
+  .head h2{font-size:56px;letter-spacing:-.015em}
+  .col{display:flex;flex-direction:column}
+  .row{display:flex}
+  .fill{flex:1}
+
+  /* ---- reveal ---- */
+  .rv{opacity:0;transform:translateY(24px);transition:opacity .55s cubic-bezier(.2,.7,.2,1),transform .55s cubic-bezier(.2,.7,.2,1)}
+  .on .rv{opacity:1;transform:none}
+  .on .rv:nth-child(1){transition-delay:.10s}.on .rv:nth-child(2){transition-delay:.18s}
+  .on .rv:nth-child(3){transition-delay:.26s}.on .rv:nth-child(4){transition-delay:.34s}
+  .on .rv:nth-child(5){transition-delay:.42s}
+
+  /* ---- chrome ---- */
+  #prog{position:fixed;top:0;inset-inline:0;height:3px;z-index:20}
+  #prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--moss),var(--sky));transition:width .35s}
+  #dots{position:fixed;inset-inline-end:18px;top:50%;transform:translateY(-50%);z-index:20;
+    display:flex;flex-direction:column;gap:9px}
+  #dots b{width:9px;height:9px;border-radius:50%;background:rgba(244,241,232,.25);cursor:pointer;transition:.25s;display:block}
+  #dots b.on{background:var(--amber);transform:scale(1.5)}
+  #hud{position:fixed;inset-inline-start:20px;bottom:16px;z-index:20;color:rgba(244,241,232,.5);
+    font-size:13px;font-weight:700;display:flex;align-items:center;gap:14px}
+  #hud button{background:rgba(244,241,232,.1);border:none;color:rgba(244,241,232,.75);cursor:pointer;
+    width:32px;height:32px;border-radius:50%;font-size:15px;line-height:1}
+  #hud button:hover{background:rgba(244,241,232,.22)}
+  @media(max-width:700px){#dots{display:none}}
+
+  /* ================= HERO ================= */
+  .hero{display:grid;grid-template-columns:1.02fr .98fr;align-items:center;gap:40px}
+  .hero h1{font-size:84px;letter-spacing:-.03em}
+  .hero .gr{background:linear-gradient(100deg,#8FE0C6,#9BB0FF);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .accentbar{width:200px;height:6px;background:var(--amber);border-radius:6px}
+
+  /* ================= medallions ================= */
+  .meds{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;align-items:start}
+  .med{display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center}
+  .ring{width:168px;height:168px;border-radius:50%;display:grid;place-items:center;position:relative}
+  .ring::before{content:"";position:absolute;inset:0;border-radius:50%;border:8px solid currentColor;opacity:.9}
+  .ring::after{content:"";position:absolute;inset:-14px;border-radius:50%;border:2px solid currentColor;opacity:.22}
+  .med h3{font-size:34px}
+  .med p{font-size:24px;line-height:1.5;opacity:.72}
+
+  /* ================= wheel ================= */
+  .wheelgrid{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+  .wheel{position:relative;width:560px;height:560px;margin-inline:auto}
+  .wheel svg{position:absolute;inset:0;width:100%;height:100%}
+  .wlab{position:absolute;width:150px;margin-left:-75px;margin-top:-16px;text-align:center;
+    font-size:21px;font-weight:700;color:var(--ink)}
+  .wcore{position:absolute;left:50%;top:50%;width:170px;margin-left:-85px;margin-top:-34px;
+    text-align:center;font-size:26px;font-weight:900;color:var(--paper);line-height:1.28}
+  .legend{display:flex;flex-direction:column;gap:16px}
+  .lg{display:flex;align-items:center;gap:18px;background:var(--card);border:1px solid var(--line);
+    border-radius:18px;padding:22px 26px}
+  .lg span{width:20px;height:20px;border-radius:50%;flex:0 0 20px}
+  .lg h4{font-size:28px}.lg small{font-size:20px;color:var(--soft);font-weight:600}
+
+  /* ================= ladder ================= */
+  .bars{display:flex;gap:20px;align-items:flex-end;height:470px}
+  .bcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:12px;justify-content:flex-end;height:100%}
+  .bcol em{font-style:normal;font-family:'Plus Jakarta Sans';font-weight:800;font-size:22px}
+  .bar{width:100%;border-radius:12px 12px 4px 4px;height:0;transition:height .9s cubic-bezier(.2,.7,.2,1)}
+  .on .bar{height:var(--h)}
+  .bcol b{font-size:22px;font-weight:700}
+
+  /* ================= cards ================= */
+  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:38px 32px;
+    display:flex;flex-direction:column;gap:18px;box-shadow:var(--sh)}
+  .dark .card{background:rgba(255,255,255,.055);border-color:rgba(255,255,255,.1);box-shadow:none}
+  .card .ic{width:68px;height:68px;border-radius:20px;display:grid;place-items:center}
+  .card h3{font-size:32px}
+  .card p{font-size:23px;color:var(--soft);line-height:1.5}
+  .dark .card p{color:rgba(244,241,232,.66)}
+  .card ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+  .card li{font-size:21px;color:var(--soft);display:flex;gap:9px;align-items:flex-start;line-height:1.4}
+  .card li svg{flex:0 0 15px;margin-top:4px}
+  .tag{align-self:flex-start;font-size:17px;font-weight:800;padding:5px 14px;border-radius:99px}
+
+  /* ================= vs ================= */
+  .vs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:22px;overflow:hidden}
+  .vs .ch{padding:22px 30px;font-weight:900;font-size:25px;display:flex;align-items:center;gap:11px;
+    border-bottom:1px solid var(--line)}
+  .vs .r{padding:19px 30px;font-size:23px;border-bottom:1px solid var(--line);min-height:70px;
+    display:flex;align-items:center}
+  .vs .r:last-child{border-bottom:none}
+  .vs .them{background:var(--paper2);color:var(--soft)}
+  .vs .us{background:var(--card);color:var(--ink);font-weight:700}
+
+  /* ================= impact ================= */
+  .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:28px}
+  .nm{display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center}
+  .nring{width:186px;height:186px;border-radius:50%;display:grid;place-items:center;position:relative;background:var(--card)}
+  .nring::before{content:"";position:absolute;inset:0;border-radius:50%;border:9px solid currentColor}
+  .nring b{font-size:72px;font-weight:900;line-height:1}
+  .nm p{font-size:23px;color:var(--soft);line-height:1.45}
+
+  /* ================= steps ================= */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:30px}
+  .st{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:42px 34px;
+    display:flex;flex-direction:column;gap:18px;box-shadow:var(--sh)}
+  .st .n{width:66px;height:66px;border-radius:50%;display:grid;place-items:center;
+    font-size:30px;font-weight:900;color:var(--paper)}
+  .st h3{font-size:34px}.st p{font-size:23px;color:var(--soft);line-height:1.5}
+
+  .spin{animation:sp 42s linear infinite;transform-origin:480px 450px}
+  .spinr{animation:sp 32s linear infinite reverse;transform-origin:480px 450px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .pl{animation:pl 3.8s ease-in-out infinite}
+  @keyframes pl{0%,100%{opacity:.2}50%{opacity:.45}}
+  @media(prefers-reduced-motion:reduce){.spin,.spinr,.pl{animation:none}}
+</style>
+</head>
+<body>
+<div id="prog"><i></i></div>
+<div id="fit"><div id="stage">
+
+<!-- 1 COVER -->
+<section class="slide dark on">
+  <div class="hero" style="height:100%">
+    <div class="col" style="gap:28px">
+      <div class="rv"><span class="eyebrow"><i></i> نظام ذكاء وتعلّم تشغيلي للمؤسسات</span></div>
+      <h1 class="rv">الذكاء يتعلّم<br><span class="gr">شركتك</span>.<br>لا العكس.</h1>
+      <div class="accentbar rv"></div>
+      <p class="rv" style="font-size:30px;color:#A9BDB5;line-height:1.5">يراقب · يتعلّم · يُختبر<br>ثم يكتسب حق التنفيذ</p>
+    </div>
+    <div class="rv">
+      <svg viewBox="0 0 960 900" style="width:100%;height:520px" aria-label="العقل التشغيلي">
+        <defs><radialGradient id="cr" cx="50%" cy="42%" r="62%">
+          <stop offset="0%" stop-color="#3f9a80"/><stop offset="100%" stop-color="#1a5342"/></radialGradient></defs>
+        <circle cx="480" cy="450" r="300" fill="none" stroke="#294840" stroke-width="2" stroke-dasharray="5 10"/>
+        <circle cx="480" cy="450" r="215" fill="none" stroke="#294840" stroke-width="2"/>
+        <circle cx="480" cy="450" r="185" fill="#173229" opacity=".55"/>
+        <circle cx="480" cy="450" r="160" fill="#2F7D65" opacity=".2" class="pl"/>
+        <g class="spin">
+          <circle cx="780" cy="450" r="20" fill="#5E79E6"/><circle cx="480" cy="150" r="16" fill="#E0A04B"/>
+          <circle cx="180" cy="450" r="18" fill="#8C6FE0"/><circle cx="480" cy="750" r="15" fill="#E46F61"/>
+        </g>
+        <g class="spinr">
+          <circle cx="695" cy="450" r="12" fill="#8FE0C6"/><circle cx="480" cy="235" r="11" fill="#5E79E6"/>
+          <circle cx="265" cy="450" r="11" fill="#E0A04B"/>
+        </g>
+        <circle cx="480" cy="450" r="130" fill="url(#cr)"/>
+        <text x="480" y="440" text-anchor="middle" fill="#F4F1E8" font-family="Cairo" font-weight="800" font-size="40">العقل</text>
+        <text x="480" y="492" text-anchor="middle" fill="#F4F1E8" font-family="Cairo" font-weight="800" font-size="40">التشغيلي</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 2 PROBLEM -->
+<section class="slide dark">
+  <div class="head"><div class="rv"><span class="eyebrow"><i></i> المشكلة</span></div>
+    <h2 class="rv">معرفتكم في رؤوس الموظفين — لا في نظام.</h2></div>
+  <div class="meds">
+    <div class="med rv"><div class="ring" style="color:#E46F61;background:rgba(228,111,97,.09)">
+      <svg width="76" height="76" viewBox="0 0 24 24" fill="none" stroke="#E46F61" stroke-width="1.8"><path d="M12 2a5 5 0 0 0-5 5v3a5 5 0 0 0 10 0V7a5 5 0 0 0-5-5Z"/><path d="M5 20c0-3 3.1-4 7-4s7 1 7 4"/></svg></div>
+      <h3>الاعتماد على فرد</h3><p>عملية حسّاسة يعرفها موظف واحد. إجازته توقف العمل.</p></div>
+    <div class="med rv"><div class="ring" style="color:#E0A04B;background:rgba(224,160,75,.09)">
+      <svg width="76" height="76" viewBox="0 0 24 24" fill="none" stroke="#E0A04B" stroke-width="1.8"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></div>
+      <h3>ممارسات متعارضة</h3><p>كل فرع ينفّذ بطريقته. لا مصدر واحد للحقيقة.</p></div>
+    <div class="med rv"><div class="ring" style="color:#8C6FE0;background:rgba(140,111,224,.09)">
+      <svg width="76" height="76" viewBox="0 0 24 24" fill="none" stroke="#8C6FE0" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/></svg></div>
+      <h3>أدوات تُهلوس</h3><p>تخمّن بثقة زائفة. لا أحد يتركها تلمس قراراً حقيقياً.</p></div>
+  </div>
+</section>
+
+<!-- 3 IDEA -->
+<section class="slide moss">
+  <div class="col" style="height:100%;justify-content:center;gap:40px">
+    <div class="rv"><span class="eyebrow"><i></i> الفكرة في سطر</span></div>
+    <h2 class="rv" style="font-size:66px;line-height:1.3;max-width:24ch">ذكاء يتعلّم <span style="box-shadow:inset 0 -.28em 0 rgba(224,160,75,.65)">كيف تعملون فعلاً</span> — ويكتسب حق التنفيذ بالدليل.</h2>
+    <div class="row rv" style="gap:24px">
+      <div style="flex:1;background:rgba(0,0,0,.15);border-radius:20px;padding:30px 34px">
+        <p style="font-size:27px;font-weight:700;line-height:1.45">لا تضبطوا الذكاء الاصطناعي — دعوه يتعلّمكم.</p></div>
+      <div style="flex:1;background:rgba(0,0,0,.15);border-radius:20px;padding:30px 34px">
+        <p style="font-size:27px;font-weight:700;line-height:1.45">الذكاء يكتسب حق التصرّف — لا يُمنح له.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 LOOP -->
+<section class="slide light">
+  <div class="head"><div class="rv"><span class="eyebrow"><i></i> الحلقة الأساسية</span></div>
+    <h2 class="rv">اثنتا عشرة خطوة. دورة واحدة لا تتوقف.</h2></div>
+  <div class="wheelgrid">
+    <div class="wheel rv" id="wheel"></div>
+    <div class="legend">
+      <div class="lg rv"><span style="background:#5E79E6"></span><div><h4>يفهم</h4><small>يلاحظ · يفهم · يستوضح</small></div></div>
+      <div class="lg rv"><span style="background:#E0A04B"></span><div><h4>يتأكّد</h4><small>يتحقّق · يُقنّن · يمارس</small></div></div>
+      <div class="lg rv"><span style="background:#8C6FE0"></span><div><h4>يثبت جدارته</h4><small>يعمل بالظل · يقترح · يُعتمد</small></div></div>
+      <div class="lg rv"><span style="background:#2F7D65"></span><div><h4>ينفّذ ويتحسّن</h4><small>ينفّذ · يقيس · يحسّن</small></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 LADDER -->
+<section class="slide light2">
+  <div class="head"><div class="rv"><span class="eyebrow"><i></i> سلّم الاستقلالية</span></div>
+    <h2 class="rv">من المراقبة الصامتة إلى الطيّار الآلي.</h2></div>
+  <div class="bars" id="bars"></div>
+</section>
+
+<!-- 6 DIFF -->
+<section class="slide light">
+  <div class="head"><div class="rv"><span class="eyebrow"><i></i> التميّز</span></div>
+    <h2 class="rv">ثلاثة أشياء لا تجدونها في غيره.</h2></div>
+  <div class="g3">
+    <div class="card rv"><div class="ic" style="background:rgba(47,125,101,.12)">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="2"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></div>
+      <h3>عقل مؤسسي</h3><p>معرفتكم تبقى ملككم — موثّقة ومُدارة وقابلة للإصدار، لا حبيسة نموذج.</p></div>
+    <div class="card rv"><div class="ic" style="background:rgba(94,121,230,.12)">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#5E79E6" stroke-width="2"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M6 10.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-5.5"/></svg></div>
+      <h3>تُعلّمونه بالعمل</h3><p>الموظف يُظهر العملية كما ينفّذها. لا عُقد تُسحب، ولا أوامر تُكتب.</p></div>
+    <div class="card rv"><div class="ic" style="background:rgba(224,160,75,.14)">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#E0A04B" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg></div>
+      <h3>قيمة من اليوم الأول</h3><p>يكشف الثغرات والتعارض والاعتماد على فرد — حتى بصفر أتمتة.</p></div>
+  </div>
+</section>
+
+<!-- 7 VS -->
+<section class="slide light2">
+  <div class="head"><h2 class="rv">الفرق، سطراً بسطر.</h2></div>
+  <div class="vs rv">
+    <div class="us">
+      <div class="ch"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg> نهج</div>
+      <div class="r">يتعلّمكم بالمراقبة والتعليم</div>
+      <div class="r">لا يخمّن — يسأل أو يصعّد</div>
+      <div class="r">محرّك سياسات حتمي للمال والمخاطر</div>
+      <div class="r">أثر مُدقّق وقابل للتفسير لكل قرار</div>
+      <div class="r">يُختبر ويثبت جدارته قبل أن ينفّذ</div>
+    </div>
+    <div class="them">
+      <div class="ch" style="color:#9aa6a0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E46F61" stroke-width="3"><path d="M18 6 6 18M6 6l12 12"/></svg> الأدوات التقليدية</div>
+      <div class="r">تطلب ضبط كل شيء مسبقاً</div>
+      <div class="r">تخمّن وتردّ بثقة زائفة</div>
+      <div class="r">قرارات مالية بيد النموذج</div>
+      <div class="r">لا سجل ولا تفسير</div>
+      <div class="r">تنفّذ من اليوم الأول بلا اختبار</div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 SCENARIO -->
+<section class="slide light">
+  <div class="head"><div class="rv"><span class="eyebrow"><i></i> سيناريو حيّ · تسجيل طالب جديد</span></div>
+    <h2 class="rv">من التعليم إلى التنفيذ في أربع مراحل.</h2></div>
+  <div class="g4">
+    <div class="card rv" style="padding:30px 26px"><div class="ic" style="background:rgba(94,121,230,.12);width:58px;height:58px">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#5E79E6" stroke-width="2"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M6 10.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-5.5"/></svg></div>
+      <h3 style="font-size:29px">يتعلّم</h3>
+      <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="#5E79E6" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>الموظف يُظهر العملية</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="#5E79E6" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>يستخرج الخطوات والقواعد</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="#5E79E6" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>يسأل عن الغامض</li></ul></div>
+    <div class="card rv" style="padding:30px 26px"><div class="ic" style="background:rgba(224,160,75,.14);width:58px;height:58px">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#E0A04B" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 11l2 2 4-4"/></svg></div>
+      <h3 style="font-size:29px">يُختبر</h3>
+      <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="#E0A04B" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>حالات عادية وحدّية</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="#E0A04B" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>ومحاولات التفاف عدائية</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="#E0A04B" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>بلا أي تنفيذ حقيقي</li></ul>
+      <span class="tag" style="background:rgba(47,125,101,.14);color:#1f5b49">نجح ٩٥٪</span></div>
+    <div class="card rv" style="padding:30px 26px"><div class="ic" style="background:rgba(140,111,224,.13);width:58px;height:58px">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8C6FE0" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="8" r="3.2"/><path d="M3 19c0-2.8 2.7-4.2 6-4.2M13 19c0-2.8 2.7-4.2 6-4.2"/></svg></div>
+      <h3 style="font-size:29px">يعمل بالظل</h3>
+      <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="#8C6FE0" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>يقرّر بموازاة الموظف</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="#8C6FE0" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>صفر أثر على العميل</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="#8C6FE0" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>يُقاس تطابق القرارين</li></ul></div>
+    <div class="card rv" style="padding:30px 26px"><div class="ic" style="background:rgba(47,125,101,.12);width:58px;height:58px">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-4Z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <h3 style="font-size:29px">ينفّذ</h3>
+      <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>يتحقّق من الهوية والمقعد</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>يجلب الرسوم المعتمدة</li>
+      <li><svg viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>ثم يتوقف عند بوابة</li></ul>
+      <span class="tag" style="background:rgba(228,111,97,.14);color:#E46F61">بوابة موافقة</span></div>
+  </div>
+</section>
+
+<!-- 9 GATE -->
+<section class="slide dark">
+  <div class="col" style="height:100%;justify-content:center;gap:38px">
+    <div class="rv"><span class="eyebrow" style="color:#E0A04B;background:rgba(224,160,75,.14)"><i></i> اللحظة الحاسمة</span></div>
+    <h2 class="rv" style="font-size:62px;line-height:1.3">حين تدخل الفلوس،<br>يتوقّف النظام — ويسأل إنساناً.</h2>
+    <div class="row rv" style="gap:22px">
+      <div style="flex:1;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px 30px">
+        <p style="font-size:20px;color:#E0A04B;margin-bottom:10px">سياسة المخاطر</p>
+        <p style="font-size:27px;font-weight:700;line-height:1.4">رسوم فوق الحدّ ← موافقة مدير</p></div>
+      <div style="flex:1;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px 30px">
+        <p style="font-size:20px;color:#8FE0C6;margin-bottom:10px">القرار</p>
+        <p style="font-size:27px;font-weight:700;line-height:1.4">المدير يوافق بضغطة واحدة</p></div>
+      <div style="flex:1;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px 30px">
+        <p style="font-size:20px;color:#8FE0C6;margin-bottom:10px">بعد التنفيذ</p>
+        <p style="font-size:27px;font-weight:700;line-height:1.4">تحقّق مستقل يؤكّد النتيجة</p></div>
+    </div>
+    <p class="rv" style="font-size:25px;color:#A9BDB5">القرار المالي لا يمرّ عبر تخمين النموذج — بل عبر قاعدة ثابتة تكتبونها أنتم.</p>
+  </div>
+</section>
+
+<!-- 10 GOVERNANCE -->
+<section class="slide dark">
+  <div class="head"><div class="rv"><span class="eyebrow"><i></i> الحوكمة</span></div>
+    <h2 class="rv">أنتم المتحكّمون. دائماً.</h2></div>
+  <div class="g4">
+    <div class="card rv"><div class="ic" style="background:rgba(143,224,198,.14)">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8FE0C6" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+      <h3>سياسات حتمية</h3><p>الحدود المالية بمنطق ثابت — لا بتخمين.</p></div>
+    <div class="card rv"><div class="ic" style="background:rgba(143,224,198,.14)">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8FE0C6" stroke-width="2"><path d="M4 4h16v12H5.2L4 17.5V4Z"/><path d="M8 9h8M8 12h5"/></svg></div>
+      <h3>أثر مُدقّق</h3><p>الفاعل والزمن والسياسة والمصدر لكل قرار.</p></div>
+    <div class="card rv"><div class="ic" style="background:rgba(143,224,198,.14)">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8FE0C6" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5 8.5 15.5M8.5 8.5l7 7"/></svg></div>
+      <h3>إيقاف فوري</h3><p>مفتاح طوارئ لكل مهارة، في أي لحظة.</p></div>
+    <div class="card rv"><div class="ic" style="background:rgba(143,224,198,.14)">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8FE0C6" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 17h.01M12 7v5"/></svg></div>
+      <h3>لا يخمّن</h3><p>لا مصدر موثوق؟ يصعّد السؤال للإنسان.</p></div>
+  </div>
+</section>
+
+<!-- 11 IMPACT -->
+<section class="slide light2">
+  <div class="head"><div class="rv"><span class="eyebrow"><i></i> الأثر</span></div>
+    <h2 class="rv">ما الذي يُقاس؟</h2></div>
+  <div class="nums">
+    <div class="nm rv"><div class="nring" style="color:#1f5b49"><b data-c="7">٠</b></div>
+      <p>مستويات تدرّج محكوم للاستقلالية</p></div>
+    <div class="nm rv"><div class="nring" style="color:#5E79E6"><b data-c="1">٠</b></div>
+      <p>ضغطة واحدة لاعتماد أي إجراء حسّاس</p></div>
+    <div class="nm rv"><div class="nring" style="color:#c98a36"><b data-c="95" data-s="٪" style="font-size:52px">٠</b></div>
+      <p>دقة المهارة في السيناريو التجريبي قبل أي تنفيذ</p></div>
+    <div class="nm rv"><div class="nring" style="color:#8C6FE0">
+      <svg width="74" height="74" viewBox="0 0 24 24" fill="none" stroke="#8C6FE0" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+      <p>الوقت الموفَّر ونسبة الأخطاء ومدة العمليات</p></div>
+  </div>
+  <p style="text-align:center;margin-top:34px;font-size:19px;color:#6c7a73">رقم ٩٥٪ من السيناريو التجريبي (أكاديمية المستقبل). الأرقام الفعلية تُقاس على عمليات مؤسستكم.</p>
+</section>
+
+<!-- 12 START -->
+<section class="slide light">
+  <div class="head"><div class="rv"><span class="eyebrow"><i></i> كيف نبدأ معكم</span></div>
+    <h2 class="rv">ثلاث خطوات. بلا مخاطرة.</h2></div>
+  <div class="steps">
+    <div class="st rv"><div class="n" style="background:#10251F">١</div><h3>عرض حيّ</h3>
+      <p>نُريكم الحلقة كاملة على سيناريو من قطاعكم أنتم.</p></div>
+    <div class="st rv"><div class="n" style="background:#2F7D65">٢</div><h3>تجربة موجّهة</h3>
+      <p>نلتقط عملية واحدة حقيقية عندكم ونحوّلها إلى مهارة موثّقة.</p></div>
+    <div class="st rv"><div class="n" style="background:#E0A04B;color:#10251F">٣</div><h3>شراكة</h3>
+      <p>نتدرّج بالاستقلالية خطوة بخطوة، تحت حوكمتكم الكاملة.</p></div>
+  </div>
+</section>
+
+<!-- 13 CLOSE -->
+<section class="slide dark">
+  <div class="col" style="height:100%;justify-content:center;gap:36px;align-items:flex-start">
+    <h2 class="rv" style="font-size:76px;line-height:1.28">دعوه يراقب اليوم.<br>ينفّذ حين يستحق.</h2>
+    <div class="accentbar rv"></div>
+    <p class="rv" style="font-size:30px;color:#A9BDB5;line-height:1.5">لا نطلب أن تثقوا بالذكاء الاصطناعي من اليوم الأول.<br>نطلب أن تتركوه يتعلّم — وهو يُثبت جدارته بالأرقام.</p>
+    <p class="rv" style="font-size:24px;color:#8FE0C6;margin-top:16px">نهج · NAHJ — لنبدأ بعملية واحدة</p>
+  </div>
+</section>
+
+</div></div>
+
+<div id="dots"></div>
+<div id="hud"><button id="pv">›</button><span id="ct">١ / ١٣</span><button id="nx">‹</button></div>
+
+<script>
+(function(){
+  var toAr=function(s){return String(s).replace(/[0-9]/g,function(d){return '٠١٢٣٤٥٦٧٨٩'[d];});};
+
+  /* ---- wheel ---- */
+  var steps=[['يلاحظ','#5E79E6'],['يفهم','#5E79E6'],['يستوضح','#5E79E6'],
+             ['يتحقّق','#E0A04B'],['يُقنّن','#E0A04B'],['يمارس','#E0A04B'],
+             ['يعمل بالظل','#8C6FE0'],['يقترح','#8C6FE0'],['يُعتمد','#8C6FE0'],
+             ['ينفّذ','#2F7D65'],['يقيس','#2F7D65'],['يحسّن','#2F7D65']];
+  var C=280,R=196,LR=262,svg='',lab='';
+  svg+='<circle cx="'+C+'" cy="'+C+'" r="'+R+'" fill="none" stroke="#cfc9b8" stroke-width="2" stroke-dasharray="4 9"/>';
+  steps.forEach(function(s,i){
+    var a=(i/12)*Math.PI*2-Math.PI/2, x=C+R*Math.cos(a), y=C+R*Math.sin(a);
+    svg+='<line x1="'+(C+78*Math.cos(a))+'" y1="'+(C+78*Math.sin(a))+'" x2="'+(C+(R-16)*Math.cos(a))+'" y2="'+(C+(R-16)*Math.sin(a))+'" stroke="'+s[1]+'" stroke-opacity=".3" stroke-width="2"/>';
+    svg+='<circle cx="'+x+'" cy="'+y+'" r="15" fill="'+s[1]+'"/>';
+    lab+='<div class="wlab" style="left:'+(C+LR*Math.cos(a))+'px;top:'+(C+LR*Math.sin(a))+'px">'+toAr(i+1)+' '+s[0]+'</div>';
+  });
+  svg+='<circle cx="'+C+'" cy="'+C+'" r="72" fill="#10251F"/>';
+  document.getElementById('wheel').innerHTML='<svg viewBox="0 0 560 560">'+svg+'</svg>'+lab
+    +'<div class="wcore">حلقة<br>نهج</div>';
+
+  /* ---- ladder bars ---- */
+  var L=[['L0','مراقبة',60,'#10251F'],['L1','تدريب',115,'#7d91ea'],['L2','ظل',175,'#5E79E6'],
+         ['L3','اقتراح',245,'#E8B872'],['L4','تجهيز',315,'#E0A04B'],['L5','موافقة',385,'#2F7D65'],
+         ['L6','طيّار آلي',455,'#1f5b49']];
+  document.getElementById('bars').innerHTML=L.map(function(r){
+    return '<div class="bcol rv"><em style="color:'+r[3]+'">'+r[0]+'</em>'
+      +'<div class="bar" style="--h:'+r[2]+'px;background:'+r[3]+'"></div><b>'+r[1]+'</b></div>';
+  }).join('');
+
+  /* ---- deck nav ---- */
+  var slides=[].slice.call(document.querySelectorAll('.slide')),n=slides.length,cur=0;
+  var dots=document.getElementById('dots'),ct=document.getElementById('ct'),pg=document.querySelector('#prog i');
+  dots.innerHTML=slides.map(function(_,i){return '<b data-i="'+i+'"></b>';}).join('');
+  var db=[].slice.call(dots.children);
+  function counters(sl){
+    sl.querySelectorAll('[data-c]').forEach(function(el){
+      var tg=+el.dataset.c,sf=el.dataset.s||'',t0=performance.now();
+      (function tick(t){var p=Math.min((t-t0)/900,1);
+        el.textContent=toAr(Math.round((1-Math.pow(1-p,3))*tg))+sf;
+        if(p<1)requestAnimationFrame(tick);})(t0);
+    });
+  }
+  function go(i){
+    cur=Math.max(0,Math.min(n-1,i));
+    slides.forEach(function(s,j){s.classList.toggle('on',j===cur);});
+    db.forEach(function(d,j){d.classList.toggle('on',j===cur);});
+    ct.textContent=toAr(cur+1)+' / '+toAr(n);
+    pg.style.width=((cur+1)/n*100)+'%';
+    counters(slides[cur]);
+  }
+  db.forEach(function(d){d.onclick=function(){go(+d.dataset.i);};});
+  document.getElementById('nx').onclick=function(){go(cur+1);};
+  document.getElementById('pv').onclick=function(){go(cur-1);};
+  addEventListener('keydown',function(e){
+    if(e.key==='ArrowLeft'||e.key==='PageDown'||e.key===' ')  {e.preventDefault();go(cur+1);}
+    if(e.key==='ArrowRight'||e.key==='PageUp'){e.preventDefault();go(cur-1);}
+    if(e.key==='Home')go(0); if(e.key==='End')go(n-1);
+  });
+  var sx=0;
+  addEventListener('touchstart',function(e){sx=e.touches[0].clientX;},{passive:true});
+  addEventListener('touchend',function(e){
+    var d=e.changedTouches[0].clientX-sx;
+    if(Math.abs(d)>60) go(d>0?cur+1:cur-1);
+  },{passive:true});
+  addEventListener('click',function(e){
+    if(e.target.closest('#hud')||e.target.closest('#dots'))return;
+    go(cur+1);
+  });
+
+  /* ---- scale stage ---- */
+  var st=document.getElementById('stage');
+  function fit(){
+    var s=Math.min(innerWidth/1600,innerHeight/900);
+    st.style.transform='scale('+s+')';
+  }
+  addEventListener('resize',fit); fit(); go(0);
+})();
+</script>
+</body>
+</html>
