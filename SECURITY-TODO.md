@@ -2,6 +2,36 @@
 
 White-box security audit of the NAHJ applet. Branch: `claude/security-audit-comprehensive-ao2ap1`.
 
+---
+
+## Status update (post-audit) — items A & B are now RESOLVED
+
+The two HIGH findings originally "intentionally left" have since been implemented
+in the codebase. This section records their current state so the audit reflects
+reality:
+
+- **Item A — Authentication & authorization (RESOLVED).** `server/auth.ts` now
+  ships a full auth layer: scrypt password hashing with a per-account salt,
+  DB-backed sessions (hashed session tokens in `sessions`), an HttpOnly +
+  `SameSite=Strict` session cookie, a double-submit CSRF token required on every
+  mutating request, failed-login lockout (`MAX_FAILED_LOGINS` / `LOCKOUT_MINUTES`),
+  timing-safe verification with a decoy scrypt on unknown emails, a `requireAuth`
+  gate and a `requireRole` role guard mounted on the `/api` router, atomic
+  first-run setup, a "cannot remove the last active admin" guard, and admin
+  password reset / self-service change-password. `POST /switch-role` as an
+  unauthenticated identity switch is gone; identity now derives from the verified
+  session. The demo path is isolated in its own in-memory sandbox
+  (`AsyncLocalStorage`) that can never reach the institution's real store or
+  Firestore.
+- **Item B — Firestore rules (RESOLVED).** `firestore.rules` now denies all client
+  access (`allow read, write: if false`). The only legitimate access is the server
+  via the Admin SDK (which bypasses rules by design). The former global
+  `allow read, write: if true` wildcard is removed.
+
+Item C (Firestore status error passthrough) and item D (payment/notification code,
+deliberately untouched) remain as documented below. Everything under **Fixed** and
+**Non-findings** still holds.
+
 Note on scope: the Node/Express backend (`server/`) is a demonstration/prototype
 using an in-memory datastore (`server/db.ts`) and mocked connectors
 (`server/engine/connectors.ts`) that perform no real network egress. As a result,
