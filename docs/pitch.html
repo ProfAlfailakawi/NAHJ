@@ -1,535 +1,519 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1"><style>:root{color-scheme:light}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>نهج — عرض الشراكة | NAHJ Pitch</title>
-<meta name="description" content="نهج: نظام ذكاء وتعلّم تشغيلي للمؤسسات. الذكاء الاصطناعي يتعلّم شركتك، ويكتسب حق التنفيذ بالدليل." />
+<title>نهج — عرض الشراكة</title>
+<meta name="description" content="نهج: ذكاء يتعلّم مؤسستك، ويكتسب حق التنفيذ بالدليل." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Plus+Jakarta+Sans:wght@500;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Plus+Jakarta+Sans:wght@600;800&display=swap" rel="stylesheet" />
 <style>
   :root{
-    --paper:#F4F1E8; --paper-2:#EBE7DA; --ink:#10251F; --ink-soft:#2c3d37;
-    --moss:#2F7D65; --moss-deep:#1f5b49; --sky:#5E79E6; --amber:#E0A04B;
-    --rose:#E46F61; --violet:#8C6FE0; --line:rgba(16,37,31,.12);
-    --card:#FBFAF5; --shadow:0 18px 50px -20px rgba(16,37,31,.28);
-    --r:22px;
+    --paper:#F4F1E8; --paper2:#EBE7DA; --ink:#10251F; --soft:#54655e;
+    --moss:#2F7D65; --moss2:#1f5b49; --sky:#5E79E6; --amber:#E0A04B;
+    --rose:#E46F61; --violet:#8C6FE0; --line:rgba(16,37,31,.11);
+    --card:#FBFAF5; --sh:0 20px 50px -24px rgba(16,37,31,.3); --r:20px;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
-  body{
-    font-family:'Cairo',system-ui,sans-serif;background:var(--paper);color:var(--ink);
-    line-height:1.7;overflow-x:hidden;-webkit-font-smoothing:antialiased;
-  }
-  .en{font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.04em}
-  h1,h2,h3{line-height:1.25;font-weight:900}
-  section{padding:clamp(64px,9vw,130px) clamp(20px,6vw,90px);position:relative}
-  .wrap{max-width:1180px;margin:0 auto}
-  .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:700;
-    letter-spacing:.08em;color:var(--moss-deep);background:rgba(47,125,101,.10);
-    padding:7px 16px;border-radius:100px;margin-bottom:22px}
-  .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--moss)}
-  .lead{font-size:clamp(17px,2vw,20px);color:var(--ink-soft);max-width:66ch}
+  body{font-family:'Cairo',system-ui,sans-serif;background:var(--paper);color:var(--ink);
+    line-height:1.55;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  .en{font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:.05em}
+  h1,h2,h3,h4{line-height:1.2;font-weight:900}
+  section{padding:clamp(56px,8vw,112px) clamp(18px,5vw,72px);position:relative}
+  .wrap{max-width:1160px;margin:0 auto}
 
-  /* progress + nav */
-  .progress{position:fixed;top:0;inset-inline:0;height:4px;background:transparent;z-index:60}
-  .progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--moss),var(--sky));transition:width .1s linear}
-  .brandbar{position:fixed;top:14px;inset-inline-start:clamp(18px,5vw,60px);z-index:55;display:flex;align-items:center;gap:11px;
-    background:rgba(251,250,245,.82);backdrop-filter:blur(10px);border:1px solid var(--line);
-    padding:8px 16px 8px 12px;border-radius:100px;box-shadow:var(--shadow)}
-  .brandbar b{font-size:19px;font-weight:900}
-  .brandbar small{font-size:11px;color:var(--moss-deep);font-weight:700}
-  .cta-fixed{position:fixed;top:14px;inset-inline-end:clamp(18px,5vw,60px);z-index:55}
-  .btn{display:inline-flex;align-items:center;gap:10px;font-family:'Cairo';font-weight:700;font-size:15px;
-    cursor:pointer;border:none;border-radius:100px;padding:13px 26px;transition:.25s;text-decoration:none}
-  .btn-primary{background:var(--ink);color:var(--paper)}
-  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 30px -12px rgba(16,37,31,.5)}
-  .btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
-  .btn-ghost:hover{border-color:var(--ink)}
+  /* ---------- atoms ---------- */
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:800;
+    letter-spacing:.1em;color:var(--moss2);background:rgba(47,125,101,.1);
+    padding:6px 15px;border-radius:99px;margin-bottom:18px}
+  .eyebrow i{width:6px;height:6px;border-radius:50%;background:var(--moss);display:block}
+  .shead{margin-bottom:46px;max-width:30ch}
+  .shead h2{font-size:clamp(26px,4.2vw,44px);letter-spacing:-.015em}
+  .btn{display:inline-flex;align-items:center;gap:9px;font-family:'Cairo';font-weight:800;font-size:15px;
+    cursor:pointer;border:none;border-radius:99px;padding:14px 28px;transition:.22s;text-decoration:none}
+  .btn-p{background:var(--ink);color:var(--paper)}
+  .btn-p:hover{transform:translateY(-2px);box-shadow:0 14px 28px -12px rgba(16,37,31,.55)}
+  .btn-g{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+  .btn-g:hover{border-color:var(--ink)}
 
-  /* reveal */
-  .reveal{opacity:0;transform:translateY(30px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .65s cubic-bezier(.2,.7,.2,1),transform .65s cubic-bezier(.2,.7,.2,1)}
   .reveal.in{opacity:1;transform:none}
-  .reveal.d1{transition-delay:.08s}.reveal.d2{transition-delay:.16s}
-  .reveal.d3{transition-delay:.24s}.reveal.d4{transition-delay:.32s}
+  .d1{transition-delay:.07s}.d2{transition-delay:.14s}.d3{transition-delay:.21s}
+  .d4{transition-delay:.28s}.d5{transition-delay:.35s}.d6{transition-delay:.42s}
   @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
 
-  /* HERO */
-  .hero{min-height:100vh;display:flex;align-items:center;overflow:hidden;
-    background:radial-gradient(120% 90% at 80% 10%,rgba(94,121,230,.10),transparent 55%),
-               radial-gradient(90% 80% at 10% 90%,rgba(47,125,101,.12),transparent 55%),var(--paper)}
-  .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:50px;align-items:center;width:100%}
-  .hero h1{font-size:clamp(40px,7vw,82px);letter-spacing:-.02em}
-  .hero h1 .grad{background:linear-gradient(100deg,var(--moss),var(--sky));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .hero .motto{margin-top:26px;font-size:clamp(18px,2.4vw,26px);font-weight:700;color:var(--ink-soft)}
-  .hero .sub{margin-top:16px;max-width:52ch}
-  .hero-cta{margin-top:38px;display:flex;gap:14px;flex-wrap:wrap}
-  .brainwrap{aspect-ratio:1;position:relative}
-  @media(max-width:880px){.hero-grid{grid-template-columns:1fr}.brainwrap{max-width:420px;margin-inline:auto}.cta-fixed{display:none}}
+  /* ---------- chrome ---------- */
+  .prog{position:fixed;top:0;inset-inline:0;height:3px;z-index:60}
+  .prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--moss),var(--sky))}
+  .bar{position:fixed;top:12px;inset-inline-start:clamp(16px,4vw,48px);z-index:55;display:flex;align-items:center;gap:10px;
+    background:rgba(251,250,245,.85);backdrop-filter:blur(10px);border:1px solid var(--line);
+    padding:7px 16px 7px 11px;border-radius:99px;box-shadow:var(--sh)}
+  .bar b{font-size:18px}.bar small{font-size:10px;color:var(--moss2);font-weight:800}
+  .topcta{position:fixed;top:12px;inset-inline-end:clamp(16px,4vw,48px);z-index:55}
+  @media(max-width:860px){.topcta{display:none}}
 
-  /* stat strip */
-  .stat-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:60px}
-  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:26px 22px}
-  .stat .num{font-size:clamp(34px,4.5vw,52px);font-weight:900;line-height:1;color:var(--moss-deep)}
-  .stat .num.sky{color:var(--sky)}.stat .num.amber{color:var(--amber)}.stat .num.rose{color:var(--rose)}
-  .stat .lbl{margin-top:10px;font-size:14px;color:var(--ink-soft);font-weight:600}
-  @media(max-width:760px){.stat-strip{grid-template-columns:repeat(2,1fr)}}
+  /* ---------- hero ---------- */
+  .hero{min-height:100vh;display:flex;align-items:center;
+    background:radial-gradient(110% 85% at 82% 8%,rgba(94,121,230,.11),transparent 55%),
+               radial-gradient(85% 75% at 8% 92%,rgba(47,125,101,.13),transparent 55%),var(--paper)}
+  .hgrid{display:grid;grid-template-columns:1.1fr .9fr;gap:44px;align-items:center;width:100%}
+  .hero h1{font-size:clamp(38px,6.6vw,76px);letter-spacing:-.025em}
+  .hero h1 em{font-style:normal;background:linear-gradient(100deg,var(--moss),var(--sky));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero .one{margin-top:22px;font-size:clamp(16px,1.9vw,20px);font-weight:700;color:var(--soft);max-width:34ch}
+  .hbtn{margin-top:32px;display:flex;gap:12px;flex-wrap:wrap}
+  @media(max-width:880px){.hgrid{grid-template-columns:1fr}.hart{max-width:400px;margin-inline:auto}}
 
-  /* section head */
-  .shead{max-width:64ch;margin-bottom:52px}
-  .shead h2{font-size:clamp(28px,4.4vw,46px);letter-spacing:-.01em}
-  .shead p{margin-top:16px}
+  /* ---------- dark ---------- */
+  .dark{background:var(--ink);color:var(--paper)}
+  .dark .eyebrow{color:#8fe0c6;background:rgba(143,224,198,.13)}
+  .dark .eyebrow i{background:#8fe0c6}
 
-  /* problem */
-  .sec-dark{background:var(--ink);color:var(--paper)}
-  .sec-dark .lead,.sec-dark .shead p{color:rgba(244,241,232,.72)}
-  .sec-dark .eyebrow{color:#8fe0c6;background:rgba(143,224,198,.12)}
-  .sec-dark .eyebrow .dot{background:#8fe0c6}
-  .pain-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
-  .pain{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);border-radius:var(--r);padding:30px 26px}
-  .pain .ic{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;margin-bottom:18px;background:rgba(228,111,97,.16)}
-  .pain h3{font-size:20px;margin-bottom:8px}
-  .pain p{color:rgba(244,241,232,.66);font-size:15px}
-  @media(max-width:820px){.pain-grid{grid-template-columns:1fr}}
+  /* ---------- ring stats ---------- */
+  .rings{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+  .ring{text-align:center}
+  .ring svg{width:150px;height:150px}
+  .ring .rv{font-size:30px;font-weight:900;fill:#F4F1E8;font-family:'Cairo'}
+  .ring h3{font-size:18px;margin-top:14px}
+  .ring p{font-size:13.5px;color:rgba(244,241,232,.6);margin-top:5px}
+  @media(max-width:780px){.rings{grid-template-columns:1fr;gap:34px}}
 
-  /* one-liner idea */
-  .idea{text-align:center}
-  .idea .big{font-size:clamp(26px,4.6vw,50px);font-weight:900;max-width:20ch;margin:0 auto;letter-spacing:-.01em}
-  .idea .big u{text-decoration:none;color:var(--moss-deep);border-bottom:5px solid var(--amber)}
-  .idea .two{margin-top:44px;display:grid;grid-template-columns:1fr 1fr;gap:22px;max-width:820px;margin-inline:auto}
-  .rule{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:30px;text-align:start}
-  .rule .en{font-size:12px;color:var(--sky);font-weight:800}
-  .rule b{display:block;font-size:19px;margin-top:8px}
-  @media(max-width:680px){.idea .two{grid-template-columns:1fr}}
+  /* ---------- idea ---------- */
+  .idea{text-align:center;background:var(--paper2)}
+  .idea .big{font-size:clamp(24px,4.3vw,46px);font-weight:900;max-width:19ch;margin:0 auto;letter-spacing:-.015em}
+  .idea .big u{text-decoration:none;color:var(--moss2);box-shadow:inset 0 -.32em 0 rgba(224,160,75,.5)}
+  .two{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:780px;margin-inline:auto}
+  .rule{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:26px;text-align:start;
+    display:flex;gap:16px;align-items:flex-start}
+  .rule .ic{flex:0 0 42px;height:42px;border-radius:12px;display:grid;place-items:center;background:rgba(47,125,101,.12)}
+  .rule b{font-size:17px;line-height:1.45}
+  @media(max-width:660px){.two{grid-template-columns:1fr}}
 
-  /* loop */
-  .loop{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:10px}
-  .loop-step{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);
-    border-radius:100px;padding:12px 20px 12px 14px;font-weight:700;font-size:15px}
-  .loop-step .n{width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--paper);
-    display:grid;place-items:center;font-size:13px;font-weight:800}
-  .loop-step small{display:block;font-size:11px;color:var(--ink-soft);font-weight:600}
-  .arrow{color:var(--moss);display:grid;place-items:center}
+  /* ---------- loop wheel ---------- */
+  .wheelwrap{display:grid;grid-template-columns:1fr 340px;gap:50px;align-items:center}
+  .wheel{position:relative;aspect-ratio:1;max-width:520px;margin-inline:auto;width:100%}
+  .wheel svg{width:100%;height:100%;overflow:visible}
+  .wnode{cursor:default}
+  .wnode circle{transition:.25s}
+  .wnode text{font-family:'Cairo';font-weight:700;font-size:11.5px;fill:#10251F}
+  .phases{display:flex;flex-direction:column;gap:12px}
+  .ph{display:flex;gap:14px;align-items:center;background:var(--card);border:1px solid var(--line);
+    border-radius:14px;padding:14px 18px}
+  .ph .dotc{width:12px;height:12px;border-radius:50%;flex:0 0 12px}
+  .ph b{font-size:15px}.ph small{display:block;font-size:11.5px;color:var(--soft);font-weight:600}
+  @media(max-width:920px){.wheelwrap{grid-template-columns:1fr}}
 
-  /* ladder */
-  .runway{display:flex;flex-direction:column;gap:12px;margin-top:8px}
-  .rung{display:grid;grid-template-columns:70px 1fr auto;align-items:center;gap:20px;
-    background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 24px;position:relative;overflow:hidden}
-  .rung::before{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:5px}
-  .rung .lv{font-family:'Plus Jakarta Sans';font-weight:800;font-size:20px}
-  .rung h4{font-size:17px}.rung p{font-size:13.5px;color:var(--ink-soft)}
-  .rung .bar{width:120px;height:8px;border-radius:100px;background:var(--paper-2);overflow:hidden}
-  .rung .bar i{display:block;height:100%;border-radius:100px}
-  .rung.l0::before{background:var(--ink)} .rung.l1::before{background:var(--sky)}
-  .rung.l2::before{background:var(--sky)} .rung.l3::before{background:var(--amber)}
-  .rung.l4::before{background:var(--amber)} .rung.l5::before{background:var(--moss)}
-  .rung.l6::before{background:var(--moss-deep)}
-  @media(max-width:680px){.rung{grid-template-columns:54px 1fr}.rung .bar{display:none}}
+  /* ---------- ladder ---------- */
+  .ladder{display:flex;flex-direction:column;gap:9px}
+  .rung{display:grid;grid-template-columns:52px 1fr 1fr;align-items:center;gap:18px;
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 20px;
+    position:relative;overflow:hidden}
+  .rung::before{content:"";position:absolute;inset-inline-start:0;top:0;bottom:0;width:4px;background:var(--c)}
+  .rung .lv{font-family:'Plus Jakarta Sans';font-weight:800;font-size:17px;color:var(--c)}
+  .rung h4{font-size:16px}
+  .rung .en2{font-size:11px;color:var(--soft);font-weight:700;letter-spacing:.06em;font-family:'Plus Jakarta Sans'}
+  .track{height:9px;border-radius:99px;background:var(--paper2);overflow:hidden}
+  .track i{display:block;height:100%;border-radius:99px;background:var(--c);width:0;transition:width 1s cubic-bezier(.2,.7,.2,1)}
+  .in .track i{width:var(--w)}
+  @media(max-width:700px){.rung{grid-template-columns:44px 1fr}.track{display:none}}
 
-  /* diff grid */
-  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
-  .fcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:30px 26px;transition:.3s}
-  .fcard:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
-  .fcard .ic{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;margin-bottom:20px}
-  .fcard h3{font-size:20px;margin-bottom:9px}
-  .fcard p{font-size:15px;color:var(--ink-soft)}
-  @media(max-width:820px){.grid3{grid-template-columns:1fr}}
+  /* ---------- 3 cards ---------- */
+  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .fc{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:28px 24px;transition:.28s}
+  .fc:hover{transform:translateY(-4px);box-shadow:var(--sh)}
+  .fc .ic{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;margin-bottom:18px}
+  .fc h3{font-size:19px;margin-bottom:7px}
+  .fc p{font-size:14.5px;color:var(--soft)}
+  @media(max-width:820px){.g3{grid-template-columns:1fr}}
 
-  /* vs table */
-  .vs{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-top:10px}
-  .vs .col{padding:8px 0}
-  .vs .col.them{background:var(--paper-2)}
-  .vs .col.us{background:var(--card)}
-  .vs .ch{padding:20px 28px;font-weight:800;font-size:16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
-  .vs .row{padding:15px 28px;font-size:15px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:11px;color:var(--ink-soft)}
-  .vs .row:last-child{border-bottom:none}
-  .vs .col.us .row{color:var(--ink);font-weight:600}
+  /* ---------- versus ---------- */
+  .vs{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  .vs .them{background:var(--paper2)}.vs .us{background:var(--card)}
+  .vs .ch{padding:18px 24px;font-weight:900;font-size:15px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:9px}
+  .vs .rw{padding:14px 24px;font-size:14.5px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:10px;color:var(--soft);min-height:56px}
+  .vs .rw:last-child{border-bottom:none}
+  .vs .us .rw{color:var(--ink);font-weight:700}
+  .vs svg{flex:0 0 17px}
 
-  /* scenario */
-  .flow{position:relative;margin-top:20px;padding-inline-start:8px}
-  .fstep{display:grid;grid-template-columns:56px 1fr;gap:22px;padding-bottom:30px;position:relative}
-  .fstep::before{content:"";position:absolute;inset-inline-start:27px;top:52px;bottom:-4px;width:2px;background:var(--line)}
-  .fstep:last-child::before{display:none}
-  .fstep .bub{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;z-index:2;
-    background:var(--card);border:1.5px solid var(--line);font-weight:800;color:var(--moss-deep)}
-  .fstep.gate .bub{background:rgba(224,160,75,.14);border-color:var(--amber);color:var(--amber)}
-  .fstep.exec .bub{background:rgba(47,125,101,.14);border-color:var(--moss);color:var(--moss-deep)}
-  .fstep .body h4{font-size:18px}.fstep .body p{font-size:14.5px;color:var(--ink-soft)}
-  .chip{display:inline-block;font-size:11px;font-weight:800;padding:3px 10px;border-radius:100px;margin-top:8px}
-  .chip.pol{background:rgba(228,111,97,.14);color:var(--rose)}
-  .chip.hum{background:rgba(140,111,224,.14);color:var(--violet)}
-  .chip.ok{background:rgba(47,125,101,.14);color:var(--moss-deep)}
+  /* ---------- journey ---------- */
+  .jour{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;position:relative}
+  .jc{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:26px 22px;position:relative}
+  .jc .top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .jc .ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;flex:0 0 46px}
+  .jc .en3{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:var(--soft);font-family:'Plus Jakarta Sans'}
+  .jc h4{font-size:17px}
+  .jc ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+  .jc li{font-size:13.5px;color:var(--soft);display:flex;gap:8px;align-items:flex-start;line-height:1.45}
+  .jc li svg{flex:0 0 14px;margin-top:4px}
+  .tag{display:inline-block;font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;margin-top:14px}
+  @media(max-width:900px){.jour{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:540px){.jour{grid-template-columns:1fr}}
 
-  /* roi */
-  .roi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
-  .roi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:30px 24px;text-align:center}
-  .roi .num{font-size:clamp(36px,5vw,58px);font-weight:900;line-height:1}
-  .roi .num.moss{color:var(--moss-deep)}.roi .num.sky{color:var(--sky)}
-  .roi .num.amber{color:var(--amber)}.roi .num.violet{color:var(--violet)}
-  .roi .lbl{margin-top:12px;font-size:14px;color:var(--ink-soft);font-weight:600}
-  @media(max-width:760px){.roi-grid{grid-template-columns:repeat(2,1fr)}}
+  /* ---------- trust ---------- */
+  .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .tc{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.1);border-radius:var(--r);padding:26px 22px}
+  .tc .ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;
+    background:rgba(143,224,198,.14);margin-bottom:16px}
+  .tc h3{font-size:16.5px;margin-bottom:6px}
+  .tc p{font-size:13.5px;color:rgba(244,241,232,.62)}
+  @media(max-width:900px){.g4{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:520px){.g4{grid-template-columns:1fr}}
 
-  /* trust */
-  .trust-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px}
-  .tcard{display:flex;gap:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);border-radius:var(--r);padding:26px}
-  .tcard .ic{flex-shrink:0;width:50px;height:50px;border-radius:14px;display:grid;place-items:center;background:rgba(143,224,198,.14)}
-  .tcard h3{font-size:18px;margin-bottom:6px}
-  .tcard p{font-size:14.5px;color:rgba(244,241,232,.66)}
-  @media(max-width:760px){.trust-grid{grid-template-columns:1fr}}
+  /* ---------- impact ---------- */
+  .imp{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .ic4{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:30px 20px;text-align:center}
+  .ic4 .n{font-size:clamp(34px,4.8vw,54px);font-weight:900;line-height:1}
+  .ic4 .l{margin-top:10px;font-size:13.5px;color:var(--soft);font-weight:700}
+  @media(max-width:760px){.imp{grid-template-columns:repeat(2,1fr)}}
 
-  /* cta */
-  .final{background:radial-gradient(100% 100% at 50% 0%,rgba(47,125,101,.14),transparent 60%),var(--paper);text-align:center}
-  .final h2{font-size:clamp(30px,5.5vw,58px);max-width:18ch;margin:0 auto;letter-spacing:-.02em}
-  .final p{margin:22px auto 0;max-width:52ch}
-  .final .btns{margin-top:40px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
-  .steps3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;max-width:820px;margin:56px auto 0}
-  .s3{text-align:center}.s3 .n{width:44px;height:44px;border-radius:50%;background:var(--ink);color:var(--paper);
-    display:grid;place-items:center;margin:0 auto 14px;font-weight:800}
-  .s3 h4{font-size:17px;margin-bottom:6px}.s3 p{font-size:14px;color:var(--ink-soft)}
-  @media(max-width:680px){.steps3{grid-template-columns:1fr}}
-
-  footer{padding:36px 24px;text-align:center;background:var(--ink);color:rgba(244,241,232,.6);font-size:13px}
+  /* ---------- final ---------- */
+  .final{text-align:center;background:radial-gradient(95% 100% at 50% 0%,rgba(47,125,101,.15),transparent 62%),var(--paper)}
+  .final h2{font-size:clamp(28px,5.2vw,54px);max-width:17ch;margin:0 auto;letter-spacing:-.025em}
+  .s3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:760px;margin:46px auto 0}
+  .s3 div{text-align:center}
+  .s3 .n{width:42px;height:42px;border-radius:50%;background:var(--ink);color:var(--paper);
+    display:grid;place-items:center;margin:0 auto 12px;font-weight:900;font-size:15px}
+  .s3 h4{font-size:16px;margin-bottom:5px}.s3 p{font-size:13.5px;color:var(--soft)}
+  @media(max-width:660px){.s3{grid-template-columns:1fr;gap:26px}}
+  footer{padding:32px 20px;text-align:center;background:var(--ink);color:rgba(244,241,232,.55);font-size:12.5px}
   footer b{color:var(--paper)}
-  .kicker{font-size:13px;color:var(--ink-soft);font-weight:700;margin-top:14px}
+
+  .spin{animation:sp 40s linear infinite;transform-origin:center}
+  .spinr{animation:sp 30s linear infinite reverse;transform-origin:center}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .pl{animation:pl 3.6s ease-in-out infinite}
+  @keyframes pl{0%,100%{opacity:.22}50%{opacity:.48}}
+  @media(prefers-reduced-motion:reduce){.spin,.spinr,.pl{animation:none}}
 </style>
 </head>
 <body>
 
-<div class="progress"><span id="prog"></span></div>
-
-<div class="brandbar">
-  <svg width="30" height="30" viewBox="0 0 40 40" fill="none" aria-hidden="true">
-    <circle cx="7" cy="20" r="4" fill="#2F7D65"/>
-    <path d="M11 20 H20" stroke="#10251F" stroke-width="2.4" stroke-linecap="round"/>
+<div class="prog"><i id="pg"></i></div>
+<div class="bar">
+  <svg width="28" height="28" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+    <circle cx="7" cy="20" r="4" fill="#2F7D65"/><path d="M11 20H20" stroke="#10251F" stroke-width="2.4" stroke-linecap="round"/>
     <circle cx="24" cy="20" r="6.5" fill="none" stroke="#5E79E6" stroke-width="2.4"/>
-    <path d="M30 20 H33 M30 20 L36 14 M30 20 L36 26" stroke="#E0A04B" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M30.5 20H33M30.5 20L36 14.5M30.5 20L36 25.5" stroke="#E0A04B" stroke-width="2.4" stroke-linecap="round"/>
   </svg>
   <div><b>نهج</b> <small class="en">NAHJ</small></div>
 </div>
-<div class="cta-fixed">
-  <a class="btn btn-primary" href="#subscribe">اطلب عرضاً حياً</a>
-</div>
+<div class="topcta"><a class="btn btn-p" href="#cta">اطلب عرضاً حياً</a></div>
 
-<!-- HERO -->
+<!-- ============ HERO ============ -->
 <section class="hero">
-  <div class="wrap hero-grid">
+  <div class="wrap hgrid">
     <div>
-      <span class="eyebrow reveal"><span class="dot"></span> نظام ذكاء وتعلّم تشغيلي للمؤسسات</span>
-      <h1 class="reveal d1">الذكاء الاصطناعي<br>يتعلّم <span class="grad">شركتك</span>،<br>لا العكس.</h1>
-      <p class="motto reveal d2">لا تجعل شركتك تضبط الذكاء الاصطناعي — اجعل الذكاء الاصطناعي يتعلّم شركتك.</p>
-      <p class="lead sub reveal d3">نهج يراقب كيف تعمل مؤسستك فعلاً، يحوّل ذلك إلى مهارات موثّقة قابلة للإصدار، يختبر نفسه عليها، ثم يكتسب حق التنفيذ تدريجيًا — تحت حوكمة بشرية واضحة.</p>
-      <div class="hero-cta reveal d4">
-        <a class="btn btn-primary" href="#subscribe">اشترك معنا</a>
-        <a class="btn btn-ghost" href="#loop">كيف يعمل؟</a>
+      <span class="eyebrow reveal"><i></i> ذكاء تشغيلي للمؤسسات</span>
+      <h1 class="reveal d1">الذكاء يتعلّم<br><em>شركتك</em>.<br>لا العكس.</h1>
+      <p class="one reveal d2">يراقب · يتعلّم · يُختبر · ثم يكتسب حق التنفيذ.</p>
+      <div class="hbtn reveal d3">
+        <a class="btn btn-p" href="#cta">اشترك معنا</a>
+        <a class="btn btn-g" href="#loop">شوف كيف يعمل</a>
       </div>
     </div>
-    <div class="brainwrap reveal d2">
-      <svg viewBox="0 0 400 400" width="100%" height="100%" aria-label="العقل التشغيلي">
-        <defs>
-          <radialGradient id="core" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#2F7D65"/><stop offset="100%" stop-color="#1f5b49"/>
-          </radialGradient>
-        </defs>
-        <!-- orbits -->
-        <circle cx="200" cy="200" r="150" fill="none" stroke="rgba(16,37,31,.10)" stroke-width="1.5"/>
-        <circle cx="200" cy="200" r="105" fill="none" stroke="rgba(16,37,31,.12)" stroke-width="1.5"/>
-        <!-- moving paths -->
-        <g class="spin-slow" style="transform-origin:200px 200px">
-          <circle cx="350" cy="200" r="9" fill="#5E79E6"/>
-          <circle cx="200" cy="50" r="7" fill="#E0A04B"/>
-          <circle cx="95" cy="200" r="8" fill="#8C6FE0"/>
-          <circle cx="200" cy="305" r="7" fill="#E46F61"/>
+    <div class="hart reveal d2">
+      <svg viewBox="0 0 400 400" width="100%" aria-label="العقل التشغيلي">
+        <defs><radialGradient id="cg"><stop offset="0%" stop-color="#2F7D65"/><stop offset="100%" stop-color="#1f5b49"/></radialGradient></defs>
+        <circle cx="200" cy="200" r="152" fill="none" stroke="rgba(16,37,31,.09)" stroke-width="1.4"/>
+        <circle cx="200" cy="200" r="108" fill="none" stroke="rgba(16,37,31,.11)" stroke-width="1.4"/>
+        <g class="spin">
+          <circle cx="352" cy="200" r="9" fill="#5E79E6"/><circle cx="200" cy="48" r="7" fill="#E0A04B"/>
+          <circle cx="48" cy="200" r="8" fill="#8C6FE0"/><circle cx="200" cy="352" r="7" fill="#E46F61"/>
         </g>
-        <g class="spin-rev" style="transform-origin:200px 200px">
-          <circle cx="305" cy="200" r="6" fill="#2F7D65"/>
-          <circle cx="200" cy="95" r="5" fill="#5E79E6"/>
+        <g class="spinr">
+          <circle cx="308" cy="200" r="6" fill="#2F7D65"/><circle cx="200" cy="92" r="5" fill="#5E79E6"/>
+          <circle cx="92" cy="200" r="5.5" fill="#E0A04B"/>
         </g>
-        <!-- core -->
-        <circle cx="200" cy="200" r="52" fill="url(#core)"/>
-        <circle cx="200" cy="200" r="52" fill="none" stroke="rgba(47,125,101,.25)" stroke-width="14" class="pulse"/>
-        <text x="200" y="196" text-anchor="middle" fill="#F4F1E8" font-family="Cairo" font-weight="700" font-size="19">العقل</text>
-        <text x="200" y="220" text-anchor="middle" fill="#F4F1E8" font-family="Cairo" font-weight="700" font-size="19">التشغيلي</text>
+        <circle cx="200" cy="200" r="60" fill="none" stroke="#2F7D65" stroke-width="16" class="pl"/>
+        <circle cx="200" cy="200" r="52" fill="url(#cg)"/>
+        <text x="200" y="195" text-anchor="middle" fill="#F4F1E8" font-family="Cairo" font-weight="800" font-size="18">العقل</text>
+        <text x="200" y="219" text-anchor="middle" fill="#F4F1E8" font-family="Cairo" font-weight="800" font-size="18">التشغيلي</text>
       </svg>
     </div>
   </div>
 </section>
 
-<!-- PROBLEM -->
-<section class="sec-dark" id="problem">
+<!-- ============ PROBLEM ============ -->
+<section class="dark">
   <div class="wrap">
-    <div class="shead reveal">
-      <span class="eyebrow"><span class="dot"></span> المشكلة</span>
-      <h2>معرفة شركتك في رؤوس الموظفين — لا في نظام.</h2>
-      <p class="lead">كل يوم تُتّخذ مئات القرارات التشغيلية اعتمادًا على خبرة غير مكتوبة. حين يغادر موظف، تغادر معه الطريقة. والأنظمة التقليدية تطلب منك أن تشرح لها كل شيء مسبقًا — وهذا لا يحدث أبدًا.</p>
-    </div>
-    <div class="pain-grid">
-      <div class="pain reveal d1">
-        <div class="ic">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#E46F61" stroke-width="2"><path d="M12 2a5 5 0 0 0-5 5v3a5 5 0 0 0 10 0V7a5 5 0 0 0-5-5Z"/><path d="M5 20c0-3 3.1-4 7-4s7 1 7 4"/></svg>
-        </div>
-        <h3>الاعتماد على شخص واحد</h3>
-        <p>عملية حسّاسة يعرفها موظف واحد فقط. استقالته أو إجازته تعني توقفًا أو خطأً مكلفًا.</p>
-      </div>
-      <div class="pain reveal d2">
-        <div class="ic">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#E46F61" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6l1 1 2-2M3 12l1 1 2-2M3 18l1 1 2-2"/></svg>
-        </div>
-        <h3>ممارسات متعارضة</h3>
-        <p>كل فرع أو موظف ينفّذ نفس العملية بطريقة مختلفة. لا مصدر واحد للحقيقة، ولا اتساق.</p>
-      </div>
-      <div class="pain reveal d3">
-        <div class="ic">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#E46F61" stroke-width="2"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>
-        </div>
-        <h3>أدوات AI تُهلوس</h3>
-        <p>بوتات تخمّن وتردّ بثقة زائفة. لا أحد يجرؤ أن يتركها تلمس فلوسًا أو قرارًا حقيقيًا.</p>
-      </div>
-    </div>
+    <div class="shead reveal"><span class="eyebrow"><i></i> المشكلة</span>
+      <h2>معرفتكم في رؤوس الموظفين — لا في نظام.</h2></div>
+    <div class="rings" id="rings"></div>
   </div>
 </section>
 
-<!-- IDEA ONE-LINER -->
-<section class="idea" id="idea">
+<!-- ============ IDEA ============ -->
+<section class="idea">
   <div class="wrap">
-    <span class="eyebrow reveal"><span class="dot"></span> الفكرة في سطر</span>
-    <p class="big reveal d1">ذكاءٌ يتعلّم <u>كيف تعمل مؤسستك فعلاً</u>، يحوّله إلى مهارات موثّقة، ويكتسب حق التنفيذ بالدليل.</p>
+    <span class="eyebrow reveal"><i></i> الفكرة</span>
+    <p class="big reveal d1">ذكاء يتعلّم <u>كيف تعملون فعلاً</u> — ويكتسب حق التنفيذ بالدليل.</p>
     <div class="two">
-      <div class="rule reveal d2"><span class="en">CORE MOTTO</span><b>لا تجعل الشركات تضبط الذكاء الاصطناعي. اجعل الذكاء الاصطناعي يتعلّم الشركة.</b></div>
-      <div class="rule reveal d3"><span class="en">SECONDARY RULE</span><b>الذكاء الاصطناعي يجب أن يكتسب حق التصرّف — لا يُمنح له.</b></div>
-    </div>
-  </div>
-</section>
-
-<!-- LOOP -->
-<section id="loop" style="background:var(--paper-2)">
-  <div class="wrap">
-    <div class="shead reveal">
-      <span class="eyebrow"><span class="dot"></span> الحلقة الأساسية</span>
-      <h2>يلاحظ، يفهم، يتحقّق، يمارس — ثم ينفّذ.</h2>
-      <p class="lead">لا سحب عقد، ولا كتابة أوامر (prompts). الموظف يُظهر العمل الحقيقي، والنظام يبني منه مهارة موثّقة تتدرّج بأمان.</p>
-    </div>
-    <div class="loop" id="loopwrap"></div>
-  </div>
-</section>
-
-<!-- LADDER -->
-<section id="ladder">
-  <div class="wrap">
-    <div class="shead reveal">
-      <span class="eyebrow"><span class="dot"></span> سلّم الاستقلالية</span>
-      <h2>من المراقبة الصامتة إلى الطيّار الآلي — خطوة بخطوة.</h2>
-      <p class="lead">لا يقفز النظام مستوىً واحدًا إلا بعد أن يثبت جدارته بأرقام حقيقية. القرارات المالية والحسّاسة تمرّ دائمًا على موافقة بشرية.</p>
-    </div>
-    <div class="runway" id="runway"></div>
-  </div>
-</section>
-
-<!-- DIFFERENTIATORS -->
-<section id="diff" style="background:var(--paper-2)">
-  <div class="wrap">
-    <div class="shead reveal">
-      <span class="eyebrow"><span class="dot"></span> لماذا نهج مختلف</span>
-      <h2>ثلاثة أشياء لا تجدها في أي أداة أخرى.</h2>
-    </div>
-    <div class="grid3">
-      <div class="fcard reveal d1">
-        <div class="ic" style="background:rgba(47,125,101,.12)">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
-        </div>
-        <h3>عقل مؤسسي أولاً</h3>
-        <p>نبني نموذج عمل مؤسستك المُدار والموثّق أولاً — ثم يستهلك أي وكيل (Agent) هذه المهارات. المعرفة تبقى ملكك، لا حبيسة نموذج واحد.</p>
+      <div class="rule reveal d2">
+        <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="2.2"><path d="M12 3v18M5 8l7-5 7 5M5 8v8l7 5 7-5V8"/></svg></div>
+        <b>لا تضبطوا الذكاء الاصطناعي — دعوه يتعلّمكم.</b>
       </div>
-      <div class="fcard reveal d2">
-        <div class="ic" style="background:rgba(94,121,230,.12)">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5E79E6" stroke-width="2"><path d="M12 3v18M5 8l7-5 7 5M5 8v8l7 5 7-5V8"/></svg>
-        </div>
-        <h3>تُعلّمه بالعمل، لا بالأوامر</h3>
-        <p>الموظف يُظهر العملية كما ينفّذها فعلاً (Teach Mode). لا DAG nodes، ولا system prompts. من يعرف العمل يعلّمه — لا المبرمج.</p>
-      </div>
-      <div class="fcard reveal d3">
-        <div class="ic" style="background:rgba(224,160,75,.14)">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#E0A04B" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg>
-        </div>
-        <h3>قيمة فورية بلا أتمتة</h3>
-        <p>حتى بصفر أتمتة، يكشف نهج العمليات غير الموثّقة، والاعتماد على موظف واحد، والتعارض، والانحراف، وفرص التحسين.</p>
-      </div>
-    </div>
-
-    <div class="vs reveal d2" style="margin-top:40px">
-      <div class="col them">
-        <div class="ch"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E46F61" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg> أدوات AI التقليدية</div>
-        <div class="row">تطلب منك ضبط كل شيء مسبقًا</div>
-        <div class="row">تخمّن وتردّ بثقة زائفة</div>
-        <div class="row">قرارات مالية متروكة للنموذج</div>
-        <div class="row">لا سجل ولا تفسير للقرار</div>
-        <div class="row">تنفّذ من اليوم الأول بلا اختبار</div>
-      </div>
-      <div class="col us">
-        <div class="ch"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg> نهج</div>
-        <div class="row">يتعلّم شركتك بالمراقبة والتعليم</div>
-        <div class="row">لا يخمّن أبدًا — يسأل أو يصعّد</div>
-        <div class="row">محرك سياسات حتمي للقرارات الحسّاسة</div>
-        <div class="row">سجل تدقيق غير قابل للتعديل لكل قرار</div>
-        <div class="row">يكتسب حق التنفيذ بعد اختبار مُثبت</div>
+      <div class="rule reveal d3">
+        <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="2.2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-4Z"/><path d="M9 12l2 2 4-4"/></svg></div>
+        <b>الذكاء يكتسب حق التصرّف — لا يُمنح له.</b>
       </div>
     </div>
   </div>
 </section>
 
-<!-- GOLDEN SCENARIO -->
-<section id="scenario">
+<!-- ============ LOOP WHEEL ============ -->
+<section id="loop">
   <div class="wrap">
-    <div class="shead reveal">
-      <span class="eyebrow"><span class="dot"></span> سيناريو حيّ</span>
-      <h2>تسجيل طالب في «أكاديمية المستقبل» — من التعليم إلى التنفيذ.</h2>
-      <p class="lead">حلقة كاملة تُثبت الفكرة: يتعلّم النظام العملية، يختبر نفسه، يعمل بجانب الموظف، ثم ينفّذ بموافقة بضغطة واحدة — مع أثر كامل.</p>
-    </div>
-    <div class="flow">
-      <div class="fstep reveal d1"><div class="bub">١</div><div class="body"><h4>يُعلّمه الموظف</h4><p>يُظهر الموظف عملية «قبول طالب جديد» كما ينفّذها فعلاً عبر Teach Mode.</p></div></div>
-      <div class="fstep reveal d1"><div class="bub">٢</div><div class="body"><h4>يكتشف ويستوضح</h4><p>يستخرج النظام الخطوات والقواعد والشروط الناقصة، ويسأل: «هل موافقة المشرف مطلوبة لكل الرسوم أم فوق حدّ معيّن؟»</p></div></div>
-      <div class="fstep reveal d2"><div class="bub">٣</div><div class="body"><h4>يُعتمد كمهارة</h4><p>يوافق المدير على «قبول طالب جديد v1» — مهارة موثّقة قابلة للإصدار.</p></div></div>
-      <div class="fstep reveal d2"><div class="bub">٤</div><div class="body"><h4>يمارس ويُختبر</h4><p>يشغّل ١٠ حالات اختبار (عادية، حدّية، عدائية)، يسجّل ٩٥٪، وينجح.<span class="chip ok">Practice ✓</span></p></div></div>
-      <div class="fstep reveal d2"><div class="bub">٥</div><div class="body"><h4>يعمل في الظل</h4><p>يقرّر بالتوازي مع الموظف دون أي أثر خارجي، ويقيس مطابقة قراره لقرار الإنسان.<span class="chip hum">Shadow</span></p></div></div>
-      <div class="fstep reveal d3"><div class="bub">٦</div><div class="body"><h4>تفاعل حقيقي</h4><p>ولي أمر: «السلام عليكم، أبي أسجّل ولدي» — يوسف أحمد، ٥ سنوات، KG2.</p></div></div>
-      <div class="fstep reveal d3"><div class="bub">٧</div><div class="body"><h4>تحقّق من المستند</h4><p>يُرفع البطاقة المدنية، ويتحقّق منها عبر فحص OCR / Vision.</p></div></div>
-      <div class="fstep reveal d3"><div class="bub">٨</div><div class="body"><h4>بيانات حيّة</h4><p>يفحص توفّر المقعد عبر موصل SIS، ويجلب الرسوم المعتمدة (١٬٥٠٠ د.ك) من المصدر الموثوق.</p></div></div>
-      <div class="fstep gate reveal d3"><div class="bub">٩</div><div class="body"><h4>بوابة موافقة</h4><p>إنشاء الطلب وفاتورة الدفع يُفعّل بطاقة موافقة المدير بسبب سياسة المخاطر المالية.<span class="chip pol">Policy · مخاطر مالية</span></p></div></div>
-      <div class="fstep exec reveal d4"><div class="bub">١٠</div><div class="body"><h4>تنفيذ وتحقّق</h4><p>يوافق المدير بضغطة واحدة؛ يُؤكَّد الحجز (الخميس ٤:٣٠م) ويُتحقّق منه بعد التنفيذ.<span class="chip ok">Verified ✓</span></p></div></div>
-      <div class="fstep exec reveal d4"><div class="bub">١١</div><div class="body"><h4>أثر غير قابل للتعديل</h4><p>سجل كامل بالفاعل، والزمن، والسياسة المطبّقة، والتفسير.</p></div></div>
-      <div class="fstep reveal d4"><div class="bub">١٢</div><div class="body"><h4>تعلّم مستمر</h4><p>يلاحظ أن تقارير المدرسة السابقة كانت مفقودة لدى ٤٢٪ من المتقدّمين، فيقترح تذكيرًا آليًا بالمستندات.</p></div></div>
+    <div class="shead reveal"><span class="eyebrow"><i></i> الحلقة</span>
+      <h2>اثنتا عشرة خطوة. دورة واحدة لا تتوقف.</h2></div>
+    <div class="wheelwrap">
+      <div class="wheel reveal d1"><svg viewBox="0 0 440 440" id="wheel"></svg></div>
+      <div class="phases">
+        <div class="ph reveal d2"><span class="dotc" style="background:#5E79E6"></span><div><b>يفهم</b><small>يلاحظ · يفهم · يستوضح</small></div></div>
+        <div class="ph reveal d3"><span class="dotc" style="background:#E0A04B"></span><div><b>يتأكّد</b><small>يتحقّق · يُقنّن · يمارس</small></div></div>
+        <div class="ph reveal d4"><span class="dotc" style="background:#8C6FE0"></span><div><b>يثبت جدارته</b><small>يعمل بالظل · يقترح · يُعتمد</small></div></div>
+        <div class="ph reveal d5"><span class="dotc" style="background:#2F7D65"></span><div><b>ينفّذ ويتحسّن</b><small>ينفّذ · يقيس · يحسّن</small></div></div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- TRUST / GOVERNANCE -->
-<section class="sec-dark" id="trust">
+<!-- ============ LADDER ============ -->
+<section style="background:var(--paper2)">
   <div class="wrap">
-    <div class="shead reveal">
-      <span class="eyebrow"><span class="dot"></span> الحوكمة والثقة</span>
-      <h2>أنت المتحكّم. دائمًا.</h2>
-      <p class="lead">لا نطلب منك أن تثق بالذكاء الاصطناعي من اليوم الأول. نطلب أن تتركه يراقب ويتعلّم — وهو يُثبت جدارته بالأرقام قبل أن يلمس أي شيء حقيقي.</p>
+    <div class="shead reveal"><span class="eyebrow"><i></i> سلّم الاستقلالية</span>
+      <h2>من المراقبة الصامتة إلى الطيّار الآلي.</h2></div>
+    <div class="ladder" id="ladder"></div>
+  </div>
+</section>
+
+<!-- ============ DIFFERENTIATORS ============ -->
+<section>
+  <div class="wrap">
+    <div class="shead reveal"><span class="eyebrow"><i></i> التميّز</span>
+      <h2>ثلاثة أشياء لا تجدونها في غيره.</h2></div>
+    <div class="g3">
+      <div class="fc reveal d1">
+        <div class="ic" style="background:rgba(47,125,101,.12)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+        <h3>عقل مؤسسي</h3><p>معرفتكم تبقى ملككم — موثّقة ومُدارة، لا حبيسة نموذج.</p>
+      </div>
+      <div class="fc reveal d2">
+        <div class="ic" style="background:rgba(94,121,230,.12)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5E79E6" stroke-width="2"><path d="M4 19V6a2 2 0 0 1 2-2h11l3 3v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/><path d="M8 10h8M8 14h5"/></svg></div>
+        <h3>تُعلّمونه بالعمل</h3><p>الموظف يُظهر العملية. لا عُقد، ولا أوامر برمجية.</p>
+      </div>
+      <div class="fc reveal d3">
+        <div class="ic" style="background:rgba(224,160,75,.14)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#E0A04B" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 2 4-6"/></svg></div>
+        <h3>قيمة من اليوم الأول</h3><p>يكشف الثغرات والتعارض حتى بصفر أتمتة.</p>
+      </div>
     </div>
-    <div class="trust-grid">
-      <div class="tcard reveal d1"><div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8fe0c6" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-4Z"/></svg></div><div><h3>محرك سياسات حتمي</h3><p>الحدود المالية وموافقات الأدوار تُقيَّم بمنطق حتمي — لا بتخمين النموذج. «رسوم فوق حدّ ← موافقة مدير».</p></div></div>
-      <div class="tcard reveal d2"><div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8fe0c6" stroke-width="2"><path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 5-3 7-7 9-4-2-7-4-7-9V7l7-4Z"/></svg></div><div><h3>أثر غير قابل للتعديل</h3><p>كل قرار وتنفيذ حسّاس له سجل قابل للتفسير: الفاعل، والزمن، والسياسة، والمصدر.</p></div></div>
-      <div class="tcard reveal d3"><div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8fe0c6" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/><circle cx="12" cy="12" r="10"/></svg></div><div><h3>مفتاح إيقاف فوري</h3><p>Killswitch لكل مهارة، وحواجز مخاطر، ومستويات صلاحية تتحكّم فيها بنفسك في أي لحظة.</p></div></div>
-      <div class="tcard reveal d4"><div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8fe0c6" stroke-width="2"><path d="M4 4h16v12H5.2L4 17.5V4Z"/><path d="M8 9h8M8 12h5"/></svg></div><div><h3>لا يخمّن أبدًا</h3><p>إن لم يوجد مصدر موثوق، يصعّد للإنسان ويسجّل السؤال في «التعلّم» — حتى يوضّحه مدير فيُخزَّن في العقل المؤسسي.</p></div></div>
+    <div class="vs reveal d2" style="margin-top:36px">
+      <div class="them">
+        <div class="ch"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#E46F61" stroke-width="2.6"><path d="M18 6 6 18M6 6l12 12"/></svg> أدوات AI التقليدية</div>
+        <div class="rw">تطلب ضبط كل شيء مسبقاً</div>
+        <div class="rw">تخمّن بثقة زائفة</div>
+        <div class="rw">قرارات مالية بيد النموذج</div>
+        <div class="rw">لا سجل ولا تفسير</div>
+        <div class="rw">تنفّذ بلا اختبار</div>
+      </div>
+      <div class="us">
+        <div class="ch"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="2.8"><path d="M20 6 9 17l-5-5"/></svg> نهج</div>
+        <div class="rw">يتعلّمكم بالمراقبة</div>
+        <div class="rw">لا يخمّن — يسأل أو يصعّد</div>
+        <div class="rw">محرّك سياسات حتمي</div>
+        <div class="rw">أثر مُدقّق لكل قرار</div>
+        <div class="rw">يُختبر قبل أن ينفّذ</div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ROI -->
-<section id="roi">
+<!-- ============ JOURNEY ============ -->
+<section style="background:var(--paper2)">
   <div class="wrap">
-    <div class="shead reveal">
-      <span class="eyebrow"><span class="dot"></span> الأثر</span>
-      <h2>قيمة تُقاس بالأرقام — لا بالوعود.</h2>
-      <p class="lead">نهج يقيس الوقت الموفّر، ونسبة الأخطاء، ومدة العمليات، وتغطية الذاكرة المؤسسية — ويقترح تحسينات مستمرة.</p>
+    <div class="shead reveal"><span class="eyebrow"><i></i> سيناريو حيّ</span>
+      <h2>تسجيل طالب — من التعليم إلى التنفيذ.</h2></div>
+    <div class="jour">
+      <div class="jc reveal d1">
+        <div class="top"><div class="ic" style="background:rgba(94,121,230,.13)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#5E79E6" stroke-width="2"><path d="M12 3 2 8l10 5 10-5-10-5Z"/><path d="M6 10.5V16c0 1.5 3 3 6 3s6-1.5 6-3v-5.5"/></svg></div>
+          <div><div class="en3">TEACH</div><h4>يتعلّم</h4></div></div>
+        <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="#5E79E6" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>الموظف يُظهر العملية</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#5E79E6" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>يستخرج الخطوات والقواعد</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#5E79E6" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>يسأل عن الغامض</li></ul>
+      </div>
+      <div class="jc reveal d2">
+        <div class="top"><div class="ic" style="background:rgba(224,160,75,.15)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E0A04B" stroke-width="2"><path d="M9 11l2 2 4-4"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg></div>
+          <div><div class="en3">PRACTICE</div><h4>يُختبر</h4></div></div>
+        <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="#E0A04B" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>١٠ حالات: عادية وحدّية وعدائية</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#E0A04B" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>لا تنفيذ حقيقي إطلاقاً</li></ul>
+        <span class="tag" style="background:rgba(47,125,101,.14);color:#1f5b49">نجح ٩٥٪ ✓</span>
+      </div>
+      <div class="jc reveal d3">
+        <div class="top"><div class="ic" style="background:rgba(140,111,224,.14)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8C6FE0" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="8" r="3.2"/><path d="M3 19c0-2.8 2.7-4.2 6-4.2M13 19c0-2.8 2.7-4.2 6-4.2"/></svg></div>
+          <div><div class="en3">SHADOW</div><h4>يعمل بالظل</h4></div></div>
+        <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="#8C6FE0" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>يقرّر بموازاة الموظف</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#8C6FE0" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>صفر أثر على العميل</li></ul>
+        <span class="tag" style="background:rgba(140,111,224,.14);color:#8C6FE0">يقيس المطابقة</span>
+      </div>
+      <div class="jc reveal d4">
+        <div class="top"><div class="ic" style="background:rgba(47,125,101,.13)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-4Z"/><path d="M9 12l2 2 4-4"/></svg></div>
+          <div><div class="en3">EXECUTE</div><h4>ينفّذ</h4></div></div>
+        <ul><li><svg viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>يتحقّق من الهوية والمقعد</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>الرسوم توقف التنفيذ</li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="#2F7D65" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>موافقة المدير بضغطة</li></ul>
+        <span class="tag" style="background:rgba(228,111,97,.14);color:#E46F61">بوابة موافقة</span>
+      </div>
     </div>
-    <div class="roi-grid">
-      <div class="roi reveal d1"><div class="num moss" data-count="95" data-suffix="٪">٠</div><div class="lbl">دقة المهارة قبل أي تنفيذ حقيقي</div></div>
-      <div class="roi reveal d2"><div class="num sky" data-count="1" data-suffix=" ضغطة">٠</div><div class="lbl">لاعتماد أي إجراء حسّاس</div></div>
-      <div class="roi reveal d3"><div class="num amber" data-count="7" data-suffix=" مستويات">٠</div><div class="lbl">من المراقبة إلى الطيّار الآلي</div></div>
-      <div class="roi reveal d4"><div class="num violet" data-count="100" data-suffix="٪">٠</div><div class="lbl">من القرارات الحسّاسة موثّقة ومُدقّقة</div></div>
-    </div>
-    <p class="kicker reveal" style="text-align:center">* أرقام السيناريو الذهبي التوضيحي (أكاديمية المستقبل). تُخصَّص لكل مؤسسة حسب عملياتها الحقيقية.</p>
   </div>
 </section>
 
-<!-- CTA -->
-<section class="final" id="subscribe">
+<!-- ============ TRUST ============ -->
+<section class="dark">
   <div class="wrap">
-    <span class="eyebrow reveal"><span class="dot"></span> اشترك معنا</span>
-    <h2 class="reveal d1">دع ذكاءك التشغيلي يبدأ بالمراقبة اليوم.</h2>
-    <p class="lead reveal d2">لا تغيير في طريقة عملكم من اليوم الأول. نبدأ بخريطة عملياتكم الحقيقية، ثم نتدرّج بالثقة — بالدليل، لا بالوعود.</p>
-    <div class="steps3">
-      <div class="s3 reveal d1"><div class="n">١</div><h4>عرض حيّ</h4><p>نُريكم الحلقة الكاملة على سيناريو من قطاعكم.</p></div>
-      <div class="s3 reveal d2"><div class="n">٢</div><h4>تجربة موجّهة</h4><p>نلتقط عملية واحدة حقيقية ونحوّلها لمهارة.</p></div>
-      <div class="s3 reveal d3"><div class="n">٣</div><h4>شراكة</h4><p>نتدرّج بالاستقلالية تحت حوكمتكم الكاملة.</p></div>
-    </div>
-    <div class="btns reveal d2">
-      <a class="btn btn-primary" href="mailto:ah_f@hotmail.com?subject=طلب%20عرض%20حي%20-%20نهج%20NAHJ">اطلب عرضاً حياً</a>
-      <a class="btn btn-ghost" href="#loop">راجع الفكرة مجددًا</a>
+    <div class="shead reveal"><span class="eyebrow"><i></i> الحوكمة</span>
+      <h2>أنتم المتحكّمون. دائماً.</h2></div>
+    <div class="g4">
+      <div class="tc reveal d1"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8fe0c6" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6l-8-4Z"/></svg></div>
+        <h3>سياسات حتمية</h3><p>الحدود المالية بمنطق ثابت — لا بتخمين.</p></div>
+      <div class="tc reveal d2"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8fe0c6" stroke-width="2"><path d="M4 4h16v12H5.2L4 17.5V4Z"/><path d="M8 9h8M8 12h5"/></svg></div>
+        <h3>أثر مُدقّق</h3><p>الفاعل والزمن والسياسة والمصدر.</p></div>
+      <div class="tc reveal d3"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8fe0c6" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5 8.5 15.5M8.5 8.5l7 7"/></svg></div>
+        <h3>إيقاف فوري</h3><p>مفتاح طوارئ لكل مهارة.</p></div>
+      <div class="tc reveal d4"><div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8fe0c6" stroke-width="2"><path d="M12 17h.01M12 7v5"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <h3>لا يخمّن</h3><p>لا مصدر موثوق؟ يصعّد للإنسان.</p></div>
     </div>
   </div>
 </section>
 
-<footer>
-  <b>نهج — NAHJ</b> · نظام ذكاء وتعلّم تشغيلي للمؤسسات<br>
-  «الذكاء الاصطناعي يجب أن يكتسب حق التصرّف.»
-</footer>
+<!-- ============ IMPACT ============ -->
+<section>
+  <div class="wrap">
+    <div class="shead reveal"><span class="eyebrow"><i></i> الأثر</span>
+      <h2>أرقام تُقاس. لا وعود.</h2></div>
+    <div class="imp">
+      <div class="ic4 reveal d1"><div class="n" style="color:#1f5b49" data-c="95" data-s="٪">٠</div><div class="l">دقة قبل أي تنفيذ</div></div>
+      <div class="ic4 reveal d2"><div class="n" style="color:#5E79E6" data-c="1" data-s=" ضغطة">٠</div><div class="l">لاعتماد إجراء حسّاس</div></div>
+      <div class="ic4 reveal d3"><div class="n" style="color:#E0A04B" data-c="7" data-s=" مستويات">٠</div><div class="l">تدرّج محكوم للاستقلالية</div></div>
+      <div class="ic4 reveal d4"><div class="n" style="color:#8C6FE0" data-c="100" data-s="٪">٠</div><div class="l">قرارات حسّاسة موثّقة</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="final" id="cta">
+  <div class="wrap">
+    <span class="eyebrow reveal"><i></i> ابدأوا</span>
+    <h2 class="reveal d1">دعوه يراقب اليوم.<br>ينفّذ حين يستحق.</h2>
+    <div class="s3">
+      <div class="reveal d1"><div class="n">١</div><h4>عرض حيّ</h4><p>الحلقة كاملة على سيناريو من قطاعكم.</p></div>
+      <div class="reveal d2"><div class="n">٢</div><h4>تجربة موجّهة</h4><p>عملية واحدة حقيقية تصبح مهارة.</p></div>
+      <div class="reveal d3"><div class="n">٣</div><h4>شراكة</h4><p>تدرّج بالاستقلالية تحت حوكمتكم.</p></div>
+    </div>
+    <div class="reveal d2" style="margin-top:38px">
+      <a class="btn btn-p" href="mailto:ah_f@hotmail.com?subject=طلب%20عرض%20حي%20-%20نهج">اطلب عرضاً حياً</a>
+    </div>
+  </div>
+</section>
+
+<footer><b>نهج — NAHJ</b> · ذكاء تشغيلي للمؤسسات<br>«الذكاء الاصطناعي يجب أن يكتسب حق التصرّف.»</footer>
 
 <script>
-  // progress bar
-  const prog = document.getElementById('prog');
-  const onScroll = () => {
-    const h = document.documentElement;
-    const p = h.scrollTop / (h.scrollHeight - h.clientHeight);
-    prog.style.width = (p*100) + '%';
-  };
-  addEventListener('scroll', onScroll, {passive:true}); onScroll();
+(function(){
+  var pg=document.getElementById('pg');
+  function sc(){var h=document.documentElement;pg.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';}
+  addEventListener('scroll',sc,{passive:true});sc();
 
-  // reveal on view
-  const io = new IntersectionObserver((es)=>{
-    es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
-  },{threshold:.14});
-  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+  },{threshold:.12});
+  function watch(root){(root||document).querySelectorAll('.reveal').forEach(function(el){io.observe(el);});}
 
-  // build loop
-  const steps = [
-    ['يلاحظ','Observe'],['يفهم','Understand'],['يستوضح','Clarify'],['يتحقّق','Verify'],
-    ['يُقنّن','Codify'],['يمارس','Practice'],['يعمل بالظل','Shadow'],['يقترح','Suggest'],
-    ['يُعتمد','Approve'],['ينفّذ','Execute'],['يقيس','Measure'],['يحسّن','Improve']
+  /* ---- problem rings ---- */
+  var rings=[
+    {v:1,suf:'',t:'موظف واحد',d:'يعرف العملية الحسّاسة',pct:100,c:'#E46F61',
+     ic:'<path d="M12 2a5 5 0 0 0-5 5v3a5 5 0 0 0 10 0V7a5 5 0 0 0-5-5Z"/><path d="M5 20c0-3 3.1-4 7-4s7 1 7 4"/>'},
+    {v:0,suf:'',t:'صفر توثيق',d:'للطريقة التي تُنفَّذ بها فعلاً',pct:8,c:'#E0A04B',
+     ic:'<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>'},
+    {v:42,suf:'٪',t:'تعارض وانحراف',d:'بين الفروع والموظفين',pct:42,c:'#8C6FE0',
+     ic:'<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>'}
   ];
-  const arrow = '<span class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
-  const lw = document.getElementById('loopwrap');
-  lw.innerHTML = steps.map((s,i)=>{
-    const n = ['١','٢','٣','٤','٥','٦','٧','٨','٩','١٠','١١','١٢'][i];
-    return `<div class="loop-step reveal d${(i%4)+1}"><span class="n">${n}</span><span>${s[0]}<small class="en">${s[1]}</small></span></div>` + (i<steps.length-1?arrow:'');
+  var toAr=function(s){return String(s).replace(/[0-9]/g,function(d){return '٠١٢٣٤٥٦٧٨٩'[d];});};
+  document.getElementById('rings').innerHTML=rings.map(function(r,i){
+    var R=62,C=2*Math.PI*R,off=C-(C*r.pct/100);
+    return '<div class="ring reveal d'+(i+1)+'">'
+      +'<svg viewBox="0 0 150 150">'
+      +'<circle cx="75" cy="75" r="'+R+'" fill="none" stroke="rgba(244,241,232,.12)" stroke-width="9"/>'
+      +'<circle class="rp" cx="75" cy="75" r="'+R+'" fill="none" stroke="'+r.c+'" stroke-width="9" stroke-linecap="round"'
+      +' stroke-dasharray="'+C+'" stroke-dashoffset="'+C+'" data-off="'+off+'" transform="rotate(-90 75 75)"/>'
+      +'<g transform="translate(63,40)" fill="none" stroke="'+r.c+'" stroke-width="1.8" stroke-linecap="round">'
+      +'<svg width="24" height="24" viewBox="0 0 24 24">'+r.ic+'</svg></g>'
+      +'<text class="rv" x="75" y="98" text-anchor="middle">'+toAr(r.v)+r.suf+'</text>'
+      +'</svg><h3>'+r.t+'</h3><p>'+r.d+'</p></div>';
   }).join('');
-  lw.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  var ringIO=new IntersectionObserver(function(es){
+    es.forEach(function(e){if(!e.isIntersecting)return;
+      var c=e.target.querySelector('.rp');
+      c.style.transition='stroke-dashoffset 1.3s cubic-bezier(.2,.7,.2,1)';
+      c.style.strokeDashoffset=c.dataset.off; ringIO.unobserve(e.target);});
+  },{threshold:.4});
+  document.querySelectorAll('.ring').forEach(function(el){ringIO.observe(el);});
 
-  // build ladder
-  const rungs = [
-    ['L0','مراقبة','Observe','مراقبة سلبية فقط. لا مخرجات.',8],
-    ['L1','تدريب','Practice','ينفّذ على بيانات تجريبية وتاريخية فقط.',22],
-    ['L2','ظل','Shadow','قرارات موازية آنية دون أي أثر على العميل.',38],
-    ['L3','اقتراح','Suggest','اقتراحات استباقية وإحاطات سياقية للموظف.',54],
-    ['L4','تجهيز','Prepare','يجهّز الإجراء كاملًا بانتظار تنفيذ بضغطة واحدة.',68],
-    ['L5','موافقة للتنفيذ','Approval','يجهّز التنفيذ ويتوقف حتى موافقة صريحة مصرّح بها.',84],
-    ['L6','طيّار آلي','Autopilot','تنفيذ ذاتي محدود بعتبات مخاطر وقواطع أمان.',100]
-  ];
-  const colors=['#10251F','#5E79E6','#5E79E6','#E0A04B','#E0A04B','#2F7D65','#1f5b49'];
-  document.getElementById('runway').innerHTML = rungs.map((r,i)=>
-    `<div class="rung l${i} reveal d${(i%4)+1}">
-      <div class="lv en" style="color:${colors[i]}">${r[0]}</div>
-      <div><h4>${r[1]} <span class="en" style="font-size:12px;color:var(--ink-soft)">${r[2]}</span></h4><p>${r[3]}</p></div>
-      <div class="bar"><i style="width:${r[4]}%;background:${colors[i]}"></i></div>
-    </div>`).join('');
-  document.querySelectorAll('#runway .reveal').forEach(el=>io.observe(el));
+  /* ---- loop wheel ---- */
+  var steps=[['يلاحظ','#5E79E6'],['يفهم','#5E79E6'],['يستوضح','#5E79E6'],
+             ['يتحقّق','#E0A04B'],['يُقنّن','#E0A04B'],['يمارس','#E0A04B'],
+             ['يعمل بالظل','#8C6FE0'],['يقترح','#8C6FE0'],['يُعتمد','#8C6FE0'],
+             ['ينفّذ','#2F7D65'],['يقيس','#2F7D65'],['يحسّن','#2F7D65']];
+  var cx=220,cy=220,R=150,s='';
+  s+='<circle cx="220" cy="220" r="150" fill="none" stroke="rgba(16,37,31,.1)" stroke-width="1.5" stroke-dasharray="4 7"/>';
+  s+='<circle cx="220" cy="220" r="66" fill="#10251F"/>';
+  s+='<text x="220" y="213" text-anchor="middle" fill="#F4F1E8" font-family="Cairo" font-weight="800" font-size="17">حلقة</text>';
+  s+='<text x="220" y="236" text-anchor="middle" fill="#F4F1E8" font-family="Cairo" font-weight="800" font-size="17">نهج</text>';
+  steps.forEach(function(st,i){
+    var a=(i/steps.length)*Math.PI*2-Math.PI/2;
+    var x=cx+R*Math.cos(a),y=cy+R*Math.sin(a);
+    var lx=cx+(R+30)*Math.cos(a),ly=cy+(R+30)*Math.sin(a);
+    s+='<line x1="'+(cx+72*Math.cos(a))+'" y1="'+(cy+72*Math.sin(a))+'" x2="'+(cx+(R-14)*Math.cos(a))+'" y2="'+(cy+(R-14)*Math.sin(a))+'" stroke="'+st[1]+'" stroke-opacity=".28" stroke-width="1.6"/>';
+    s+='<g class="wnode"><circle cx="'+x+'" cy="'+y+'" r="13" fill="'+st[1]+'"/>'
+      +'<text x="'+x+'" y="'+(y+4)+'" text-anchor="middle" font-family="Plus Jakarta Sans" font-weight="800" font-size="11" fill="#fff">'+(i+1)+'</text>'
+      +'<text x="'+lx+'" y="'+(ly+4)+'" text-anchor="middle">'+st[0]+'</text></g>';
+  });
+  document.getElementById('wheel').innerHTML=s;
 
-  // count-up (Arabic numerals)
-  const toAr = s => String(s).replace(/[0-9]/g,d=>'٠١٢٣٤٥٦٧٨٩'[d]);
-  const countIO = new IntersectionObserver((es)=>{
-    es.forEach(e=>{
-      if(!e.isIntersecting) return;
-      const el=e.target, target=+el.dataset.count, suf=el.dataset.suffix||'';
-      let cur=0; const dur=1100, t0=performance.now();
-      const tick=(t)=>{ const p=Math.min((t-t0)/dur,1); const v=Math.round((1-Math.pow(1-p,3))*target);
-        el.textContent=toAr(v)+suf; if(p<1) requestAnimationFrame(tick); };
-      requestAnimationFrame(tick); countIO.unobserve(el);
+  /* ---- ladder ---- */
+  var L=[['L0','مراقبة','OBSERVE','لا مخرجات إطلاقاً',10,'#10251F'],
+         ['L1','تدريب','PRACTICE','بيانات تجريبية فقط',25,'#5E79E6'],
+         ['L2','ظل','SHADOW','قرار موازٍ بلا أثر',40,'#5E79E6'],
+         ['L3','اقتراح','SUGGEST','يقترح على الموظف',55,'#E0A04B'],
+         ['L4','تجهيز','PREPARE','جاهز بضغطة واحدة',68,'#E0A04B'],
+         ['L5','موافقة','APPROVAL','يتوقف حتى الإذن',84,'#2F7D65'],
+         ['L6','طيّار آلي','AUTOPILOT','ضمن عتبات وقواطع',100,'#1f5b49']];
+  document.getElementById('ladder').innerHTML=L.map(function(r,i){
+    return '<div class="rung reveal d'+((i%6)+1)+'" style="--c:'+r[5]+';--w:'+r[4]+'%">'
+      +'<div class="lv en">'+r[0]+'</div>'
+      +'<div><h4>'+r[1]+'</h4><div class="en2">'+r[2]+' · '+r[3]+'</div></div>'
+      +'<div class="track"><i></i></div></div>';
+  }).join('');
+
+  /* ---- counters ---- */
+  var cIO=new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(!e.isIntersecting)return;
+      var el=e.target,tg=+el.dataset.c,sf=el.dataset.s||'',t0=performance.now();
+      (function tick(t){var p=Math.min((t-t0)/1000,1);
+        el.textContent=toAr(Math.round((1-Math.pow(1-p,3))*tg))+sf;
+        if(p<1)requestAnimationFrame(tick);})(t0);
+      cIO.unobserve(el);
     });
   },{threshold:.5});
-  document.querySelectorAll('[data-count]').forEach(el=>countIO.observe(el));
+  document.querySelectorAll('[data-c]').forEach(function(el){cIO.observe(el);});
+
+  watch();
+})();
 </script>
-<style>
-  .spin-slow{animation:spin 34s linear infinite}
-  .spin-rev{animation:spin 26s linear infinite reverse}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .pulse{animation:pulse 3.4s ease-in-out infinite}
-  @keyframes pulse{0%,100%{opacity:.25;r:52}50%{opacity:.5;r:60}}
-  @media(prefers-reduced-motion:reduce){.spin-slow,.spin-rev,.pulse{animation:none}}
-</style>
 </body>
 </html>
+
+</body></html>
