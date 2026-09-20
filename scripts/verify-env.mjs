@@ -2,8 +2,8 @@
 /*
  * نهج — فاحص جاهزية الإعداد.
  *
- * نهج بسيط الإعداد عمداً: لا مزوّد دفع ولا بريد. فالفحص الحقيقي الوحيد هنا هو
- * السؤال الذي يقرّر إن كان منتجاً أم نموذج عرض: هل قاعدة البيانات على قرص دائم؟
+ * سؤالان يقرّران إن كان هذا منتجاً أم نموذج عرض: هل قاعدة البيانات على قرص
+ * دائم؟ وهل بوابة الدفع مضبوطة ضبطاً كاملاً — فنصفُ إعدادٍ لا يُحصّل ديناراً.
  *
  *   node scripts/verify-env.mjs
  *   node scripts/verify-env.mjs --strict   رمز خروج غير صفري عند أي مانع
@@ -107,6 +107,38 @@ line(val('NAHJ_DEMO_ENABLED') === 'false' ? '○' : '✓',
   val('NAHJ_DEMO_ENABLED') === 'false' ? 'مقفلة في هذا النشر' : 'مفعّلة — يدخلها الزائر من شاشة الدخول، معزولة تماماً');
 line(has('GEMINI_API_KEY') ? '✓' : '○', has('GEMINI_API_KEY') ? C.green : C.amber, 'الذكاء الاصطناعي',
   has('GEMINI_API_KEY') ? undefined : 'بلا مفتاح — التوليف والمحاكاة تعمل بمنطقها الحتمي فقط، ولا تتعطّل');
+
+console.log(`\n${C.bold}  بوابة الدفع${C.off}`);
+/*
+ * البوابة إمّا مضبوطة كاملةً أو معدومة. والحالة الثالثة — مزوّدٌ مُعلن بإعدادٍ
+ * ناقص — هي الخطرة: يظنّ المالك أنه ربط، ولا يُنشأ رابط دفع واحد.
+ */
+const provider = val('NAHJ_PAYMENT_PROVIDER').toLowerCase();
+if (!provider || provider === 'manual') {
+  line('○', C.dim, 'بلا بوابة', 'الفواتير تُسدَّد خارج المنصة ويُسجّل المالك الدفعة بمرجعها — وهذا معلَن على الشاشة');
+} else if (!['myfatoorah', 'tap'].includes(provider)) {
+  blocking += 1;
+  line('✗', C.red, 'مزوّد غير معروف', `NAHJ_PAYMENT_PROVIDER=${provider} — المدعوم: myfatoorah أو tap`);
+} else {
+  const missing = ['NAHJ_PAYMENT_API_KEY', 'NAHJ_PAYMENT_WEBHOOK_SECRET', 'NAHJ_PUBLIC_URL'].filter(name => !has(name));
+  if (missing.length) {
+    blocking += 1;
+    line('✗', C.red, `${provider} — إعداد ناقص`, `ينقص: ${missing.join('، ')}\n       لن يُنشأ رابط دفع، وستُعرض للمؤسسة طريقة السداد اليدوية.`);
+  } else {
+    const live = val('NAHJ_PAYMENT_ENV').toLowerCase() === 'live';
+    line('✓', C.green, `${provider} — مضبوطة`, `البيئة: ${live ? 'حيّة (تُحصَّل مبالغ حقيقية)' : 'اختبار'}`);
+    const publicUrl = val('NAHJ_PUBLIC_URL').replace(/\/+$/, '');
+    line('○', C.dim, 'سجّل هذا العنوان عند المزوّد', `${publicUrl}/api/payments/webhook/${provider}`);
+    if (!/^https:\/\//.test(publicUrl)) {
+      blocking += 1;
+      line('✗', C.red, 'عنوان النشر غير مشفّر', 'المزوّدون لا يُرسلون الإشعارات إلا إلى https');
+    }
+    if (live && val('NAHJ_PAYMENT_WEBHOOK_SECRET').length < 16) {
+      warnings += 1;
+      line('◐', C.amber, 'سرّ التوقيع قصير', 'على بيئة حيّة اجعله 32 محرفاً عشوائياً فأكثر');
+    }
+  }
+}
 
 console.log('\n  ─────────────────────────────────────────────');
 console.log(`  ${blocking ? C.red : C.green}${blocking} مانع${C.off} · ${C.amber}${warnings} تنبيه${C.off}`);
