@@ -340,11 +340,22 @@ const adapters: Record<Exclude<PaymentProvider, "manual">, {
           UserDefinedField: request.reference,
           CallBackUrl: `${request.returnUrl}?ref=${encodeURIComponent(request.reference)}`,
           ErrorUrl: `${request.returnUrl}?ref=${encodeURIComponent(request.reference)}&failed=1`,
-          InvoiceItems: request.invoice.lines.map(line => ({
-            ItemName: line.description.slice(0, 100),
-            Quantity: Math.max(1, Math.round(line.quantity)),
-            UnitPrice: Number(toMajorString(line.unitAmount, request.invoice.currency)),
-          })),
+          /*
+           * بندٌ واحد قيمته ما يُطلب تحصيله بالضبط.
+           *
+           * ماي فاتورة تتحقق من أن مجموع البنود يساوي `InvoiceValue` وترفض
+           * العملية إن اختلفا. وبنود الفاتورة الأصلية لا تساويه كلّما وُجد
+           * خصمٌ أو ضريبةٌ أو دفعةٌ سابقة: فاتورةُ 149 سُدِّد منها 100 تُرسل
+           * قيمةً 49 وبنوداً مجموعها 149 — فيُرفض إنشاء الرابط، ولا يملك
+           * المشتري أن يُكمل سداد المتبقّي إطلاقاً.
+           *
+           * فالبند يصف الفاتورة بالمرجع، وقيمته هي المبلغ المُحصَّل نفسه.
+           */
+          InvoiceItems: [{
+            ItemName: `فاتورة ${request.invoice.number}`.slice(0, 100),
+            Quantity: 1,
+            UnitPrice: Number(toMajorString(request.amount, request.invoice.currency)),
+          }],
         }),
       });
       const payload = parseJson(response.body);
@@ -617,13 +628,35 @@ export async function settleIntent(intentId: string, actor = "gateway"): Promise
   if (intent.provider === "manual" || !adapters[intent.provider as Exclude<PaymentProvider, "manual">]) {
     throw gatewayError("لا مزوّد لتسوية هذه العملية.", 409);
   }
-  const remote = await adapters[intent.provider as Exclude<PaymentProvider, "manual">].fetchState(config, intent.providerRef);
 
   const db = openDatabase();
   const touch = (status: IntentStatus, failureReason = "") => {
     db.prepare("UPDATE payment_intents SET status = ?, updated_at = ?, failure_reason = ? WHERE id = ?")
       .run(status, nowIso(), failureReason, intent.id);
   };
+
+  /*
+   * العملية تُسأل عند مزوّدها هي، لا عند المزوّد المضبوط الآن.
+   *
+   * وتبديلُ `NAHJ_PAYMENT_PROVIDER` بينما عملياتٌ معلّقة قائمة يجعل الإعداد
+   * الحالي لمزوّدٍ والمنطقَ لمزوّدٍ آخر: فيُسأل عنوان «تاب» بمنطق «ماي فاتورة»
+   * وبمفتاحها — وهو في أحسن الأحوال خطأ مصادقة، وفي أسوئها قراءةُ عمليةٍ
+   * أخرى لها المعرّف نفسه. والمفتاح لا يُستنسخ: لا سبيل إلى مفتاح المزوّد
+   * السابق بعد أن بُدِّل.
+   *
+   * فتُعلَّم العملية للمراجعة البشرية ويُقال السبب، ولا يُطرَق باب مزوّدٍ بمفتاح
+   * غيره.
+   */
+  if (intent.provider !== config.provider) {
+    const reason = `أُنشئت هذه العملية عند ${PROVIDER_LABEL_AR[intent.provider]} والمزوّد المضبوط الآن ${PROVIDER_LABEL_AR[config.provider]} — تُسوّى يدوياً بمرجعها.`;
+    touch("mismatch", reason);
+    recordBillingEvent("payment.intent.provider_rotated", "عملية معلّقة من مزوّدٍ سابق — تحتاج تسويةً يدوية", actor, {
+      intentId: intent.id, providerRef: intent.providerRef, intentProvider: intent.provider, configuredProvider: config.provider,
+    });
+    return { intent: getIntent(intent.id)!, recorded: false, reason };
+  }
+
+  const remote = await adapters[intent.provider as Exclude<PaymentProvider, "manual">].fetchState(config, intent.providerRef);
 
   if (remote.status === "pending") {
     touch("pending");
@@ -650,15 +683,29 @@ export async function settleIntent(intentId: string, actor = "gateway"): Promise
   }
 
   /*
-   * البوابة الذرّية. من يصل ثانياً يجد `changes === 0` فينصرف بلا تسجيل.
+   * المطالبة والقيد في معاملةٍ واحدة.
+   *
+   * كان انتقال الحالة إلى «مدفوعة» يُثبَّت وحده ثم تُسجَّل الدفعة بعده. فلو
+   * توقّفت العملية بينهما — نشرٌ، أو انقطاع كهرباء، أو `OOM` — بقيت النيّة
+   * «مدفوعة» إلى الأبد بلا قيد: كل إشعارٍ لاحق يخرج من الفحص المبكر
+   * `status === "paid"`، والمال محصَّلٌ عند المزوّد والفاتورة مفتوحة. وهذه
+   * أسوأ حالةٍ ممكنة في نظام تحصيل — لا يكتشفها إلا تسويةٌ بنكية بعد شهر.
+   *
+   * فصارت المطالبة والقيد وتحديث الفاتورة وختم النيّة كتلةً واحدة: تثبت كلها
+   * أو لا يثبت منها شيء، فتُعاد المحاولة عند الإشعار التالي سليمةً.
+   *
+   * ولا `await` داخل الكتلة عمداً: جافاسكربت أحاديةُ الخيط، فما دامت الكتلة
+   * متزامنة بالكامل لا يتخلّلها نداءٌ آخر ولا تتداخل معاملتان على الاتصال نفسه.
    */
-  const claimed = db.prepare("UPDATE payment_intents SET status = 'paid', updated_at = ? WHERE id = ? AND status <> 'paid'")
-    .run(nowIso(), intent.id);
-  if (Number(claimed.changes) !== 1) {
-    return { intent: getIntent(intent.id)!, recorded: false, reason: "سُوّيت في نداءٍ متزامن" };
-  }
-
+  db.exec("BEGIN IMMEDIATE");
   try {
+    const claimed = db.prepare("UPDATE payment_intents SET status = 'paid', updated_at = ? WHERE id = ? AND status <> 'paid'")
+      .run(nowIso(), intent.id);
+    if (Number(claimed.changes) !== 1) {
+      db.exec("ROLLBACK");
+      return { intent: getIntent(intent.id)!, recorded: false, reason: "سُوّيت في نداءٍ متزامن" };
+    }
+
     const { payment } = recordPayment({
       invoiceId: intent.invoiceId,
       amount: intent.amount,
@@ -668,15 +715,18 @@ export async function settleIntent(intentId: string, actor = "gateway"): Promise
       note: `تحصيل عبر ${PROVIDER_LABEL_AR[intent.provider]} (${config.environment === "live" ? "حيّة" : "اختبار"})`,
     }, actor);
     db.prepare("UPDATE payment_intents SET payment_id = ?, settled_at = ? WHERE id = ?").run(payment.id, nowIso(), intent.id);
+    db.exec("COMMIT");
     return { intent: getIntent(intent.id)!, recorded: true };
   } catch (error) {
     /*
-     * فشل التسجيل بعد نجاح التحصيل أسوأ حالةٍ ممكنة: المال قُبض ولا أثر له.
-     * فتُعاد الحالة ويُسجَّل الحدث ليُعاد المحاولة، ولا يُبتلع الخطأ.
+     * التراجع يُعيد النيّة معلّقةً كما كانت، فتُعاد المحاولة. ثم يُسجَّل الحدث
+     * *خارج* المعاملة — فسجلٌّ يُمحى بالتراجع لا يُنبّه أحداً.
      */
-    touch("mismatch", error instanceof Error ? error.message : "تعذّر تسجيل الدفعة");
+    try { db.exec("ROLLBACK"); } catch { /* أُغلقت المعاملة سلفاً */ }
+    const message = error instanceof Error ? error.message : "تعذّر تسجيل الدفعة";
+    touch("mismatch", message);
     recordBillingEvent("payment.settlement.failed", "حُصِّل المبلغ ولم تُسجَّل الدفعة — يلزم تدخّل", actor, {
-      intentId: intent.id, providerRef: intent.providerRef, error: String(error instanceof Error ? error.message : error),
+      intentId: intent.id, providerRef: intent.providerRef, error: String(message),
     });
     throw error;
   }

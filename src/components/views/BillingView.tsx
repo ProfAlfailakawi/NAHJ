@@ -23,6 +23,14 @@ interface Props {
   plans: Plan[];
   loading: boolean;
   canRequest: boolean;
+  /*
+   * هل يملك صاحب الجلسة أن يدفع؟
+   *
+   * الخادم يقصر `POST /payments/checkout` على المشرف والمدير (والمالك). وزرٌّ
+   * يُعرض لمن سيُردّ طلبه بـ403 أسوأ من غيابه: يَعِد المُطَّلع بقدرةٍ لا يملكها،
+   * ويجعله يظنّ أن النظام معطّل لا أن الصلاحية ليست له.
+   */
+  canPay: boolean;
   onRefresh: () => void;
   notify: (text: string, error?: boolean) => void;
 }
@@ -171,7 +179,7 @@ const METHOD_LABEL: Record<string, { ar: string; en: string }> = {
   credit: { ar: "رصيد", en: "Credit" },
 };
 
-export function BillingView({ lang, snapshot, plans, loading, canRequest, onRefresh, notify }: Props) {
+export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay, onRefresh, notify }: Props) {
   const ar = lang === "ar";
   const [openInvoice, setOpenInvoice] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
@@ -206,6 +214,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, onRefr
     setPayResult(outcome);
     const url = new URL(window.location.href);
     url.searchParams.delete("payment");
+    url.hash = "";
     window.history.replaceState({}, "", url.toString());
     if (outcome === "paid") onRefresh();
   }, [onRefresh]);
@@ -468,7 +477,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, onRefr
                       */}
                       {invoice.status !== "void" && invoice.amountPaid < invoice.total && (
                         <div className="invoice-pay">
-                          {gateway?.configured ? (
+                          {gateway?.configured && canPay ? (
                             <>
                               <button
                                 className="btn-primary"
@@ -487,9 +496,13 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, onRefr
                             </>
                           ) : (
                             <small className="invoice-pay-manual">
-                              {ar
-                                ? "لا بوابة دفع مربوطة في هذا النشر — تُسدَّد الفاتورة بتحويل بنكي أو كي نت، ويُسجّل مالك المنصة الدفعة بمرجعها فتظهر هنا."
-                                : "No payment gateway is connected — settle by transfer and the owner records the payment with its reference."}
+                              {gateway?.configured
+                                ? (ar
+                                  ? "السداد من هذه الشاشة متاح للمشرف أو المدير — راجع من يملك الصرف في مؤسستك."
+                                  : "Paying from this screen is available to an admin or a manager.")
+                                : (ar
+                                  ? "لا بوابة دفع مربوطة في هذا النشر — تُسدَّد الفاتورة بتحويل بنكي أو كي نت، ويُسجّل مالك المنصة الدفعة بمرجعها فتظهر هنا."
+                                  : "No payment gateway is connected — settle by transfer and the owner records the payment with its reference.")}
                             </small>
                           )}
                         </div>

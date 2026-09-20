@@ -51,7 +51,16 @@ type ContextResponse={organization:Organization;users:User[];currentUser:User};
 
 export default function App(){
   const [lang,setLang]=useState<"ar"|"en">("ar");
-  const [section,setSection]=useState<SectionId>("today");
+  /*
+   * العودة من صفحة الدفع تفتح شاشة الاشتراك.
+   *
+   * كان الخادم يُعيد الدافع إلى `/?payment=...#billing`، والواجهة لا تقرأ
+   * الجزء ولا المعامل: تبدأ دائماً من «اليوم». فيعود من دفع للتوّ إلى شاشةٍ لا
+   * تذكر دفعته، ولا يرى نتيجتها إلا إن فتح الاشتراك بنفسه — وهي اللحظة التي
+   * يحتاج فيها التأكيد أكثر من أي لحظة أخرى.
+   */
+  const [section,setSection]=useState<SectionId>(()=>
+    new URLSearchParams(window.location.search).has("payment")||window.location.hash==="#billing"?"billing":"today");
   const [organization,setOrganization]=useState<Organization>(initialOrganization);
   const [user,setUser]=useState<User>(demoUsers[0]);
   const [skills,setSkills]=useState<Skill[]>(initialSkills);
@@ -337,9 +346,9 @@ export default function App(){
     case "partners":view=<PartnersAdminView lang={lang} notify={notify}/>;break;
     case "partnerPortal":view=<PartnerPortalView lang={lang} notify={notify}/>;break;
     case "sectors":view=<SectorsView lang={lang} isDemo={demoActive} canApply={account?.role==="admin"||account?.role==="owner"} notify={notify} onApplied={()=>void loadAll()}/>;break;
-    case "billing":view=<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={account?.role==="admin"||account?.role==="manager"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
+    case "billing":view=<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={account?.role==="admin"||account?.role==="manager"} canPay={account?.role==="admin"||account?.role==="manager"||account?.role==="owner"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
     /* لوحة المالك لا تُركَّب أصلاً لغير المالك — والخادم يرفضها أيضاً، فالحجب في الطبقتين. */
-    case "owner":view=isOwner?<OwnerView lang={lang} notify={notify} onChanged={()=>void refreshBilling()}/>:<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={false} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
+    case "owner":view=isOwner?<OwnerView lang={lang} notify={notify} onChanged={()=>void refreshBilling()}/>:<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={false} canPay={account?.role==="owner"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
   }
 
   return <>

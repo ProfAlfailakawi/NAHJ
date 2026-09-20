@@ -81,3 +81,25 @@ test("«موصول» تعني عملاً نجح، لا عميلاً أُنشئ",
   assert.match(source, /connected: isConnected && !!firestoreDb && !!lastSyncTime && !connectionError/,
     "الحالة المعروضة لا تشترط عملاً ناجحاً بلا فشلٍ بعده");
 });
+
+test("زرّ الدفع لا يُعرض لمن يردّه الخادم، والعودة تفتح شاشة الاشتراك", () => {
+  /*
+   * اثنتان من مراجعة، كلتاهما في الطبقة التي لا يراها فحصُ الخادم:
+   *   - `POST /payments/checkout` مقصور على المشرف والمدير والمالك، والزرّ كان
+   *     يُعرض لكل من دخل — فيَعِد المُطَّلع بقدرةٍ تنتهي بـ403 ويظنّ النظام معطّلاً.
+   *   - الخادم يُعيد الدافع إلى `?payment=...#billing`، والواجهة لا تقرأ الجزء
+   *     ولا المعامل: تبدأ من «اليوم». فيعود من دفع للتوّ إلى شاشة لا تذكر دفعته.
+   */
+  const billing = read("src/components/views/BillingView.tsx");
+  const app = read("src/App.tsx");
+  const routes = read("server/paymentRoutes.ts");
+
+  assert.match(billing, /gateway\?\.configured && canPay/, "الزرّ لا يتبع صلاحية الدفع");
+  assert.match(app, /canPay=\{/, "الصلاحية لا تُمرَّر من التطبيق");
+
+  /* الصلاحية في الواجهة يجب أن تطابق ما يقبله المسار. */
+  assert.match(routes, /requireRole\("admin", "manager"\)/, "تغيّر حارس المسار فلتُراجع الواجهة");
+
+  assert.match(app, /useState<SectionId>\(\(\)=>/, "القسم الابتدائي ثابت لا يُشتق من العودة");
+  assert.match(app, /has\("payment"\)/, "العودة من الدفع لا تفتح شاشة الاشتراك");
+});

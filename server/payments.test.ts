@@ -27,7 +27,7 @@ import {
 } from "./payments.ts";
 import {
   ensureBillingSchema, getInvoice, issueInvoice, listPayments, recordPayment,
-  resetBillingSchemaCache, seedDefaultPlans,
+  resetBillingSchemaCache, seedDefaultPlans, voidInvoice,
 } from "./billing.ts";
 import { closeDatabase } from "./persistence.ts";
 
@@ -466,4 +466,83 @@ test("لا يُعاد مفتاح ولا سرّ في حالة البوابة", ()
   assert.ok(!serialized.includes("SECRET-KEY-VALUE"), "المفتاح يخرج في الحالة المعروضة");
   assert.ok(!serialized.includes("SECRET-HOOK-VALUE"), "سرّ التوقيع يخرج في الحالة المعروضة");
   assert.match(gatewayStatus().webhookUrl, /\/api\/payments\/webhook\/myfatoorah$/);
+});
+
+/* ------------------------------------------------- ذرّية التسوية */
+
+test("فشل القيد يُعيد النيّة معلّقةً — لا «مدفوعة» بلا دفعة", async () => {
+  /*
+   * سقط هذا في مراجعة: المطالبة كانت تُثبَّت وحدها ثم يُسجَّل القيد بعدها. فلو
+   * توقّفت العملية بينهما بقيت النيّة «مدفوعة» أبداً بلا قيد، وكل إشعارٍ لاحق
+   * يخرج من الفحص المبكر — فالمال محصَّل والفاتورة مفتوحة.
+   *
+   * ولا يمكن إيقاف العملية داخل فحص، فيُستعمل ما يُنتج الأثر نفسه: قيدٌ يفشل
+   * داخل الكتلة. والمطلوب إثباتُه واحد — ألّا يبقى أثرٌ نصفيّ.
+   */
+  freshDatabase();
+  configure("myfatoorah");
+  stubTransport(() => ({ body: { IsSuccess: true, Data: { InvoiceId: "MF-TX", InvoiceURL: "https://pay.example/MF-TX" } } }));
+  const invoice = anInvoice(80_000);
+  const intent = await createCheckout({ invoiceId: invoice.id });
+
+  /* تُلغى الفاتورة بعد إنشاء العملية: `recordPayment` سيرفض السداد عليها. */
+  voidInvoice(invoice.id);
+
+  stubTransport(() => ({ body: myfatoorahPaid("80.000") }));
+  await assert.rejects(() => settleIntent(intent.id), /ملغاة/);
+
+  const after = findIntentByRef("myfatoorah", "MF-TX")!;
+  assert.notEqual(after.status, "paid", "بقيت النيّة «مدفوعة» بلا قيد");
+  assert.equal(after.paymentId, null, "قيدٌ نصفيّ");
+  assert.equal(listPayments().length, 0, "سُجِّلت دفعة داخل معاملةٍ تراجعت");
+  assert.match(after.failureReason, /ملغاة/, "لا سبب مكتوب لمن يراجع");
+});
+
+/* ------------------------------------------- بنود ماي فاتورة */
+
+test("مجموع البنود المرسلة يساوي المبلغ المُحصَّل بالضبط", async () => {
+  /*
+   * ماي فاتورة تتحقق من أن مجموع البنود يساوي `InvoiceValue` وترفض إن اختلفا.
+   * وفاتورةٌ سُدِّد بعضها كانت تُرسل المتبقّي مع بنود الفاتورة كاملة — فيُرفض
+   * إنشاء الرابط ولا يملك المشتري إكمال السداد إطلاقاً.
+   */
+  freshDatabase();
+  configure("myfatoorah");
+  const invoice = anInvoice(149_000);
+  recordPayment({ invoiceId: invoice.id, amount: 100_000, currency: "KWD" });
+
+  const calls = stubTransport(() => ({ body: { IsSuccess: true, Data: { InvoiceId: "MF-ITEMS", InvoiceURL: "https://pay.example/items" } } }));
+  await createCheckout({ invoiceId: invoice.id });
+
+  const sent = JSON.parse(calls[0].body || "{}");
+  const itemsTotal = (sent.InvoiceItems || []).reduce((sum: number, item: any) => sum + item.Quantity * item.UnitPrice, 0);
+  assert.equal(sent.InvoiceValue, 49);
+  assert.equal(Math.round(itemsTotal * 1000), Math.round(sent.InvoiceValue * 1000), "مجموع البنود يخالف المبلغ المُحصَّل");
+});
+
+/* ------------------------------------------- تبديل المزوّد */
+
+test("عمليةٌ معلّقة من مزوّدٍ سابق لا تُسأل بمفتاح مزوّدٍ آخر", async () => {
+  /*
+   * سقط هذا في مراجعة: التسوية كانت تختار المنطق من مزوّد العملية وتقرأ
+   * الإعداد من المزوّد المضبوط الآن. فبعد تبديل `NAHJ_PAYMENT_PROVIDER` تُسأل
+   * «تاب» بمنطق «ماي فاتورة» وبمفتاحها — أو يُقرأ معرّفٌ يخصّ عمليةً أخرى.
+   */
+  freshDatabase();
+  configure("myfatoorah");
+  stubTransport(() => ({ body: { IsSuccess: true, Data: { InvoiceId: "MF-OLD", InvoiceURL: "https://pay.example/old" } } }));
+  const invoice = anInvoice(30_000);
+  const intent = await createCheckout({ invoiceId: invoice.id });
+
+  /* بُدِّل المزوّد والعملية ما زالت معلّقة. */
+  configure("tap");
+  const calls = stubTransport(() => ({ body: { id: "chg_x", status: "CAPTURED", amount: 30, currency: "KWD" } }));
+  const result = await settleIntent(intent.id);
+
+  assert.equal(calls.length, 0, "طُرق باب مزوّدٍ بمفتاح غيره");
+  assert.equal(result.recorded, false);
+  assert.equal(listPayments().length, 0);
+  const after = findIntentByRef("myfatoorah", "MF-OLD")!;
+  assert.equal(after.status, "mismatch", "لم تُرفع للمراجعة البشرية");
+  assert.match(after.failureReason, /تُسوّى يدوياً/);
 });
