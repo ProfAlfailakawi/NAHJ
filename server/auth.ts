@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import type { NextFunction, Request, Response } from "express";
 import { openDatabase } from "./persistence.ts";
 import { DemoSandbox } from "./db.ts";
+import { checkLimit } from "./billing.ts";
 
 /*
  * المصادقة.
@@ -23,8 +24,23 @@ const SESSION_HOURS = 8;
 const MAX_FAILED_LOGINS = 8;
 const LOCKOUT_MINUTES = 15;
 
-export type AccountRole = "admin" | "manager" | "operator" | "viewer";
-const ROLES: AccountRole[] = ["admin", "manager", "operator", "viewer"];
+/*
+ * الأدوار.
+ *
+ * `owner` هو مالك المنصة — من باعها ونشرها، لا مدير المؤسسة المشترية. وهو الوحيد
+ * الذي يملك الترخيص: الباقات والاشتراك والفواتير والدفعات. و`admin` هو أعلى دور
+ * داخل المؤسسة المشترية: يدير حساباتها وحوكمتها، ويرى اشتراكه وفواتيره، ولا يملك
+ * أن يمدّد اشتراكه بنفسه.
+ *
+ * الفصل بينهما هو الفرق بين نظامٍ مُباع ونظامٍ مُسلَّم.
+ */
+export type AccountRole = "owner" | "admin" | "manager" | "operator" | "viewer";
+const ROLES: AccountRole[] = ["owner", "admin", "manager", "operator", "viewer"];
+
+/** الترتيب تصاعدي في الصلاحية. `owner` يعلو الجميع، فيمرّ من كل حارس دور. */
+const ROLE_RANK: Record<AccountRole, number> = { viewer: 1, operator: 2, manager: 3, admin: 4, owner: 5 };
+
+export const isOwnerRole = (role: string | undefined) => role === "owner";
 
 export interface Account {
   id: string;
@@ -355,7 +371,6 @@ export function requireAuth(req: AuthenticatedRequest, res: Response, next: Next
   next();
 }
 
-/** حارس أدوار. الترتيب تصاعدي في الصلاحية. */
 /*
  * إدارة الحسابات.
  *
@@ -388,8 +403,9 @@ export function listAccounts(): AccountSummary[] {
   }));
 }
 
+/* المالك يُدير النظام أيضاً، فهو يُعدّ ضمن من يملكون إدارته عند حساب "آخر مشرف". */
 const adminCount = () => {
-  const row = openDatabase().prepare("SELECT COUNT(*) AS count FROM accounts WHERE role = 'admin' AND status = 'ACTIVE'").get() as { count: number };
+  const row = openDatabase().prepare("SELECT COUNT(*) AS count FROM accounts WHERE role IN ('admin','owner') AND status = 'ACTIVE'").get() as { count: number };
   return Number(row?.count ?? 0);
 };
 
@@ -404,8 +420,9 @@ function assertNotLastAdmin(accountId: string, nextRole: string, nextStatus: str
   const target = openDatabase().prepare('SELECT role, status FROM accounts WHERE id = ?').get(accountId) as
     | { role: string; status: string } | undefined;
   if (!target) return;
-  const wasActiveAdmin = target.role === 'admin' && target.status === 'ACTIVE';
-  const staysActiveAdmin = nextRole === 'admin' && nextStatus === 'ACTIVE';
+  const administers = (role: string) => role === 'admin' || role === 'owner';
+  const wasActiveAdmin = administers(target.role) && target.status === 'ACTIVE';
+  const staysActiveAdmin = administers(nextRole) && nextStatus === 'ACTIVE';
   if (wasActiveAdmin && !staysActiveAdmin && adminCount() <= 1) {
     throw Object.assign(new Error('لا يمكن إزالة آخر مشرف نشط — عيّن مشرفاً آخر أولاً.'), { status: 409 });
   }
@@ -415,6 +432,18 @@ export async function adminCreateAccount(input: CreateAccountInput): Promise<Acc
   const existing = openDatabase().prepare('SELECT id FROM accounts WHERE email = ? LIMIT 1')
     .get(String(input.email || '').trim().toLowerCase());
   if (existing) throw Object.assign(new Error('هذا البريد مسجّل مسبقاً.'), { status: 409 });
+  // لا يُصنع مالكٌ ثانٍ من شاشة الحسابات. المِلكية تُضبط عند النشر، لا بنموذج ويب.
+  if (input.role === 'owner') {
+    throw Object.assign(new Error('لا يُنشأ حساب مالك من هنا.'), { status: 403 });
+  }
+  /*
+   * حدّ المقاعد.
+   *
+   * لا معنى لباقةٍ تقول "عشرة مقاعد" ثم يُنشئ النظام الحادي عشر بلا اعتراض. والرفض
+   * هنا لا في الواجهة: الواجهة تُخبر، والخادم يمنع.
+   */
+  const seats = checkLimit('seats', accountCount());
+  if (!seats.allowed) throw Object.assign(new Error(seats.reason), { status: 402, code: 'PLAN_LIMIT' });
   try {
     return await createAccount(input);
   } catch (error) {
@@ -431,6 +460,23 @@ export function updateAccount(accountId: string, changes: { role?: AccountRole; 
   const role = changes.role ?? (current.role as AccountRole);
   const status = changes.status ?? current.status;
   if (!ROLES.includes(role)) throw Object.assign(new Error('الدور غير صالح.'), { status: 400 });
+
+  /*
+   * حساب المالك خارج متناول شاشة الحسابات تماماً — لا خفضاً ولا تعليقاً.
+   *
+   * مشرف المؤسسة المشترية يمرّ من نفس الحارس الذي يمرّ منه المالك (`requireRole("admin")`)،
+   * فبدون هذا السطر يستطيع بضغطة واحدة أن يعزل مالك المنصة عن ترخيصه ويصير هو من
+   * يقرّر متى ينتهي اشتراكه. وترقية حساب إلى مالك ليست عملية إدارة حسابات أصلاً.
+   */
+  if (current.role === 'owner' && role !== 'owner') {
+    throw Object.assign(new Error('حساب مالك المنصة لا يُخفَّض من هنا.'), { status: 403 });
+  }
+  if (current.role === 'owner' && status !== 'ACTIVE') {
+    throw Object.assign(new Error('حساب مالك المنصة لا يُعلَّق.'), { status: 403 });
+  }
+  if (role === 'owner' && current.role !== 'owner') {
+    throw Object.assign(new Error('الترقية إلى مالك المنصة لا تتم من شاشة الحسابات.'), { status: 403 });
+  }
   if (!['ACTIVE', 'SUSPENDED'].includes(status)) throw Object.assign(new Error('حالة الحساب غير صالحة.'), { status: 400 });
 
   assertNotLastAdmin(accountId, role, status);
@@ -484,14 +530,73 @@ export function revokeSessions(accountId: string): number {
   return Number(result.changes ?? 0);
 }
 
+/**
+ * حارس أدوار.
+ *
+ * `owner` يمرّ دائماً: هو مالك النظام، ولا معنى لأن يُمنع من شاشةٍ فيه. أي حارس
+ * آخر يُطابق الدور المطلوب نصّاً — لا نستعمل الرتبة للتصعيد العام، لأن بعض
+ * الحراس يقصدون دوراً بعينه لا "هذا الدور فما فوق".
+ */
 export function requireRole(...allowed: AccountRole[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.account) return res.status(401).json({ error: "يلزم تسجيل الدخول.", code: "AUTH_REQUIRED" });
-    if (!allowed.includes(req.account.role)) {
+    if (!isOwnerRole(req.account.role) && !allowed.includes(req.account.role)) {
       return res.status(403).json({ error: "لا تملك صلاحية تنفيذ هذه العملية.", code: "FORBIDDEN" });
     }
     next();
   };
+}
+
+/**
+ * حارس المالك — لإدارة الترخيص وحدها.
+ *
+ * ولا يمرّ منه زائر البيئة التجريبية رغم هويّته الاصطناعية: صندوقه في الذاكرة،
+ * بينما جداول الفوترة في القاعدة الحقيقية. تمريره كان سيجعل أي زائر يُلغي اشتراك
+ * المؤسسة أو يُصدر فواتير باسمها.
+ */
+export function requireOwner(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.account) return res.status(401).json({ error: "يلزم تسجيل الدخول.", code: "AUTH_REQUIRED" });
+  if (req.account.id === "demo") {
+    return res.status(403).json({ error: "إدارة الترخيص غير متاحة في البيئة التجريبية.", code: "DEMO_READONLY" });
+  }
+  if (!isOwnerRole(req.account.role)) {
+    return res.status(403).json({ error: "هذه الشاشة لمالك المنصة وحده.", code: "OWNER_ONLY" });
+  }
+  next();
+}
+
+export const roleRank = (role: string | undefined) => ROLE_RANK[(role || "viewer") as AccountRole] ?? 0;
+
+/**
+ * يضمن وجود مالك واحد على الأقل.
+ *
+ * ثلاث خطوات بترتيب مقصود:
+ *   ١. مالكٌ موجود؟ لا شيء يُفعل — قرار قائم لا يُنقض عند كل إقلاع.
+ *   ٢. `NAHJ_OWNER_EMAIL` يطابق حساباً؟ يُرقّى. هذه الطريقة الصريحة لمن ينشر.
+ *   ٣. وإلا يُرقّى أقدم حساب — وهو حساب من هيّأ النظام، أي من نشره.
+ *
+ * بدون هذا لا يملك أحدٌ شاشة الترخيص إطلاقاً، وتبقى الفوترة بلا يد تديرها.
+ */
+export function ensureOwnerAccount(): Account | null {
+  const db = openDatabase();
+  const existing = db.prepare("SELECT id, email, name, role, status FROM accounts WHERE role = 'owner' LIMIT 1").get() as
+    | { id: string; email: string; name: string; role: string; status: string } | undefined;
+  if (existing) return { ...existing, role: "owner" as AccountRole };
+
+  const declared = normalizeEmail(process.env.NAHJ_OWNER_EMAIL);
+  const candidate = (declared
+    ? db.prepare("SELECT id, email, name, status FROM accounts WHERE email = ? LIMIT 1").get(declared)
+    : db.prepare("SELECT id, email, name, status FROM accounts ORDER BY created_at ASC LIMIT 1").get()) as
+    | { id: string; email: string; name: string; status: string } | undefined;
+
+  if (!candidate) {
+    if (declared) console.log(`[NAHJ] NAHJ_OWNER_EMAIL=${declared} لا يطابق أي حساب بعد — سيُرقّى حين يُنشأ.`);
+    return null;
+  }
+
+  db.prepare("UPDATE accounts SET role = 'owner', updated_at = ? WHERE id = ?").run(now(), candidate.id);
+  console.log(`[NAHJ] مالك المنصة: ${candidate.email}${declared ? " (من NAHJ_OWNER_EMAIL)" : " (أقدم حساب)"}`);
+  return { id: candidate.id, email: candidate.email, name: candidate.name, role: "owner", status: candidate.status };
 }
 
 export const authCookieNames = { session: SESSION_COOKIE, csrf: CSRF_COOKIE };

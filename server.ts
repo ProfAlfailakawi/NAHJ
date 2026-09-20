@@ -2,7 +2,8 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { apiRouter, authRouter } from "./server/routes.ts";
-import { bootstrapFirstAccount, purgeExpiredSessions } from "./server/auth.ts";
+import { bootstrapFirstAccount, ensureOwnerAccount, purgeExpiredSessions } from "./server/auth.ts";
+import { ensureSubscription, startBillingWorker, stopBillingWorker } from "./server/billing.ts";
 import { DemoSandbox, DEMO_SESSION_TTL_MS, persistence } from "./server/db.ts";
 import { randomBytes } from "node:crypto";
 
@@ -128,6 +129,16 @@ async function startServer() {
   app.use("/api", apiRouter);
 
   await bootstrapFirstAccount();
+  /*
+   * الترخيص يُهيَّأ قبل الاستماع لا بعده.
+   *
+   * أول طلب قد يصل في الملّي ثانية التالية لفتح المنفذ، وحارس الاشتراك يقرأ حالةً
+   * يجب أن تكون موجودة حينها — لا أن تُنشأ تحت أول قارئ لها.
+   */
+  ensureSubscription();
+  ensureOwnerAccount();
+  startBillingWorker();
+
   const sessionCleanup = setInterval(() => purgeExpiredSessions(), 30 * 60_000);
   sessionCleanup.unref();
 
@@ -138,7 +149,7 @@ async function startServer() {
   // إيقاف نظيف: آخر لقطة تُكتب قبل الخروج فلا تضيع ثوانٍ من العمل.
   const shutdown = (signal: string) => {
     console.log(`[NAHJ] ${signal} received — flushing state.`);
-    try { persistence.flush(); } finally { process.exit(0); }
+    try { persistence.flush(); stopBillingWorker(); } finally { process.exit(0); }
   };
   process.once("SIGINT", () => shutdown("SIGINT"));
   process.once("SIGTERM", () => shutdown("SIGTERM"));

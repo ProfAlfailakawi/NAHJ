@@ -1,9 +1,9 @@
 import React from "react";
-import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, FlaskConical, GraduationCap, History, Languages, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
+import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, CreditCard, Crown, FlaskConical, GraduationCap, History, Languages, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
 import { BrandLockup, NahjMark } from "./Brand";
 import type { Organization, User } from "../types";
 
-export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts";
+export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts" | "billing" | "owner";
 
 type ShellProps = {
   section: SectionId;
@@ -23,10 +23,14 @@ type ShellProps = {
   onExitDemo?: () => void;
   onSignOut?: () => void;
   signingOut?: boolean;
+  /** يُخفي مدخل لوحة المالك عمّن ليس مالكاً — لا يُعرض قفلٌ على باب لا يخصّه. */
+  isOwner?: boolean;
+  /** شريط حالة الترخيص، يُمرَّر كما هو ليُرسم فوق كل سطح. */
+  licenceBanner?: React.ReactNode;
   children: React.ReactNode;
 };
 
-const nav: { id: SectionId; ar: string; en: string; icon: React.ElementType; group?: "core"|"operate"|"govern" }[] = [
+const nav: { id: SectionId; ar: string; en: string; icon: React.ElementType; group?: "core"|"operate"|"govern"|"owner" }[] = [
   { id: "today", ar: "اليوم", en: "Today", icon: Activity, group:"core" },
   { id: "learn", ar: "يتعلّم", en: "Learn", icon: Sparkles, group:"core" },
   { id: "teach", ar: "علّم", en: "Teach", icon: GraduationCap, group:"core" },
@@ -39,14 +43,18 @@ const nav: { id: SectionId; ar: string; en: string; icon: React.ElementType; gro
   { id: "control", ar: "الحوكمة", en: "Control", icon: ShieldCheck, group:"govern" },
   { id: "audit", ar: "السجل", en: "Audit", icon: History, group:"govern" },
   { id: "accounts", ar: "الحسابات", en: "Accounts", icon: Users, group:"govern" },
+  { id: "billing", ar: "الاشتراك", en: "Subscription", icon: CreditCard, group:"govern" },
+  { id: "owner", ar: "لوحة المالك", en: "Owner console", icon: Crown, group:"owner" },
 ];
 
 export function Shell({
   section, onSection, organization, user, lang, onToggleLang, alerts, onAlert, serverLive = false,
   demoEnabled = false, demoActive = false, demoBusy = false, onEnterDemo, onResetDemo, onExitDemo,
-  onSignOut, signingOut = false, children,
+  onSignOut, signingOut = false, isOwner = false, licenceBanner, children,
 }: ShellProps) {
   const ar = lang === "ar";
+  /* مدخل المالك يُحذف من القائمة لا يُعطَّل: قائمةٌ فيها بابٌ مقفل تدعو إلى طرقه. */
+  const visibleNav = nav.filter(item => item.id !== "owner" || isOwner);
   let lastGroup: string | undefined;
   return (
     <div className="app-shell" dir={ar ? "rtl" : "ltr"}>
@@ -54,7 +62,7 @@ export function Shell({
       <aside className="desktop-rail">
         <div className="rail-brand"><NahjMark size={48}/></div>
         <nav className="rail-nav">
-          {nav.map(({ id, ar: a, en, icon: Icon, group }) => {
+          {visibleNav.map(({ id, ar: a, en, icon: Icon, group }) => {
             const divider = lastGroup && group !== lastGroup;
             lastGroup = group;
             return (
@@ -160,9 +168,9 @@ export function Shell({
             ) : null}
           </div>
         </header>
-        <main className="content-stage">{children}</main>
+        <main className="content-stage">{licenceBanner}{children}</main>
         <nav className="mobile-dock" aria-label="Mobile navigation">
-          {nav.slice(0,8).map(({id, icon:Icon, ar:a, en})=><button key={id} className={section===id?"active":""} onClick={()=>onSection(id)} aria-label={ar?a:en}><Icon/></button>)}
+          {visibleNav.slice(0,8).map(({id, icon:Icon, ar:a, en})=><button key={id} className={section===id?"active":""} onClick={()=>onSection(id)} aria-label={ar?a:en}><Icon/></button>)}
         </nav>
       </div>
     </div>
