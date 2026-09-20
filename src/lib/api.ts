@@ -376,6 +376,33 @@ export const paymentsApi = {
     ),
 };
 
+/* ------------------------------------------------- التصدير والنسخ */
+
+export interface ExportSummary {
+  counts: { skills: number; workItems: number; auditEvents: number; invoices: number; payments: number; outstanding: string };
+  ledgers: Array<{ name: string; label: string }>;
+  backup: null | {
+    enabled: boolean; intervalHours: number; directory: string; retention: number;
+    count: number; totalBytes: number; note: string;
+    latest: null | { name: string; sizeBytes: number; createdAt: string };
+  };
+}
+
+export const archiveApi = {
+  summary: () => api<ExportSummary>("/export/summary"),
+
+  /*
+   * التنزيل لا يمرّ بـ`api`: الجواب ملفٌّ لا JSON.
+   *
+   * ويُفتح في اللسان نفسه اعتماداً على `Content-Disposition` — فلا نافذةٌ
+   * جديدة تحجبها المتصفحات ولا كائنٌ في الذاكرة لملفٍ قد يكون كبيراً.
+   */
+  download: (path: string) => { window.location.href = `/api${path}`; },
+
+  backups: () => api<{ status: NonNullable<ExportSummary["backup"]>; files: Array<{ name: string; size: string; createdAt: string }> }>("/backup"),
+  runBackup: () => post<{ ok: boolean; file: { name: string; size: string }; pruned: string[] }>("/backup/run", {}),
+};
+
 export const partnersApi = {
   /** لوحة صاحب الجلسة — معرّفه من حسابه لا من معامل يرسله. */
   me: () => api<PartnerPortal>("/partners/me"),

@@ -140,6 +140,28 @@ if (!provider || provider === 'manual') {
   }
 }
 
+console.log(`\n${C.bold}  النسخ الاحتياطي${C.off}`);
+/*
+ * النسخة بجوار الأصل تضيع معه. ولا نستطيع الجزم بأن المجلد على قرصٍ آخر من
+ * داخل العملية، لكن كونَه داخل مجلد القاعدة نفسه مؤشّرٌ قاطع على أنه ليس كذلك.
+ */
+const backupHours = Number(val('NAHJ_BACKUP_HOURS') || 24);
+if (!(backupHours > 0)) {
+  warnings += 1;
+  line('◐', C.amber, 'النسخ الدوري معطّل', 'NAHJ_BACKUP_HOURS=0 — النسخ اليدوي وحده من لوحة المالك');
+} else {
+  line('✓', C.green, 'النسخ الدوري', `كل ${backupHours} ساعة، ويُستبقى آخر ${val('NAHJ_BACKUP_KEEP') || 14} نسخة`);
+}
+
+const backupDir = val('NAHJ_BACKUP_DIR') || path.join(path.dirname(dbPath), 'backups');
+const sameDisk = path.resolve(backupDir).startsWith(path.dirname(path.resolve(dbPath)) + path.sep);
+if (sameDisk) {
+  warnings += 1;
+  line('◐', C.amber, 'النسخ بجوار القاعدة', `${backupDir}\n       على القرص نفسه — يضيع معها. وجّهه إلى قرصٍ آخر أو خزّنه خارجياً.`);
+} else {
+  line('✓', C.green, 'مجلد النسخ', backupDir);
+}
+
 console.log('\n  ─────────────────────────────────────────────');
 console.log(`  ${blocking ? C.red : C.green}${blocking} مانع${C.off} · ${C.amber}${warnings} تنبيه${C.off}`);
 if (blocking) console.log(`  ${C.red}لا تنشر قبل معالجة الموانع أعلاه.${C.off}`);

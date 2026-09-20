@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle, ArrowUpRight, BadgeCheck, CalendarClock, CheckCircle2, CircleSlash, CreditCard,
-  FileText, Gauge, Layers, Receipt, RefreshCw, ShieldCheck, Sparkles, Timer, Wallet,
+  Download, FileText, Gauge, HardDriveDownload, Layers, Receipt, RefreshCw, ShieldCheck, Sparkles, Timer, Wallet,
 } from "lucide-react";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
 import {
-  billingApi, money, paymentsApi,
-  type BillingSnapshot, type GatewayState, type Plan, type PlanFeatureKey, type SubscriptionStatus,
+  archiveApi, billingApi, money, paymentsApi,
+  type BillingSnapshot, type ExportSummary, type GatewayState, type Plan, type PlanFeatureKey, type SubscriptionStatus,
 } from "../../lib/api";
 
 /*
@@ -192,6 +192,16 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
    */
   const [gateway, setGateway] = useState<GatewayState | null>(null);
   const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
+  /* ما يُصدَّر، وكم فيه — يُقرأ من الخادم فلا يَعِد الزرّ بما لا يوجد. */
+  const [exportSummary, setExportSummary] = useState<ExportSummary | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    archiveApi.summary()
+      .then(summary => { if (alive) setExportSummary(summary); })
+      .catch(() => { if (alive) setExportSummary(null); });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -403,6 +413,42 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
               );
             })}
           </div>
+        </section>
+      )}
+
+      {/*
+        * التصدير.
+        *
+        * وعدُ «بياناتك تبقى مقروءة وقابلة للتصدير» أعلاه كان بلا طريق: لا زرّ
+        * يُخرجها ولا صيغة تُقرأ خارج نهج. ومؤسسةٌ لا تستطيع أن تأخذ بياناتها
+        * ليست مالكةً لها مهما كُتب في العقد — والتصدير هنا متاحٌ حتى والكتابة
+        * مجمّدة، لأن منعه عن متأخّرٍ عن السداد ابتزازٌ لا تحصيل.
+      */}
+      {exportSummary && !snapshot.isDemo && (
+        <section className="surface-strong sub-block">
+          <SectionTitle title={ar ? "بياناتك" : "Your data"} icon={<Download />}
+            meta={ar ? "لك، لا لنا" : "yours, not ours"} />
+          <p className="sub-footnote" style={{ marginTop: 0 }}>
+            {ar
+              ? `${exportSummary.counts.skills} مهارة، و${exportSummary.counts.workItems} حالة عمل، و${exportSummary.counts.auditEvents} حدث تدقيق، و${exportSummary.counts.invoices} فاتورة. تخرج كلها بصيغةٍ تُقرأ خارج نهج — الآن، وبلا طلبٍ منّا.`
+              : `Everything you have built, exported in formats readable outside NAHJ.`}
+          </p>
+          <div className="export-actions">
+            <button className="btn-primary" onClick={() => archiveApi.download("/export/full.json")}>
+              <Download /> {ar ? "نسخة كاملة (JSON)" : "Full export (JSON)"}
+            </button>
+            {exportSummary.ledgers.map(ledger => (
+              <button key={ledger.name} className="btn-secondary"
+                onClick={() => archiveApi.download(`/export/${ledger.name}.csv`)}>
+                <FileText /> {ledger.label} (CSV)
+              </button>
+            ))}
+          </div>
+          <p className="sub-footnote">
+            {ar
+              ? "كل تصدير يُسجَّل في سجلّ التدقيق بمن فعله ومتى — إخراج بيانات مؤسسة حدثٌ أمني بقدر ما هو خدمة."
+              : "Every export is recorded in the audit log."}
+          </p>
         </section>
       )}
 

@@ -6,6 +6,7 @@ import { paymentPublicRouter } from "./server/paymentRoutes.ts";
 import { bootstrapFirstAccount, ensureOwnerAccount, purgeExpiredSessions } from "./server/auth.ts";
 import { ensureSubscription, startBillingWorker, stopBillingWorker } from "./server/billing.ts";
 import { DemoSandbox, DEMO_SESSION_TTL_MS, persistence } from "./server/db.ts";
+import { startBackupWorker, stopBackupWorker } from "./server/archive.ts";
 import { randomBytes } from "node:crypto";
 
 const DEMO_COOKIE = "nahj_demo";
@@ -151,6 +152,8 @@ async function startServer() {
   ensureSubscription();
   ensureOwnerAccount();
   startBillingWorker();
+  /* النسخ الدوري — لا يكتب نسخةً عند الإقلاع، فالنشر المتكرر يُزيح نسخة الأمس. */
+  startBackupWorker();
 
   const sessionCleanup = setInterval(() => purgeExpiredSessions(), 30 * 60_000);
   sessionCleanup.unref();
@@ -162,7 +165,7 @@ async function startServer() {
   // إيقاف نظيف: آخر لقطة تُكتب قبل الخروج فلا تضيع ثوانٍ من العمل.
   const shutdown = (signal: string) => {
     console.log(`[NAHJ] ${signal} received — flushing state.`);
-    try { persistence.flush(); stopBillingWorker(); } finally { process.exit(0); }
+    try { persistence.flush(); stopBillingWorker(); stopBackupWorker(); } finally { process.exit(0); }
   };
   process.once("SIGINT", () => shutdown("SIGINT"));
   process.once("SIGTERM", () => shutdown("SIGTERM"));

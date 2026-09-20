@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle, BadgeDollarSign, CalendarPlus, CreditCard, Crown, FilePlus2, History, Layers, PauseCircle,
+  AlertTriangle, BadgeDollarSign, CalendarPlus, CreditCard, Crown, DatabaseBackup, FilePlus2, History, Layers, PauseCircle,
   PlayCircle, Plus, RefreshCw, Save, Trash2, TrendingUp, Wallet, X,
 } from "lucide-react";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
 import {
-  billingApi, fromMinor, money, paymentsApi, toMinor,
+  archiveApi, billingApi, fromMinor, money, paymentsApi, toMinor,
   type BillingCycle, type InvoiceLine, type OwnerOverview, type PaymentIntentView, type Plan, type PlanFeatureKey,
 } from "../../lib/api";
 
@@ -114,6 +114,18 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
     paymentsApi.ownerIntents().then(setGateway).catch(() => setGateway(null));
   }, []);
   useEffect(() => { loadGateway(); }, [loadGateway]);
+
+  /*
+   * النسخ الاحتياطي.
+   *
+   * وهو شأن من يملك النشر لا من يستعمله: المؤسسة تُصدّر بياناتها من شاشتها،
+   * والمالك يضمن أن لها نسخةً إن ضاع القرص.
+   */
+  const [backups, setBackups] = useState<Awaited<ReturnType<typeof archiveApi.backups>> | null>(null);
+  const loadBackups = useCallback(() => {
+    archiveApi.backups().then(setBackups).catch(() => setBackups(null));
+  }, []);
+  useEffect(() => { loadBackups(); }, [loadBackups]);
 
   const load = useCallback(async () => {
     try {
@@ -362,6 +374,56 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
                 أنهِ الترخيص
               </button>
             </div>
+          </>
+        )}
+      </section>
+
+      {/* --------------------------------------------- النسخ الاحتياطي */}
+      <section className="surface-strong owner-block">
+        <SectionTitle title="النسخ الاحتياطي" icon={<DatabaseBackup />}
+          meta={backups?.status.enabled ? `كل ${backups.status.intervalHours} ساعة` : "دوريٌّ معطّل"} />
+
+        {!backups ? (
+          <p className="owner-hint">جارٍ قراءة حالة النسخ...</p>
+        ) : (
+          <>
+            <p className="owner-hint">{backups.status.note}</p>
+            <div className="stat-grid compact">
+              <Stat label="نسخ محفوظة" value={backups.status.count} tone="sky" icon={<DatabaseBackup />} />
+              <Stat label="آخر نسخة" value={backups.status.latest ? new Date(backups.status.latest.createdAt).toLocaleString("ar-KW") : "لا شيء"} tone={backups.status.latest ? "moss" : "amber"} icon={<History />} />
+              <Stat label="الاحتفاظ" value={`${backups.status.retention} نسخة`} tone="violet" icon={<Layers />} />
+            </div>
+
+            {/* غياب أي نسخة ليس تفصيلاً: هو الفارق بين عطلٍ وكارثة. */}
+            {!backups.status.latest && (
+              <p className="owner-hint tone-text-amber">
+                <AlertTriangle /> لا توجد نسخة واحدة بعد. اضغط «انسخ الآن» ثم تأكد أن مجلد النسخ على قرصٍ دائم غير قرص القاعدة.
+              </p>
+            )}
+
+            <button className="btn-primary" disabled={busy}
+              onClick={() => void run(async () => { await archiveApi.runBackup(); loadBackups(); }, "كُتبت النسخة")}>
+              <DatabaseBackup /> انسخ الآن
+            </button>
+
+            {backups.files.length > 0 && (
+              <div className="ledger compact" style={{ marginTop: 10 }}>
+                <div className="ledger-head four">
+                  <span>الملف</span><span>الحجم</span><span>التاريخ</span><span></span>
+                </div>
+                {backups.files.slice(0, 8).map(file => (
+                  <div key={file.name} className="ledger-row four static">
+                    <span className="mono">{file.name}</span>
+                    <span className="mono">{file.size}</span>
+                    <span>{new Date(file.createdAt).toLocaleString("ar-KW")}</span>
+                    <span />
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="owner-hint">
+              الاستعادة موصوفة في <code>BACKUP.md</code>: أوقف الخدمة، ضع الملف مكان القاعدة، ثم شغّلها.
+            </p>
           </>
         )}
       </section>
