@@ -213,3 +213,38 @@ test("تركيب قطاع غير معروف يفشل بلا أثر", async () =>
   assert.equal(store.skills.length, before.skills, "فشلٌ مسّ المهارات");
   assert.equal(store.auditEvents.length, before.audit, "فشلٌ كتب في السجلّ");
 });
+
+test("القناة لا تعيد كل قطاع إلى سير التسجيل المدرسي", async () => {
+  /*
+   * تبديل الحزمة كان يغيّر نصّ الترحيب وحده، بينما سير المحادثة في المسارات
+   * تعليميٌّ مكتوب حرفياً: عمر الطفل، والصفّ، والبطاقة المدنية. فأول ردّ في
+   * محادثة مريضٍ أو موكّل كان يعود بها إلى تسجيل طالب — أي أن الحزمة تبدّل كل
+   * شيء إلا اللسان الذي تُحادَث به، وهو أظهر ما يراه من يُعرض عليه المنتج.
+   */
+  const fs = await import("node:fs");
+  const routes = fs.readFileSync("server/routes.ts", "utf8");
+  const handler = /apiRouter\.post\("\/simulator\/message"[\s\S]*?\n\}\);/.exec(routes)?.[0] || "";
+  assert.ok(handler, "تعذّر العثور على مسار المحادثة");
+
+  /* السير التعليمي محجوزٌ خلف حارس القطاع. */
+  assert.match(handler, /db\.sectorCode !== EDUCATION_CODE/, "السير التعليمي يعمل لكل القطاعات");
+  assert.ok(
+    handler.indexOf("EDUCATION_CODE") < handler.indexOf('=== "initial"'),
+    "الحارس بعد بداية السير التعليمي — أي أنه لا يحجبه",
+  );
+  /* ولا اسم مؤسسةٍ مكتوبٌ حرفياً في ردود القناة. */
+  assert.doesNotMatch(handler, /text: "[^"]*أكاديمية المستقبل/, "اسم مؤسسة تعليمية مكتوب في ردّ القناة");
+});
+
+test("تبديل القطاع يبدّل لسان القناة لا ترحيبها وحده", async () => {
+  const { Store } = await import("./db.ts");
+  const store = new Store();
+  store.applySector("clinic", "tester@nahj.test");
+
+  assert.equal(store.sectorCode, "clinic");
+  assert.match(store.channel.counterpart, /مريض/, "الطرف المقابل ما زال تعليمياً");
+  assert.match(store.simulatorState.messages[0].text, /الشفاء/);
+  /* وأمثلة البدء تخصّ القطاع الجديد. */
+  assert.ok(store.channel.samplePrompts.some(prompt => /موعد|تأمين|ألم/.test(prompt)),
+    "أمثلة القناة لا تخصّ العيادة");
+});

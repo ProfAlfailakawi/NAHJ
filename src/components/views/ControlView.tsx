@@ -70,7 +70,15 @@ export function ControlView({ lang, paused, onPause, governance }: Props) {
   const autonomy = governance?.autonomyDistribution || {};
   const autonomyTotal = Object.values(autonomy).reduce((sum, count) => sum + count, 0);
   const bypasses = governance?.unapprovedHighRiskActions;
-  const hasBypasses = typeof bypasses?.value === "number" && bypasses.value > 0;
+  /*
+   * ثلاث حالات لا اثنتان: وقع تجاوز، أو لم يقع، أو **لم يُقَس**.
+   *
+   * كان غياب القياس يسقط في «لا تجاوزات» — فتقول الشاشة إنها لم تستطع قراءة
+   * أرقام الحوكمة، وتطمئنك في السطر نفسه أنه لا تجاوزات. وهو بعينه الادّعاء
+   * الذي أُزيل من الشيفرة: طمأنينةٌ بلا بحث.
+   */
+  const measured = typeof bypasses?.value === "number";
+  const hasBypasses = measured && bypasses!.value! > 0;
 
   return (
     <div className="page-enter">
@@ -109,15 +117,19 @@ export function ControlView({ lang, paused, onPause, governance }: Props) {
             * التجاوزات تستحقّ سطراً خاصاً لا بطاقةً بين البطاقات: هذا هو الرقم
             * الذي يُسأل عنه المسؤول، وهو الذي كان مخترعاً.
           */}
-          <div className={`bypass-line ${hasBypasses ? "is-alarming" : "is-clear"}`}>
-            {hasBypasses ? <ShieldAlert /> : <ShieldCheck />}
+          <div className={`bypass-line ${hasBypasses ? "is-alarming" : measured ? "is-clear" : "is-unmeasured"}`}>
+            {hasBypasses ? <ShieldAlert /> : measured ? <ShieldCheck /> : <Info />}
             <div>
               <strong>
                 {hasBypasses
                   ? ar ? `${bypasses!.value} إجراء عالي الخطورة بلا موافقة مقابلة` : `${bypasses!.value} high-risk actions without approval`
-                  : ar ? "لا تجاوزات" : "No bypasses"}
+                  : measured
+                    ? ar ? "لا تجاوزات" : "No bypasses"
+                    : ar ? "لم يُقَس" : "Not measured"}
               </strong>
-              <p>{bypasses?.basis || (ar ? "لم يُقَس بعد." : "Not measured yet.")}</p>
+              <p>{measured
+                ? bypasses!.basis
+                : ar ? "تعذّرت قراءة أرقام الحوكمة — فلا يُقال إن لا تجاوزات، لأن البحث لم يجرِ." : "Governance figures could not be read, so no claim is made."}</p>
             </div>
           </div>
 
