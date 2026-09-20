@@ -1,9 +1,9 @@
 import React from "react";
-import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, Building2, CreditCard, Crown, FlaskConical, GraduationCap, History, Languages, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
+import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, Building2, CreditCard, Crown, FlaskConical, HandCoins, GraduationCap, History, Languages, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
 import { BrandLockup, NahjMark } from "./Brand";
 import type { Organization, User } from "../types";
 
-export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts" | "billing" | "owner" | "sectors";
+export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts" | "billing" | "owner" | "sectors" | "partners" | "partnerPortal";
 
 type ShellProps = {
   section: SectionId;
@@ -50,6 +50,7 @@ const nav: { id: SectionId; ar: string; en: string; icon: React.ElementType; gro
   { id: "billing", ar: "الاشتراك", en: "Subscription", icon: CreditCard, group:"govern" },
   { id: "sectors", ar: "النشاط", en: "Sector", icon: Building2, group:"govern" },
   { id: "owner", ar: "لوحة المالك", en: "Owner console", icon: Crown, group:"owner" },
+  { id: "partners", ar: "المسوّقون", en: "Partners", icon: HandCoins, group:"owner" },
 ];
 
 export function Shell({
@@ -59,7 +60,12 @@ export function Shell({
 }: ShellProps) {
   const ar = lang === "ar";
   /* مدخل المالك يُحذف من القائمة لا يُعطَّل: قائمةٌ فيها بابٌ مقفل تدعو إلى طرقه. */
-  const visibleNav = nav.filter(item => item.id !== "owner" || isOwner);
+  /*
+   * المسوّق لا يرى شريط التنقّل أصلاً — لوحته سطحٌ واحد. وما عداه يُخفى مدخل
+   * المالك عمّن ليس مالكاً: قائمةٌ فيها بابٌ مقفل تدعو إلى طرقه.
+   */
+  const ownerOnly = new Set<SectionId>(["owner", "partners"]);
+  const visibleNav = nav.filter(item => !ownerOnly.has(item.id) || isOwner);
   let lastGroup: string | undefined;
   return (
     <div className="app-shell" dir={ar ? "rtl" : "ltr"}>

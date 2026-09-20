@@ -10,11 +10,15 @@ interface Props {
   notify: (text: string, error?: boolean) => void;
 }
 
-const ROLES = ["admin", "manager", "operator", "viewer"] as const;
+/*
+ * «مسوّق» دورٌ خارج سلسلة المؤسسة: لا يرى مهاراتها ولا حالات عملها، بل شركاته
+ * وعمولته وحدها. ويُنشأ من هنا ثم يُربط بملفّه من دفتر المسوّقين.
+ */
+const ROLES = ["admin", "manager", "operator", "viewer", "partner"] as const;
 
 const roleLabel = (role: string, ar: boolean) =>
   ar
-    ? ({ admin: "مشرف", manager: "مدير", operator: "مشغّل", viewer: "مُطّلع" } as Record<string, string>)[role] || role
+    ? ({ admin: "مشرف", manager: "مدير", operator: "مشغّل", viewer: "مُطّلع", partner: "مسوّق (خارجي)", owner: "مالك المنصة" } as Record<string, string>)[role] || role
     : role;
 
 /**
@@ -172,6 +176,10 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
                     <div className="accounts-identity">
                       <strong>{account.name}{isSelf && <em> — {ar ? "أنت" : "you"}</em>}</strong>
                       <small>{account.email}</small>
+                      {account.role === "partner" && (
+                        /* المعرّف يُنسخ إلى دفتر المسوّقين ليُفتح له لوحته. */
+                        <code className="account-id" title={ar ? "انسخه إلى ملفّ المسوّق" : "Copy into the partner record"}>{account.id}</code>
+                      )}
                       <small className="accounts-meta">
                         {ar ? "جلسات نشطة" : "active sessions"}: {account.activeSessions}
                         {account.lockedUntil ? ` · ${ar ? "مقفل مؤقتاً" : "locked"}` : ""}

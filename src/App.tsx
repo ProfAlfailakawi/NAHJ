@@ -1,5 +1,6 @@
 import React,{useCallback,useEffect,useMemo,useState} from "react";
-import { CheckCircle2, TriangleAlert } from "lucide-react";
+import { CheckCircle2, LogOut, TriangleAlert } from "lucide-react";
+import { BrandLockup } from "./components/Brand";
 import { Shell,type SectionId } from "./components/Shell";
 import { TodayView } from "./components/views/TodayView";
 import { LearnView } from "./components/views/LearnView";
@@ -17,6 +18,8 @@ import { BillingView } from "./components/views/BillingView";
 import { OwnerView } from "./components/views/OwnerView";
 import { SubscriptionBanner } from "./components/SubscriptionBanner";
 import { SectorsView } from "./components/views/SectorsView";
+import { PartnersAdminView } from "./components/views/PartnersAdminView";
+import { PartnerPortalView } from "./components/views/PartnerPortalView";
 import { HelpPanel } from "./components/Explain";
 import { CommandPalette, type CommandTarget } from "./components/CommandPalette";
 import { ApprovalModal } from "./components/ApprovalModal";
@@ -298,6 +301,25 @@ export default function App(){
     return <LoginScreen lang={lang} needsSetup={authState==="setup"} demoEnabled={demoEnabled} demoBusy={demoBusy}
       onEnterDemo={()=>void enterDemo()} onAuthenticated={()=>void checkAuth()}/>;
 
+  /*
+   * حساب المسوّق سطحٌ واحد.
+   *
+   * لا شريط تنقّل ولا شاشات تشغيلية: هو طرفٌ خارجي لا شأن له بمهارات المؤسسة
+   * ولا حالات عملها. والخادم يحجبه أيضاً — فالحجب في الطبقتين لا في الواجهة
+   * وحدها، لأن واجهةً تُخفي زرّاً تبقى مساراتها مفتوحة لمن يعرف عنوانها.
+   */
+  if(account?.role==="partner")
+    return <div className="partner-shell" dir={lang==="ar"?"rtl":"ltr"}>
+      <div className="ambient-canvas" aria-hidden="true"/>
+      <header className="partner-topbar">
+        <BrandLockup compact/>
+        <button type="button" className="top-icon" onClick={()=>void signOut()} disabled={signingOut}
+          title={lang==="ar"?"تسجيل الخروج":"Sign out"} aria-label={lang==="ar"?"تسجيل الخروج":"Sign out"}><LogOut/></button>
+      </header>
+      <main className="partner-stage"><PartnerPortalView lang={lang} notify={notify}/></main>
+      {toast&&<div className={`toast ${toast.error?"error":""}`}>{toast.error?<TriangleAlert/>:<CheckCircle2/>}<span>{toast.text}</span></div>}
+    </div>;
+
   let view:React.ReactNode;
   switch(section){
     case "today":view=<TodayView lang={lang} organization={organization} onNavigate={setSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval} todayMetrics={todayData?.metrics||null} memory={todayData?.institutionalMemoryCoverage||null}/>;break;
@@ -312,6 +334,8 @@ export default function App(){
     case "control":view=<ControlView lang={lang} governance={governance} paused={paused} onPause={()=>{setPaused(v=>!v);notify(!paused?(lang==="ar"?"تم إيقاف التنفيذ الآلي":"Execution paused"):(lang==="ar"?"تم الاستئناف":"Execution resumed"))}}/>;break;
     case "audit":view=<AuditView lang={lang} events={audit}/>;break;
     case "accounts":view=<AccountsView lang={lang} currentAccountId={account?.id||""} isAdmin={account?.role==="admin"||account?.role==="owner"} notify={notify}/>;break;
+    case "partners":view=<PartnersAdminView lang={lang} notify={notify}/>;break;
+    case "partnerPortal":view=<PartnerPortalView lang={lang} notify={notify}/>;break;
     case "sectors":view=<SectorsView lang={lang} isDemo={demoActive} canApply={account?.role==="admin"||account?.role==="owner"} notify={notify} onApplied={()=>void loadAll()}/>;break;
     case "billing":view=<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={account?.role==="admin"||account?.role==="manager"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
     /* لوحة المالك لا تُركَّب أصلاً لغير المالك — والخادم يرفضها أيضاً، فالحجب في الطبقتين. */

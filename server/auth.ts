@@ -34,11 +34,19 @@ const LOCKOUT_MINUTES = 15;
  *
  * الفصل بينهما هو الفرق بين نظامٍ مُباع ونظامٍ مُسلَّم.
  */
-export type AccountRole = "owner" | "admin" | "manager" | "operator" | "viewer";
-const ROLES: AccountRole[] = ["owner", "admin", "manager", "operator", "viewer"];
+export type AccountRole = "owner" | "admin" | "manager" | "operator" | "viewer" | "partner";
+const ROLES: AccountRole[] = ["owner", "admin", "manager", "operator", "viewer", "partner"];
 
-/** الترتيب تصاعدي في الصلاحية. `owner` يعلو الجميع، فيمرّ من كل حارس دور. */
-const ROLE_RANK: Record<AccountRole, number> = { viewer: 1, operator: 2, manager: 3, admin: 4, owner: 5 };
+/*
+ * الترتيب تصاعدي في الصلاحية، و`partner` خارجه عمداً بقيمة صفر.
+ *
+ * المسوّق ليس «أقلّ صلاحية» من المُطّلع — هو طرفٌ من سلسلةٍ أخرى تماماً: يرى
+ * شركاته وعمولته، ولا يرى بيانةً تشغيلية واحدة من داخل أي مؤسسة. فوضعُه على
+ * السُلّم نفسه كان سيجعله يرث ما دونه، وهو ما لا يملكه أصلاً.
+ */
+const ROLE_RANK: Record<AccountRole, number> = { partner: 0, viewer: 1, operator: 2, manager: 3, admin: 4, owner: 5 };
+
+export const isPartnerRole = (role: string | undefined) => role === "partner";
 
 export const isOwnerRole = (role: string | undefined) => role === "owner";
 
@@ -566,6 +574,13 @@ export function revokeSessions(accountId: string, requesterId?: string): number 
 export function requireRole(...allowed: AccountRole[]) {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     if (!req.account) return res.status(401).json({ error: "يلزم تسجيل الدخول.", code: "AUTH_REQUIRED" });
+    /*
+     * المسوّق لا يمرّ من أي حارس تشغيلي مهما كان الدور المطلوب. وحدُّه مسارات
+     * لوحته وحدها، وهي تحرسه بحارسها الخاص.
+     */
+    if (isPartnerRole(req.account.role) && !allowed.includes("partner")) {
+      return res.status(403).json({ error: "هذا السطح ليس للمسوّقين.", code: "PARTNER_SCOPE" });
+    }
     if (!isOwnerRole(req.account.role) && !allowed.includes(req.account.role)) {
       return res.status(403).json({ error: "لا تملك صلاحية تنفيذ هذه العملية.", code: "FORBIDDEN" });
     }
@@ -592,6 +607,24 @@ export function requireOwner(req: AuthenticatedRequest, res: Response, next: Nex
 }
 
 export const roleRank = (role: string | undefined) => ROLE_RANK[(role || "viewer") as AccountRole] ?? 0;
+
+/**
+ * حارس لوحة المسوّق.
+ *
+ * يمرّ منه المسوّق والمالك وحدهما: المسوّق ليرى لوحته، والمالك لأنه يملك النظام.
+ * ولا يمرّ زائر البيئة التجريبية — صندوقه في الذاكرة بينما الدفتر التجاري في
+ * القاعدة الحقيقية.
+ */
+export function requirePartnerOrOwner(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (!req.account) return res.status(401).json({ error: "يلزم تسجيل الدخول.", code: "AUTH_REQUIRED" });
+  if (req.account.id === "demo") {
+    return res.status(403).json({ error: "دفتر المسوّقين غير متاح في البيئة التجريبية.", code: "DEMO_READONLY" });
+  }
+  if (!isPartnerRole(req.account.role) && !isOwnerRole(req.account.role)) {
+    return res.status(403).json({ error: "هذه اللوحة للمسوّقين ومالك المنصة.", code: "PARTNER_ONLY" });
+  }
+  next();
+}
 
 /**
  * يضمن وجود مالك واحد على الأقل.

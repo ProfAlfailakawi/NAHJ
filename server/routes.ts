@@ -10,6 +10,7 @@ import { generateAiResponse } from "./gemini.ts";
 import { AutonomyLevel, SkillStep, LearningSession, Skill } from "../src/types/index.ts";
 import { getFirebaseStatus } from "./firebase.ts";
 import { billingRouter, enforceSubscription } from "./billingRoutes.ts";
+import { confinePartners, partnerRouter } from "./partnerRoutes.ts";
 import { incrementUsage, maxAutonomyLevel } from "./billing.ts";
 import {
   AuthenticatedRequest,
@@ -220,6 +221,24 @@ apiRouter.use(requireAuth);
  * كل ما تحته بلا استثناء، بدل أن يُفحص في كل مسار على حدة — وهو ما يُنسى في واحد
  * منها حتماً. والقراءة تمرّ كاملة.
  */
+/*
+ * الترتيب هنا هو العزل نفسه، لا تنظيمٌ للقراءة.
+ *
+ *   ١. دفتر المسوّقين أولاً، ليبلغ المسوّق لوحته.
+ *   ٢. ثم حبسُه فيها، فلا يبلغ شيئاً بعدها.
+ *   ٣. ثم الاشتراك وباقي الأسطح التشغيلية.
+ *
+ * وموضع الحارس قبل موجّه الاشتراك مقصود وحاسم: كان مركَّباً بعده، فكان المسوّق
+ * يقرأ اشتراك المؤسسة كاملاً — باقتها وفواتيرها ودفعاتها واستهلاكها. وهي بيانات
+ * عميلٍ لا شأن لوسيطٍ بها، ولم يكشفها فحصُ أنواعٍ ولا اختبار وحدة: كشفها طلبٌ
+ * واحد على خادم حيّ ردّ 200 حيث كان يجب أن يردّ 403.
+ *
+ * ولوحة المسوّق قبل حارس الاشتراك عمداً: عمولته مستحقّةٌ عليه حتى لو توقّف اشتراك
+ * المؤسسة. لا يُحجب عن دفتره لأن عميلاً تأخّر في السداد.
+ */
+apiRouter.use("/partners", partnerRouter);
+apiRouter.use(confinePartners);
+
 apiRouter.use("/billing", billingRouter);
 apiRouter.use(enforceSubscription);
 
