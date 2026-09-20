@@ -91,3 +91,50 @@ test("the port comes from the environment, with 3000 as the default", () => {
   /* والافتراض يبقى 3000 لأن الحاوية تعلنه وCaddy يوجّه إليه. */
   assert.match(read("Dockerfile"), /^EXPOSE\s+3000$/m, "الحاوية لم تعد تعلن 3000");
 });
+
+/*
+ * طبقة الترخيص — عقود توصيلٍ لا يكشف انكسارَها فحصُ أنواع.
+ *
+ * وقع منها اثنان فعلاً أثناء بناء الطبقة:
+ *
+ *   ١. `ensureOwnerAccount` كان يعمل عند الإقلاع وحده، والحساب الأول يُنشأ من شاشة
+ *      التهيئة *بعد* الإقلاع — فيبقى من نشر النظام بلا مِلكية حتى إعادة التشغيل
+ *      التالية: يفتح لوحته فلا يجدها، ولا شيء يفسّر له لماذا.
+ *
+ *   ٢. حارس الاشتراك لو رُكّب على المسارات فرادى بدل جذر الموجّه، لسقط من واحدٍ
+ *      منها حتماً — وثغرةٌ واحدة في طبقة ترخيص تُبطلها كلها.
+ */
+
+test("من هيّأ النظام يصير مالكه في اللحظة نفسها، لا عند إعادة التشغيل", () => {
+  const routes = read("server/routes.ts");
+  const setup = /authRouter\.post\("\/setup"[\s\S]*?\n\}\);/.exec(routes)?.[0];
+  assert.ok(setup, "تعذّر العثور على مسار التهيئة — أُعيدت تسميته؟ أعد توجيه هذا الفحص.");
+  assert.match(setup, /ensureOwnerAccount\(\)/, "الحساب الأول يُنشأ بلا مِلكية");
+  assert.ok(
+    setup.indexOf("ensureOwnerAccount()") < setup.indexOf("await login("),
+    "الترقية بعد فتح الجلسة تترك الجلسة تحمل الدور القديم",
+  );
+});
+
+test("حارس الترخيص مركَّب على جذر الموجّه لا على مسارات مفردة", () => {
+  const routes = read("server/routes.ts");
+  assert.match(routes, /apiRouter\.use\(enforceSubscription\)/, "حارس الاشتراك غير مركَّب");
+  /* ومسارات الاشتراك نفسها قبله، وإلا صار التجميد أبدياً: لا طريق إلى التجديد. */
+  assert.ok(
+    routes.indexOf('apiRouter.use("/billing", billingRouter)') < routes.indexOf("apiRouter.use(enforceSubscription)"),
+    "تجميد الطريق إلى التجديد يجعل التجميد بلا مخرج",
+  );
+});
+
+test("التجميد يمنع الكتابة وحدها — القراءة والتصدير يبقيان", () => {
+  const guard = read("server/billingRoutes.ts");
+  assert.match(guard, /\["GET", "HEAD", "OPTIONS"\]\.includes\(req\.method\)\) return next\(\)/,
+    "القراءة يجب أن تمرّ دائماً: البيانات للمؤسسة، والخدمة هي المُباعة");
+  assert.match(guard, /res\.status\(402\)/, "الردّ يجب أن يقول «ادفع» لا «لا صلاحية لك»");
+});
+
+test("المبالغ تُخزَّن بالوحدة الصغرى كأعداد صحيحة", () => {
+  const billing = read("server/billing.ts");
+  assert.match(billing, /Number\.isInteger\(amount\)/, "قبول الكسور في المال يُنتج فواتير لا تُسوّى");
+  assert.match(billing, /KWD: 3/, "الدينار الكويتي ثلاث منازل لا اثنتان");
+});

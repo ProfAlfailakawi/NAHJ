@@ -7,6 +7,8 @@ import { McpEngine } from "./engine/mcpEngine.ts";
 import { generateAiResponse } from "./gemini.ts";
 import { AutonomyLevel, SkillStep, LearningSession, Skill } from "../src/types/index.ts";
 import { getFirebaseStatus } from "./firebase.ts";
+import { billingRouter, enforceSubscription } from "./billingRoutes.ts";
+import { incrementUsage, maxAutonomyLevel } from "./billing.ts";
 import {
   AuthenticatedRequest,
   adminCreateAccount,
@@ -14,6 +16,7 @@ import {
   changeOwnPassword,
   clearSessionCookies,
   createFirstAccount,
+  ensureOwnerAccount,
   listAccounts,
   login,
   logout,
@@ -52,6 +55,17 @@ authRouter.post("/setup", async (req: Request, res: Response) => {
       name: req.body?.name,
       password: req.body?.password,
     });
+    /*
+     * من هيّأ النظام هو مالكه.
+     *
+     * `ensureOwnerAccount` يعمل عند الإقلاع أيضاً، لكن النشر الجديد لا حساب فيه
+     * حينها — فالحساب يُنشأ من هذه الشاشة بعد الإقلاع بدقائق. بدون النداء هنا يبقى
+     * أول مشرف بلا مِلكية حتى إعادة التشغيل التالية: يفتح النظام فلا يجد لوحة
+     * ترخيصه، ولا شيء يفسّر له لماذا.
+     *
+     * والترقية قبل فتح الجلسة لا بعدها، لتحمل الجلسة الدور الصحيح من لحظتها الأولى.
+     */
+    ensureOwnerAccount();
     // تسجيل دخول فوري: مطالبة المستخدم بإعادة إدخال ما كتبه للتو خطوة بلا فائدة.
     const session = await login(account.email, req.body?.password);
     setSessionCookies(req, res, session.sessionToken, session.csrfToken);
@@ -164,6 +178,16 @@ authRouter.post("/accounts/:id/revoke-sessions", ...accountsGuard, (req: Authent
  * استقلالية وموافقات، فلا معنى لأي منها على سطح مفتوح.
  */
 apiRouter.use(requireAuth);
+
+/*
+ * الترخيص.
+ *
+ * يأتي بعد المصادقة مباشرة وقبل أي مسار تشغيلي: اشتراكٌ موقوف يُجمّد الكتابة على
+ * كل ما تحته بلا استثناء، بدل أن يُفحص في كل مسار على حدة — وهو ما يُنسى في واحد
+ * منها حتماً. والقراءة تمرّ كاملة.
+ */
+apiRouter.use("/billing", billingRouter);
+apiRouter.use(enforceSubscription);
 
 // 1. Context & User Switching
 apiRouter.get("/context", (req: Request, res: Response) => {
@@ -521,6 +545,21 @@ apiRouter.get("/skills/:id", (req: Request, res: Response) => {
 
 apiRouter.post("/skills/:id/promote", (req: Request, res: Response) => {
   const { targetLevel } = req.body;
+  /*
+   * سقف الاستقلالية من الباقة.
+   *
+   * ليس بديلاً عن الحوكمة — محرّك المهارات يبقى هو من يقرّر هل استحقّت المهارة
+   * الترقية. هذا سقفٌ تجاري فوقه: باقة «بداية» لا تُشغّل طياراً آلياً مهما بلغت
+   * موثوقية المهارة، والرسالة تقول ذلك صراحةً بدل أن تُرفض الترقية بلا سبب مفهوم.
+   */
+  const ceiling = maxAutonomyLevel();
+  if (Number(targetLevel) > ceiling) {
+    return res.status(402).json({
+      success: false,
+      code: "PLAN_AUTONOMY_CEILING",
+      message: `باقتك الحالية تسمح حتى المستوى L${ceiling}. الترقية إلى L${targetLevel} تحتاج باقة أعلى.`,
+    });
+  }
   const result = SkillEngine.promoteSkillAutonomy(
     req.params.id,
     targetLevel as AutonomyLevel,

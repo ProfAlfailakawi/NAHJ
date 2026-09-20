@@ -1,4 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
+import { incrementUsage } from "./billing.ts";
+import { DemoSandbox } from "./db.ts";
 
 let geminiClient: GoogleGenAI | null = null;
 
@@ -36,6 +38,14 @@ export async function generateAiResponse(prompt: string, systemInstruction?: str
           temperature: 0.2,
         },
       });
+      /*
+       * القياس يقع عند النداء الفعلي لا عند الطلب: ارتداد المحرّك إلى المنطق
+       * الحتمي (بلا مفتاح، أو عند خطأ) لا يُحتسب على حصّة المؤسسة — وإلا حاسبناها
+       * على استدعاء لم يحدث.
+       */
+      if (!DemoSandbox.isDemoRequest()) {
+        try { incrementUsage("aiCalls"); } catch { /* القياس لا يُسقط الاستجابة */ }
+      }
       if (response.text) {
         return response.text.trim();
       }

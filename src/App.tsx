@@ -13,8 +13,11 @@ import { AnalyticsView,type AnalyticsData } from "./components/views/AnalyticsVi
 import { ControlView } from "./components/views/ControlView";
 import { AuditView } from "./components/views/AuditView";
 import { AccountsView } from "./components/views/AccountsView";
+import { BillingView } from "./components/views/BillingView";
+import { OwnerView } from "./components/views/OwnerView";
+import { SubscriptionBanner } from "./components/SubscriptionBanner";
 import { ApprovalModal } from "./components/ApprovalModal";
-import { apiOrNull, authApi, UnauthorizedError } from "./lib/api";
+import { apiOrNull, authApi, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
 import { LoginScreen } from "./components/LoginScreen";
 import {
   demoUsers,initialOrganization,initialSkills,initialWorkItems,initialLearningProposals,
@@ -63,6 +66,13 @@ export default function App(){
   // "setup" = لا يوجد أي حساب بعد، فالشاشة تُنشئ حساب المشغّل بدل أن تطلب الدخول.
   const [authState,setAuthState]=useState<"checking"|"setup"|"anonymous"|"authenticated">("checking");
   const [account,setAccount]=useState<{id:string;role:string}|null>(null);
+  /*
+   * حالة الترخيص تُحمَّل مع كل شيء آخر لا عند فتح شاشة الاشتراك وحدها: الشريط
+   * التحذيري يجب أن يظهر لمن يعمل في «اليوم» أو «العمل»، لا لمن ذهب يتفقّد فاتورته.
+   */
+  const [billing,setBilling]=useState<BillingSnapshot|null>(null);
+  const [plans,setPlans]=useState<Plan[]>([]);
+  const [billingLoading,setBillingLoading]=useState(true);
 
   const notify=useCallback((text:string,error=false)=>{setToast({text,error});window.setTimeout(()=>setToast(null),2800)},[]);
   const refreshAudit=useCallback(async()=>{const d=await apiOrNull<{auditEvents:AuditEvent[]}>("/audit");if(d?.auditEvents)setAudit(d.auditEvents)},[]);
@@ -70,6 +80,16 @@ export default function App(){
   const refreshApprovals=useCallback(async()=>{const d=await apiOrNull<{approvalRequests:ApprovalRequest[]}>("/approvals");if(d?.approvalRequests)setApprovals(d.approvalRequests)},[]);
   const refreshSkills=useCallback(async()=>{const d=await apiOrNull<{skills:Skill[]}>("/skills");if(d?.skills)setSkills(d.skills)},[]);
   const refreshSimulator=useCallback(async()=>{const d=await apiOrNull<{state:SimulatorState}>("/simulator/state");if(d?.state)setSim(d.state)},[]);
+  const refreshBilling=useCallback(async()=>{
+    setBillingLoading(true);
+    const [snapshot,catalogue]=await Promise.all([
+      apiOrNull<BillingSnapshot>("/billing/subscription"),
+      apiOrNull<{plans:Plan[]}>("/billing/plans"),
+    ]);
+    if(snapshot)setBilling(snapshot);
+    if(catalogue?.plans)setPlans(catalogue.plans);
+    setBillingLoading(false);
+  },[]);
 
   useEffect(()=>{document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.documentElement.lang=lang},[lang]);
   /*
@@ -92,6 +112,7 @@ export default function App(){
   const loadAll=useCallback(async()=>{
     try{
       const health=await apiOrNull<{status:string}>("/health"); setServerLive(health?.status==="ok");
+      void refreshBilling();
       const [context,learn,sk,wo,ap,co,au,an,si]=await Promise.all([
         apiOrNull<ContextResponse>("/context"),
         apiOrNull<{proposals:LearningProposal[]}>("/learn"),
@@ -111,7 +132,7 @@ export default function App(){
       // انتهاء الجلسة أثناء التحميل يعيدنا للبوابة بدل عرض بيانات بذرة كأنها سجلّ المؤسسة.
       if(error instanceof UnauthorizedError)setAuthState("anonymous");
     }
-  },[]);
+  },[refreshBilling]);
 
   const refreshDemoConfig=useCallback(async()=>{
     const cfg=await apiOrNull<{enabled:boolean;active:boolean}>("/demo/config");
@@ -199,6 +220,7 @@ export default function App(){
   const approvalByWork=useMemo(()=>Object.fromEntries(approvals.filter(a=>a.status==="pending").map(a=>[a.workItemId,a.id])),[approvals]);
   const activeApprovalObj=approvals.find(a=>a.id===activeApproval&&a.status==="pending")||null;
   const alertCount=approvals.filter(a=>a.status==="pending").length+proposals.filter(p=>p.status==="pending").length;
+  const isOwner=account?.role==="owner";
 
   if(authState==="checking")return <div className="boot-gate"/>;
   if(authState==="anonymous"||authState==="setup")
@@ -218,11 +240,14 @@ export default function App(){
     case "analytics":view=<AnalyticsView lang={lang} data={analytics}/>;break;
     case "control":view=<ControlView lang={lang} paused={paused} onPause={()=>{setPaused(v=>!v);notify(!paused?(lang==="ar"?"تم إيقاف التنفيذ الآلي":"Execution paused"):(lang==="ar"?"تم الاستئناف":"Execution resumed"))}}/>;break;
     case "audit":view=<AuditView lang={lang} events={audit}/>;break;
-    case "accounts":view=<AccountsView lang={lang} currentAccountId={account?.id||""} isAdmin={account?.role==="admin"} notify={notify}/>;break;
+    case "accounts":view=<AccountsView lang={lang} currentAccountId={account?.id||""} isAdmin={account?.role==="admin"||account?.role==="owner"} notify={notify}/>;break;
+    case "billing":view=<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={account?.role==="admin"||account?.role==="manager"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
+    /* لوحة المالك لا تُركَّب أصلاً لغير المالك — والخادم يرفضها أيضاً، فالحجب في الطبقتين. */
+    case "owner":view=isOwner?<OwnerView lang={lang} notify={notify} onChanged={()=>void refreshBilling()}/>:<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={false} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
   }
 
   return <>
-    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut}>{paused&&<div className="pause-banner"><TriangleAlert/>{lang==="ar"?"التنفيذ الآلي متوقف. التعلم والمراجعة يعملان.":"Autonomous execution is paused. Learning and review remain active."}</div>}{view}</Shell>
+    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut} isOwner={isOwner} licenceBanner={<SubscriptionBanner snapshot={billing} lang={lang} onOpen={()=>setSection("billing")}/>}>{paused&&<div className="pause-banner"><TriangleAlert/>{lang==="ar"?"التنفيذ الآلي متوقف. التعلم والمراجعة يعملان.":"Autonomous execution is paused. Learning and review remain active."}</div>}{view}</Shell>
     <ApprovalModal lang={lang} approval={activeApprovalObj} busy={approvalBusy} onClose={()=>setActiveApproval(null)} onApprove={id=>void decideApproval(id,"approved")} onReject={(id,r)=>void decideApproval(id,"rejected",r)} onTakeOver={id=>void takeOver(id)}/>
     {toast&&<div className={`toast ${toast.error?"error":""}`}>{toast.error?<TriangleAlert/>:<CheckCircle2/>}<span>{toast.text}</span></div>}
   </>;
