@@ -32,6 +32,7 @@ import { AUDIT_RETENTION, readState, startPersistenceWorker } from "./persistenc
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createDemoSandboxSeed, type DemoSandboxSeed } from "./demoSandbox.ts";
 import { buildSector, EDUCATION_CODE } from "./packs/index.ts";
+import { stampLegacyInstant } from "./engine/metricsEngine.ts";
 
 export interface SimulatorMessage {
   id: string;
@@ -121,6 +122,21 @@ export class Store {
     this.connectors = seed ? seed.connectors : persisted("connectors", JSON.parse(JSON.stringify(initialConnectors)));
     this.testCases = seed ? seed.testCases : persisted("testCases", JSON.parse(JSON.stringify(initialTestCases)));
     this.shadowComparisons = seed ? seed.shadowComparisons : persisted("shadowComparisons", JSON.parse(JSON.stringify(initialShadowComparisons)));
+    /*
+     * تثبيت طوابع السجلات القديمة — مرة واحدة عند البناء.
+     *
+     * سجلات البذرة والسجلات المحفوظة قبل إضافة `at` تحمل نصّ عرضٍ فقط («اليوم،
+     * 10:15 ص»). وقراءته عند كل طلب كانت تدحرجها مع الساعة فلا تشيخ أبداً. تُقرأ
+     * هنا مرة وتُثبَّت، ثم تشيخ كما يشيخ كل شيء.
+     */
+    const stampedAt = new Date();
+    for (const event of this.auditEvents) {
+      if (!event.at) {
+        const instant = stampLegacyInstant(event, stampedAt);
+        if (instant) event.at = instant;
+      }
+    }
+
     this.sectorCode = seed ? EDUCATION_CODE : persisted("sectorCode", EDUCATION_CODE);
     this.channel = seed ? DEFAULT_CHANNEL : persisted("channel", { ...DEFAULT_CHANNEL });
 

@@ -113,10 +113,19 @@ test("كل مقياس يحمل أساسه وحجم عيّنته", () => {
 
 test("المنحنى لا يُرسم من يوم واحد — ويقول لماذا", () => {
   const now = new Date("2026-09-20T12:00:00.000Z");
-  const oneDay = deriveTrend(input({ auditEvents: [audit({}), audit({})], now }));
+  /* سجلات مثبَّتة الطابع في يومٍ واحد — لا تكفي لمنحنى. */
+  const oneDay = deriveTrend(input({
+    auditEvents: [audit({ at: "2026-09-20T09:00:00.000Z" }), audit({ at: "2026-09-20T10:00:00.000Z" })],
+    now,
+  }));
   assert.equal(oneDay.available, false);
   assert.match(oneDay.reason, /يوم واحد/);
   assert.deepEqual(oneDay.points, []);
+
+  /* وسجلاتٌ بلا طابع مثبَّت لا تُقرأ إطلاقاً — لا تُدحرج مع الساعة. */
+  const unstamped = deriveTrend(input({ auditEvents: [audit({}), audit({})], now }));
+  assert.equal(unstamped.available, false);
+  assert.match(unstamped.reason, /لا سجلّ/);
 
   const none = deriveTrend(input({ auditEvents: [], now }));
   assert.equal(none.available, false);
@@ -285,4 +294,75 @@ test("الواجهة لا تحمل أرقام ارتدادٍ مخترعة", asyn
   assert.ok(fallback, "تعذّر العثور على كائن الارتداد");
   assert.doesNotMatch(fallback, /412|84\.5|78\.4|94\.2/, "عاد الارتداد يعرض أرقاماً جميلة بدل أن يقول إنه فشل");
   assert.match(fallback, /available:false/, "الارتداد يجب أن يُعلن غياب البيانات");
+});
+
+/* ------------------------------- جولة مراجعة ثانية: أربعة عيوب في المحرّك */
+
+test("موافقةٌ واحدة تُجيز تنفيذاً واحداً — لا كل ما يحمل اسمها إلى الأبد", async () => {
+  const { deriveGovernance: derive } = await import("./engine/metricsEngine.ts");
+  /*
+   * العيب: المطابقة بمجموعة أسماء تجعل اعتماداً واحداً على «استرجاع» يُجيز كل
+   * استرجاعٍ لاحق، فيمرّ ألفُ تنفيذ بلا موافقة والشاشة تقول «لا تجاوزات».
+   */
+  const approval = {
+    id: "ap1", workItemId: "w1", workTitle: "", actionName: "issueRefund", payload: {},
+    reasonCode: "", reasonDescription: "", riskLevel: "critical" as const, requiredRole: "manager" as const,
+    requestedAt: "", status: "approved" as const,
+  };
+  const execution = (id: string, at: string) =>
+    audit({ id, at, actorType: "ai", risk: "critical", status: "success", action: "ISSUE_REFUND" });
+
+  const one = derive(input({ approvalRequests: [approval], auditEvents: [execution("a", "2026-09-20T09:00:00.000Z")] }));
+  assert.equal(one.unapprovedHighRiskActions.value, 0, "الموافقة الواحدة لم تُجز تنفيذها");
+
+  const three = derive(input({
+    approvalRequests: [approval],
+    auditEvents: [
+      execution("a", "2026-09-20T09:00:00.000Z"),
+      execution("b", "2026-09-20T10:00:00.000Z"),
+      execution("c", "2026-09-20T11:00:00.000Z"),
+    ],
+  }));
+  assert.equal(three.unapprovedHighRiskActions.value, 2,
+    "موافقة واحدة أجازت ثلاثة تنفيذات — عاد الرقم الكاذب من باب المنطق");
+
+  /* وموافقتان تُجيزان اثنين. */
+  const two = derive(input({
+    approvalRequests: [approval, { ...approval, id: "ap2" }],
+    auditEvents: [execution("a", "2026-09-20T09:00:00.000Z"), execution("b", "2026-09-20T10:00:00.000Z")],
+  }));
+  assert.equal(two.unapprovedHighRiskActions.value, 0);
+});
+
+test("السجلّ القديم لا يتدحرج مع الساعة", () => {
+  /*
+   * قراءة «اليوم» من نصّ العرض عند كل طلب كانت تُبقي حدث البذرة اليومَ أبداً،
+   * فلا يشيخ شيء ويعيد عدّاد اليوم عرض البذرة نفسها كل صباح.
+   */
+  const legacy = audit({ timestamp: "اليوم، 10:15 ص" });
+  delete (legacy as { at?: string }).at;
+
+  const today = deriveToday(input({ auditEvents: [legacy], now: new Date("2026-09-20T12:00:00.000Z") }));
+  assert.equal(today.value, 0, "سجلٌّ بلا طابع مثبَّت يُحتسب في يوم القراءة");
+
+  /* وبعد التثبيت مرة واحدة يُعَدّ في يومه هو، ويشيخ بعده. */
+  const stamped = audit({ at: "2026-09-20T09:00:00.000Z" });
+  assert.equal(deriveToday(input({ auditEvents: [stamped], now: new Date("2026-09-20T12:00:00.000Z") })).value, 1);
+  assert.equal(deriveToday(input({ auditEvents: [stamped], now: new Date("2026-09-23T12:00:00.000Z") })).value, 0,
+    "السجلّ المثبَّت ما زال يُحتسب بعد ثلاثة أيام");
+});
+
+test("التثبيت يقع مرة واحدة عند بناء المخزن", async () => {
+  const { Store } = await import("./db.ts");
+  const store = new Store();
+  const stamped = store.auditEvents.filter(event => Boolean(event.at));
+  assert.ok(stamped.length > 0, "لم يُثبَّت أي طابع عند البناء");
+  /* وطابعٌ مثبَّت لا يتغيّر بقراءةٍ لاحقة. */
+  const first = store.auditEvents[0].at;
+  assert.equal(store.auditEvents[0].at, first);
+});
+
+test("عدّاد اليوم يقول إنه نشاط لا إنجاز", () => {
+  const today = deriveToday(input({ auditEvents: [audit({ at: new Date().toISOString() })] }));
+  assert.match(today.basis, /نشاطٌ لا إنجاز/, "الاسم ما زال يَعِد بإنجاز ويعدّ نشاطاً");
 });

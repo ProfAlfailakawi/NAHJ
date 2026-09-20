@@ -1,6 +1,6 @@
 import React from "react";
 import {
-  AlertTriangle, ArrowUpLeft, BrainCircuit, CheckCircle2, Clock3, GraduationCap,
+  Activity, AlertTriangle, ArrowUpLeft, BrainCircuit, Clock3, GraduationCap,
   Lightbulb, Route, ShieldCheck, Sparkles, Waypoints
 } from "lucide-react";
 import type { ApprovalRequest, LearningProposal, Organization, WorkItem } from "../../types";
@@ -24,7 +24,7 @@ type Props = {
    * كانت هذه الشاشة تكتب أرقامها بيدها: «143» فوق أطلس العقل، و«137» مُنجزاً،
    * وشريط ذاكرة كامل عند 61 و37 و11 و29. لم يكن أيٌّ منها يتحرّك بعمل المؤسسة.
    */
-  todayMetrics?: { tasksCompletedToday: number; hoursSavedThisMonth: number } | null;
+  todayMetrics?: { auditEventsToday: number; hoursSavedThisMonth: number } | null;
   memory?: {
     documentedSkills: number; activeSkills: number;
     singlePersonDependencies: number; candidatesForAutomation: number;
@@ -51,7 +51,8 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
           </div>
         </article>
         <div className="pulse-stats">
-          <Stat label={ar?"أُنجز اليوم":"DONE TODAY"} value={todayMetrics?.tasksCompletedToday ?? 0} tone="moss" icon={<CheckCircle2/>}/>
+          {/* «نشاط» لا «أُنجز»: العدّ يشمل كل ما سُجِّل، لا المهام المكتملة وحدها. */}
+          <Stat label={ar?"نشاط اليوم":"ACTIVITY TODAY"} value={todayMetrics?.auditEventsToday ?? 0} tone="moss" icon={<Activity/>}/>
           <Stat label={ar?"وقت مستعاد":"TIME BACK"} value={`${todayMetrics?.hoursSavedThisMonth ?? organization.hoursSavedMonth}h`} tone="sky" icon={<Clock3/>}/>
           <Stat label={ar?"تعلّم":"LEARNING"} value={open.length} tone="amber" icon={<Sparkles/>}/>
           <Stat label={ar?"قرارك":"NEEDS YOU"} value={approvals.filter(a=>a.status==="pending").length+conflictCount} tone="rose" icon={<ShieldCheck/>}/>

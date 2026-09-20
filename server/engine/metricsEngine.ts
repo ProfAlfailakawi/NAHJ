@@ -58,8 +58,28 @@ export function parseDisplayTimestamp(display: string, now = new Date()): string
   return date.toISOString();
 }
 
-/** الطابع الحقيقي لسجلّ: المحسوب إن وُجد، وإلا المقروء من نصّ العرض. */
-export const eventInstant = (event: { at?: string; timestamp?: string }, now = new Date()): string | null =>
+/**
+ * الطابع الحقيقي لسجلّ.
+ *
+ * `at` وحده هو المصدر. وقراءة «اليوم» من نصّ العرض عند كل طلب كانت تدحرج السجلات
+ * القديمة مع الساعة: حدثٌ مكتوبٌ عليه «اليوم» يبقى اليومَ إلى الأبد، و«أمس» يبقى
+ * أمسِ أبداً — فلا يشيخ شيء، ويظلّ عدّاد اليوم ومنحنى الأسبوع يعيدان عرض البذرة
+ * نفسها كل صباح.
+ *
+ * فالقراءة من النصّ تقع مرة واحدة عند بناء المخزن (`stampLegacyInstant`) وتُثبَّت،
+ * ثم لا تُعاد. وما لا يحمل `at` بعدها لا طابع له — وهذا أصدق من طابع متحرّك.
+ */
+export const eventInstant = (event: { at?: string; timestamp?: string }, _now = new Date()): string | null =>
+  event.at || null;
+
+/**
+ * يُثبّت طابعاً لسجلّ قديم مرة واحدة.
+ *
+ * يُنادى عند بناء المخزن لا عند كل قراءة: التاريخ الأصلي غير معروف، فأقرب ما
+ * يمكن هو قراءة نصّ العرض لحظة أول تحميل وتثبيتها. والتثبيت هو المقصود — بعده
+ * يشيخ السجلّ كما يشيخ كل شيء.
+ */
+export const stampLegacyInstant = (event: { at?: string; timestamp?: string }, now = new Date()): string | null =>
   event.at || parseDisplayTimestamp(String(event.timestamp || ""), now);
 
 const dayKey = (iso: string) => iso.slice(0, 10);
@@ -297,20 +317,41 @@ export function deriveGovernance(input: MetricsInput): GovernanceSnapshot {
    * أسماء الإجراءات تُكتب بعُرفين مختلفين: سجلّ التدقيق بـSCREAMING_SNAKE
    * («ISSUE_REFUND») وطلبات الموافقة بـcamelCase («issueRefund»). المطابقة
    * بالحروف الصغيرة وحدها لا تجمعهما أبداً، فكان كل إجراءٍ محكومٍ بموافقة
-   * يُحتسب تجاوزاً — إنذارٌ كاذب دائم على الشاشة التي يُفترض أن تُطمئن.
-   *
-   * التطبيع يُسقط كل ما ليس حرفاً أو رقماً، فيلتقي العُرفان.
+   * يُحتسب تجاوزاً. التطبيع يُسقط كل ما ليس حرفاً أو رقماً، فيلتقي العُرفان.
    */
   const normalizeAction = (name: unknown) => String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const approvedActions = new Set(
-    approvalRequests.filter(approval => approval.status === "approved").map(approval => normalizeAction(approval.actionName)),
-  );
-  const unapproved = auditEvents.filter(event =>
-    event.actorType === "ai" &&
-    (event.risk === "high" || event.risk === "critical") &&
-    event.status === "success" &&
-    !approvedActions.has(normalizeAction(event.action)),
-  );
+
+  /*
+   * والموافقة تُستهلك مرة واحدة.
+   *
+   * المطابقة بمجموعةٍ من الأسماء كانت تجعل موافقةً واحدة على «استرجاع» تُجيز كل
+   * استرجاعٍ لاحق إلى الأبد: يعتمد المدير حالةً واحدة، فيمرّ بعدها ألفُ تنفيذ
+   * بلا موافقة والشاشة تقول «لا تجاوزات». وهو بالضبط الرقم الكاذب الذي أُزيل
+   * من الشيفرة — عاد من باب المنطق بدل باب الثابت.
+   *
+   * فالعدّ رصيدٌ لا مجموعة: كل موافقة معتمدة تُجيز تنفيذاً واحداً، وتُخصم عند
+   * استعمالها. والترتيب زمنيّ لأن موافقةً صدرت بعد التنفيذ لا تُجيزه بأثر رجعي.
+   */
+  const approvalBudget = new Map<string, number>();
+  for (const approval of approvalRequests) {
+    if (approval.status !== "approved") continue;
+    const key = normalizeAction(approval.actionName);
+    approvalBudget.set(key, (approvalBudget.get(key) || 0) + 1);
+  }
+
+  const highRiskExecutions = auditEvents
+    .filter(event =>
+      event.actorType === "ai" &&
+      (event.risk === "high" || event.risk === "critical") &&
+      event.status === "success")
+    .sort((a, b) => String(eventInstant(a, now) || "").localeCompare(String(eventInstant(b, now) || "")));
+
+  const unapproved = highRiskExecutions.filter(event => {
+    const key = normalizeAction(event.action);
+    const remaining = approvalBudget.get(key) || 0;
+    if (remaining > 0) { approvalBudget.set(key, remaining - 1); return false; }
+    return true;
+  });
 
   const traced = workItems.filter(item => Array.isArray(item.timeline) && item.timeline.length > 0);
 
@@ -335,7 +376,7 @@ export function deriveGovernance(input: MetricsInput): GovernanceSnapshot {
     interceptedActions: measure(intercepted.length, "إجراءات اعترضتها السياسات قبل التنفيذ.", auditEvents.length),
     unapprovedHighRiskActions: measure(
       unapproved.length,
-      "إجراءات عالية الخطورة نفّذها الذكاء بلا موافقة مقابلة — مشتقّة بالمطابقة، لا مفترضة.",
+      "إجراءات عالية الخطورة نفّذها الذكاء بلا موافقة مقابلة. كل موافقة معتمدة تُجيز تنفيذاً واحداً وتُستهلك — لا تُجيز ما بعده.",
       auditEvents.length,
     ),
     auditCoveragePercent: measure(
@@ -386,7 +427,13 @@ export function deriveMemory(input: MetricsInput): InstitutionalMemory {
 
 /* ------------------------------------------------------- نشاط اليوم */
 
-/** ما أُنجز اليوم فعلاً، من سجلّ التدقيق. صفرٌ هنا صادق: لم يحدث شيء بعد. */
+/**
+ * نشاط اليوم — لا «ما أُنجز».
+ *
+ * العدّ يشمل كل ما سُجِّل: ترقية مهارة، وحسم إشارة، وفحص موصل، وتركيب حزمة.
+ * وتسميته «أُنجز» تجعل ضغطةَ زرٍّ إداريةً تبدو مهمةً مكتملة. فالاسم صار يصف ما
+ * يُعَدّ فعلاً، بدل أن يُعَدّ شيءٌ ويُسمّى بغيره.
+ */
 export function deriveToday(input: MetricsInput): Measure {
   const now = input.now || new Date();
   const today = dayKey(now.toISOString());
@@ -394,7 +441,7 @@ export function deriveToday(input: MetricsInput): Measure {
     const iso = eventInstant(event, now);
     return iso ? dayKey(iso) === today : false;
   }).length;
-  return measure(count, "أحداث مسجَّلة في سجلّ التدقيق بتاريخ اليوم.", input.auditEvents.length);
+  return measure(count, "أحداث مسجَّلة في سجلّ التدقيق بتاريخ اليوم — نشاطٌ لا إنجاز.", input.auditEvents.length);
 }
 
 /* ------------------------------------------------------------ الجامع */

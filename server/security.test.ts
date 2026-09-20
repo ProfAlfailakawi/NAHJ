@@ -345,3 +345,66 @@ test("the session cookie is marked Secure only when the request actually arrived
     else process.env.NODE_ENV = previous;
   }
 });
+
+/*
+ * الاستيلاء على حساب المالك.
+ *
+ * وُضعت حمايةٌ على دور المالك تمنع خفضه وتعطيله — ونسيت أخطر طريق: إصدار كلمة
+ * مرور مؤقتة له. مشرف المؤسسة المشترية يمرّ من نفس حارس الحسابات، فكان يستطيع
+ * أن يضبط كلمة مرور المالك، ويطرد جلساته، ثم يدخل باسمه ويملك الترخيص كاملاً.
+ *
+ * أي أن كل ما وُضع على الدور كان يُلتَف بمسارٍ واحد غير محروس.
+ */
+
+test("مشرف المؤسسة لا يستطيع ضبط كلمة مرور المالك", async () => {
+  useFreshDatabase();
+  try {
+    const { ensureOwnerAccount } = await import("./auth.ts");
+    const owner = await createFirstAccount({ email: "owner@nahj.test", name: "المالك", password: fixturePassword() });
+    ensureOwnerAccount();
+    const admin = await createAccount({ email: "admin@school.test", name: "مشرف", password: fixturePassword(), role: "admin" });
+
+    await assert.rejects(
+      () => adminSetPassword(owner.id, fixturePassword(), admin.id),
+      /مالك المنصة/,
+      "مشرف المؤسسة استولى على حساب المالك",
+    );
+
+    /* والمالك يضبط كلمة مرور غيره بلا اعتراض. */
+    await adminSetPassword(admin.id, fixturePassword(), owner.id);
+  } finally {
+    closeDatabase();
+  }
+});
+
+test("مشرف المؤسسة لا يستطيع إنهاء جلسات المالك", async () => {
+  useFreshDatabase();
+  try {
+    const { ensureOwnerAccount } = await import("./auth.ts");
+    const owner = await createFirstAccount({ email: "owner@nahj.test", name: "المالك", password: fixturePassword() });
+    ensureOwnerAccount();
+    const admin = await createAccount({ email: "admin@school.test", name: "مشرف", password: fixturePassword(), role: "admin" });
+
+    assert.throws(() => revokeSessions(owner.id, admin.id), /مالك المنصة/, "قَفَل المشرفُ المالكَ خارج ترخيصه");
+    /* والمالك ينهي جلسات نفسه ومن دونه. */
+    assert.equal(typeof revokeSessions(owner.id, owner.id), "number");
+    assert.equal(typeof revokeSessions(admin.id, owner.id), "number");
+  } finally {
+    closeDatabase();
+  }
+});
+
+test("حسابٌ عادي لا يُحمى بحماية المالك", async () => {
+  useFreshDatabase();
+  try {
+    await createFirstAccount({ email: "owner@nahj.test", name: "المالك", password: fixturePassword() });
+    const { ensureOwnerAccount } = await import("./auth.ts");
+    ensureOwnerAccount();
+    const a = await createAccount({ email: "a@nahj.test", name: "مدير", password: fixturePassword(), role: "manager" });
+    const b = await createAccount({ email: "b@nahj.test", name: "مشرف", password: fixturePassword(), role: "admin" });
+    /* الحارس يخصّ المالك وحده، فلا يشلّ إدارة الحسابات العادية. */
+    await adminSetPassword(a.id, fixturePassword(), b.id);
+  } finally {
+    closeDatabase();
+  }
+});

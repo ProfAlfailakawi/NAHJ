@@ -142,7 +142,18 @@ const realAdminOnly = (req: AuthenticatedRequest, res: Response, next: NextFunct
   next();
 };
 
-const accountsGuard = [requireAuth, realAdminOnly, requireRole("admin")] as const;
+/*
+ * إدارة الحسابات تمرّ بحارس الاشتراك أيضاً.
+ *
+ * `authRouter` مركَّب في `server.ts` على `/api/auth` قبل `apiRouter` وبمعزل عنه،
+ * فلا يبلغه `enforceSubscription` المركَّب داخل الثاني إطلاقاً. أي أن اشتراكاً
+ * موقوفاً كان يُجمّد كل شيء إلا ما يُنشئ الحسابات ويغيّر الأدوار ويُصدر كلمات
+ * المرور — وهي من أثقل الكتابات لا أخفّها، وفيها حدّ المقاعد المدفوع.
+ *
+ * ويُركَّب هنا لا على الموجّه كلّه: الدخول والخروج وتغيير المرء كلمة مروره تبقى
+ * مفتوحة، وإلا صار التجميد قفلاً بلا مفتاح.
+ */
+const accountsGuard = [requireAuth, realAdminOnly, requireRole("admin"), enforceSubscription] as const;
 
 authRouter.get("/accounts", ...accountsGuard, (_req: AuthenticatedRequest, res: Response) => {
   res.json({ accounts: listAccounts() });
@@ -179,7 +190,7 @@ authRouter.patch("/accounts/:id", ...accountsGuard, (req: AuthenticatedRequest, 
 /* إصدار كلمة مرور مؤقتة. سلّمها بقناة تثق بها — لا يوجد بريد يرسلها. */
 authRouter.post("/accounts/:id/password", ...accountsGuard, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    await adminSetPassword(req.params.id, req.body?.newPassword);
+    await adminSetPassword(req.params.id, req.body?.newPassword, req.account?.id);
     res.json({ ok: true, sessionsRevoked: true });
   } catch (error) {
     const status = Number((error as { status?: number })?.status) || 400;
@@ -188,7 +199,12 @@ authRouter.post("/accounts/:id/password", ...accountsGuard, async (req: Authenti
 });
 
 authRouter.post("/accounts/:id/revoke-sessions", ...accountsGuard, (req: AuthenticatedRequest, res: Response) => {
-  res.json({ ok: true, revoked: revokeSessions(req.params.id) });
+  try {
+    res.json({ ok: true, revoked: revokeSessions(req.params.id, req.account?.id) });
+  } catch (error) {
+    const status = Number((error as { status?: number })?.status) || 400;
+    res.status(status).json({ error: (error as Error)?.message || "تعذّر إنهاء الجلسات." });
+  }
 });
 
 /*
@@ -242,11 +258,14 @@ apiRouter.get("/today", (req: Request, res: Response) => {
     metrics: {
       /*
        * كان هذا الرقم 137 مكتوباً في الشيفرة — ثابتاً لا يتحرّك مهما عملت
-       * المؤسسة. صار مشتقّاً من سجلّ التدقيق بتاريخ اليوم، وصفرُه صادق: لم
-       * يحدث شيء بعد.
+       * المؤسسة. صار مشتقّاً من سجلّ التدقيق بتاريخ اليوم.
+       *
+       * واسمه «نشاط» لا «أُنجز»: العدّ يشمل كل ما سُجِّل — ترقية مهارة، وحسم
+       * إشارة، وفحص موصل — وتسميته إنجازاً تجعل ضغطةَ زرٍّ إدارية تبدو مهمة
+       * مكتملة.
        */
-      tasksCompletedToday: metrics.todayActivity.value ?? 0,
-      tasksCompletedTodayBasis: metrics.todayActivity.basis,
+      auditEventsToday: metrics.todayActivity.value ?? 0,
+      auditEventsTodayBasis: metrics.todayActivity.basis,
       needsAttentionCount: pendingApprovals.length + pendingProposals.length,
       newLearnedItemsCount: pendingProposals.length,
       conflictsDetected: pendingProposals.filter((p) => p.type === "conflict").length,
@@ -791,14 +810,53 @@ apiRouter.post("/simulator/message", async (req: Request, res: Response) => {
 
   const lower = (text || "").toLowerCase();
 
-  // Progressive conversational state progression
+  /*
+   * القناة خارج قطاع التعليم.
+   *
+   * ما تحت هذا السطر نصٌّ تعليميّ مكتوب حرفياً: عمرُ الطفل، والصفّ، والبطاقة
+   * المدنية، و«أكاديمية المستقبل». وكان يعمل مهما كانت الحزمة المركَّبة — فتبدّل
+   * المؤسسةُ نشاطها إلى عيادة، ويردّ أول ردٍّ في محادثة المريض بسؤاله عن عمر
+   * طفله. أي أن الحزمة تُبدّل كل شيء إلا اللسان الذي تُحادَث به، وهو أظهر ما
+   * يراه من يُعرض عليه المنتج.
+   *
+   * والبديل لا يدّعي سيراً لم يُبنَ: يردّ بلسان القطاع، ويقول ما تعرف المؤسسة
+   * أن تفعله من مهاراتها الحيّة، ويُحيل إلى موظف. بناء سيرٍ كامل لكل قطاع عملٌ
+   * قائم بذاته — وادّعاؤه أسوأ من غيابه.
+   */
+  if (db.sectorCode && db.sectorCode !== EDUCATION_CODE) {
+    const liveSkills = db.skills.filter(skill => skill.status === "active");
+    const offered = liveSkills.slice(0, 3).map(skill => `• ${skill.name}`).join("\n");
+    const generated = await generateAiResponse(
+      `أنت مساعد خدمة العملاء في «${db.organization.name}» (${db.organization.industry}).` +
+        ` تحادث ${db.channel.counterpart}. رسالته: "${text}".` +
+        ` الإجراءات المعتمدة لدينا: ${liveSkills.map(skill => skill.name).join("، ") || "لا شيء بعد"}.` +
+        ` أجب بجملتين بالعربية، ولا تَعِد بشيء خارج هذه الإجراءات، ولا تخترع أسعاراً ولا مواعيد.`,
+      "أنت نهج: لا تخترع معلومة، وأحل إلى موظف عند الشكّ.",
+    );
+
+    const fallback = offered
+      ? `وصلتنا رسالتك. ما نتولّاه اليوم في ${db.organization.name}:\n${offered}\nوسيتابع معك الموظف المختصّ لِما هو خارج ذلك.`
+      : `وصلتنا رسالتك في ${db.organization.name}. لم تُعتمد إجراءات حيّة بعد لهذه القناة، فسيتابع معك الموظف المختصّ.`;
+
+    const reply = {
+      id: `msg_ai_${Date.now()}`,
+      sender: "ai" as const,
+      text: generated || fallback,
+      timestamp: "الآن",
+    };
+    db.simulatorState.messages.push(reply);
+    return res.json({ success: true, state: db.simulatorState });
+  }
+
+  // Progressive conversational state progression (قطاع التعليم)
   if (db.simulatorState.step === "initial") {
     // Stage 1: Identify intent, ask for child's age
     db.simulatorState.step = "age_asked";
     const reply = {
       id: `msg_ai_${Date.now()}`,
       sender: "ai" as const,
-      text: "يا مرحباً بك أستاذنا العزيز! يسرنا جداً انضمامكم لأسرة أكاديمية المستقبل. لتحديد الصف الدراسي المناسب والشواغر المتاحة فوراً، كم يبلغ عمر طفلك أو ما هو تاريخ ميلاده؟",
+      // اسم المؤسسة من سجلّها، لا مكتوباً — فتغييره في الحزمة يغيّره في القناة.
+      text: `يا مرحباً بك أستاذنا العزيز! يسرنا جداً انضمامكم لأسرة ${db.organization.name}. لتحديد الصف الدراسي المناسب والشواغر المتاحة فوراً، كم يبلغ عمر طفلك أو ما هو تاريخ ميلاده؟`,
       timestamp: "الآن",
     };
     db.simulatorState.messages.push(reply);
@@ -856,7 +914,7 @@ apiRouter.post("/simulator/message", async (req: Request, res: Response) => {
   const reply = {
     id: `msg_ai_${Date.now()}`,
     sender: "ai" as const,
-    text: "وصلتنا رسالتكم، وجارٍ معالجتها طبقاً لإجراءات أكاديمية المستقبل المعتمدة.",
+    text: `وصلتنا رسالتكم، وجارٍ معالجتها طبقاً لإجراءات ${db.organization.name} المعتمدة.`,
     timestamp: "الآن",
   };
   db.simulatorState.messages.push(reply);
