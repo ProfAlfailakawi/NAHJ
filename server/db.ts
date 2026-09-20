@@ -31,6 +31,7 @@ import { syncDocToFirestore, getFirebaseStatus } from "./firebase.ts";
 import { AUDIT_RETENTION, readState, startPersistenceWorker } from "./persistence.ts";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createDemoSandboxSeed, type DemoSandboxSeed } from "./demoSandbox.ts";
+import { buildSector, EDUCATION_CODE } from "./packs/index.ts";
 
 export interface SimulatorMessage {
   id: string;
@@ -65,6 +66,13 @@ function hydrate<T>(key: string, seed: T): T {
   return persisted === undefined ? seed : persisted;
 }
 
+/* قناة التعليم الافتراضية — الحزمة المبذورة أصلاً في المنصة. */
+const DEFAULT_CHANNEL = {
+  counterpart: "ولي أمر",
+  welcome: "أهلاً بك في أكاديمية المستقبل الدولية! يسعدنا تواصلكم واستقبال استفساركم بشأن تسجيل طلاب جدد للعام الدراسي 2026/2027.",
+  samplePrompts: ["أبي أسجل بنتي في الصف الأول", "كم الرسوم الدراسية؟", "متى يبدأ التسجيل؟"],
+};
+
 export class Store {
   /**
    * `isDemo` is the one switch that keeps a visitor's synthetic activity out of
@@ -90,6 +98,10 @@ export class Store {
   public connectors: Connector[];
   public testCases: TestCase[];
   public shadowComparisons: ShadowComparison[];
+  /** القطاع الذي بُني عليه العقل الحالي. يُقرأ في الواجهة ويُحفظ مع الحالة. */
+  public sectorCode: string;
+  /** الشخصية التي تحادث المؤسسة من الخارج — تختلف جذرياً بين القطاعات. */
+  public channel: { counterpart: string; welcome: string; samplePrompts: string[] };
 
   constructor(seed?: DemoSandboxSeed) {
     this.isDemo = Boolean(seed);
@@ -109,6 +121,8 @@ export class Store {
     this.connectors = seed ? seed.connectors : persisted("connectors", JSON.parse(JSON.stringify(initialConnectors)));
     this.testCases = seed ? seed.testCases : persisted("testCases", JSON.parse(JSON.stringify(initialTestCases)));
     this.shadowComparisons = seed ? seed.shadowComparisons : persisted("shadowComparisons", JSON.parse(JSON.stringify(initialShadowComparisons)));
+    this.sectorCode = seed ? EDUCATION_CODE : persisted("sectorCode", EDUCATION_CODE);
+    this.channel = seed ? DEFAULT_CHANNEL : persisted("channel", { ...DEFAULT_CHANNEL });
 
     const freshSimulator: SimulatorState = {
       step: "initial",
@@ -150,6 +164,8 @@ export class Store {
     const newEvent: AuditEvent = {
       id: `aud_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       timestamp: `اليوم، ${timeStr}`,
+      // الطابع الحقيقي إلى جانب نصّ العرض: القياس يحتاج الأول، والقارئ الثاني.
+      at: now.toISOString(),
       ...event,
     };
     this.auditEvents.unshift(newEvent);
@@ -160,6 +176,56 @@ export class Store {
     return newEvent;
   }
 
+  /**
+   * يستبدل العقل التشغيلي بحزمة قطاع أخرى.
+   *
+   * عمليةٌ هادمة بطبيعتها: تمسح المهارات والسياسات والموصلات ومصادر المعرفة
+   * وتضع مكانها عقل القطاع الجديد. ولهذا لا تُنادى إلا بتأكيد صريح من المسار.
+   *
+   * وما لا تمسحه مقصود: سجلّ التدقيق يبقى. أثرُ ما جرى ملكُ المؤسسة لا ملكُ
+   * الحزمة، ومحوُه عند تبديل القطاع يُفقد المراجعة معناها — ويمحو الحدث الذي
+   * يسجّل التبديل نفسه.
+   */
+  public applySector(code: string, actorName: string): { ok: boolean; reason?: string } {
+    const built = buildSector(code);
+    if (!built) return { ok: false, reason: `قطاع غير معروف: ${code}` };
+
+    this.organization = built.organization;
+    this.users = built.users;
+    this.currentUserId = built.users[0]?.id || this.currentUserId;
+    this.knowledgeSources = built.knowledgeSources;
+    this.policies = built.policies;
+    this.skills = built.skills;
+    this.connectors = built.connectors;
+    this.learningProposals = built.learningProposals;
+    this.channel = built.channel;
+    this.sectorCode = code;
+
+    /*
+     * ما يخصّ القطاع السابق ولا معنى له بعده: حالات عمله، وطلبات موافقته،
+     * واختباراته، ومقارنات ظلّه. تركها يُنتج شاشةً فيها «تسجيل طالب» داخل عيادة.
+     */
+    this.workItems = [];
+    this.approvalRequests = [];
+    this.testCases = [];
+    this.shadowComparisons = [];
+    this.learningSessions = [];
+    this.resetSimulator();
+
+    this.logAudit({
+      actorType: "human",
+      actorName,
+      action: "APPLY_SECTOR_PACK",
+      provenance: `حزمة القطاع: ${code}`,
+      risk: "high",
+      latencyMs: 0,
+      details: `استُبدل العقل التشغيلي بحزمة «${built.organization.name}» — ${built.skills.length} مهارة و${built.policies.length} سياسة. سجلّ التدقيق محفوظ.`,
+      status: "success",
+    });
+
+    return { ok: true };
+  }
+
   public resetSimulator(): void {
     this.simulatorState = {
       step: "initial",
@@ -167,7 +233,7 @@ export class Store {
         {
           id: "msg_welcome_reset",
           sender: "ai",
-          text: "أهلاً بك في أكاديمية المستقبل الدولية! يسعدنا تواصلكم واستقبال استفساركم بشأن تسجيل طلاب جدد للعام الدراسي 2026/2027.",
+          text: this.channel.welcome,
           timestamp: "الآن",
         },
       ],
@@ -329,6 +395,8 @@ export function snapshotState(): Record<string, unknown> {
     testCases: baseStore.testCases,
     shadowComparisons: baseStore.shadowComparisons,
     simulatorState: baseStore.simulatorState,
+    sectorCode: baseStore.sectorCode,
+    channel: baseStore.channel,
   };
 }
 

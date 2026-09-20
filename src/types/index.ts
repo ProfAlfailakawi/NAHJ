@@ -207,7 +207,16 @@ export interface ApprovalRequest {
 
 export interface AuditEvent {
   id: string;
+  /** نصّ العرض («اليوم، 10:14 ص»). للقراءة البشرية وحدها. */
   timestamp: string;
+  /**
+   * الطابع الحقيقي بصيغة ISO.
+   *
+   * `timestamp` نصٌّ للعرض لا يصلح للحساب، وبدون هذا الحقل لا تُشتق أي سلسلة
+   * زمنية — وهو ما دفع الشيفرة سابقاً إلى كتابة منحنى الأسبوع بيدها. اختياري
+   * لأن سجلات البذرة القديمة لا تحمله، ويُقرأ لها من نصّ العرض عند الحاجة.
+   */
+  at?: string;
   actorType: 'ai' | 'human' | 'system';
   actorName: string;
   action: string;

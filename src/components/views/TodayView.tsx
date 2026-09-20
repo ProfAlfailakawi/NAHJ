@@ -7,6 +7,8 @@ import type { ApprovalRequest, LearningProposal, Organization, WorkItem } from "
 import type { SectionId } from "../Shell";
 import { BrainAtlas, MiniProcessGlyph, WorkRiver } from "../Visuals";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
+import { Term } from "../Explain";
+import { WORK_STATE_PLAIN } from "../../lib/glossary";
 
 type Props = {
   lang: "ar"|"en";
@@ -16,20 +18,32 @@ type Props = {
   proposals: LearningProposal[];
   workItems: WorkItem[];
   onApproval: (id: string) => void;
+  /*
+   * الأرقام تأتي من الخادم مشتقّة.
+   *
+   * كانت هذه الشاشة تكتب أرقامها بيدها: «143» فوق أطلس العقل، و«137» مُنجزاً،
+   * وشريط ذاكرة كامل عند 61 و37 و11 و29. لم يكن أيٌّ منها يتحرّك بعمل المؤسسة.
+   */
+  todayMetrics?: { tasksCompletedToday: number; hoursSavedThisMonth: number } | null;
+  memory?: {
+    documentedSkills: number; activeSkills: number;
+    singlePersonDependencies: number; candidatesForAutomation: number;
+    undocumentedProcesses: number | null;
+  } | null;
 };
 
-export function TodayView({ lang, organization, onNavigate, approvals, proposals, workItems, onApproval }: Props) {
+export function TodayView({ lang, organization, onNavigate, approvals, proposals, workItems, onApproval, todayMetrics, memory }: Props) {
   const ar = lang === "ar";
   const open = proposals.filter(p=>p.status==="pending");
   const active = workItems.filter(w=>w.state!=="completed").slice(0,3);
   const conflictCount = open.filter(p=>p.type==="conflict"||p.type==="process_drift").length;
   return (
     <div className="page-enter">
-      <PageHeader eyebrow="NAHJ / PULSE" title={ar ? "العقل يعمل." : "The brain is working."} hint={ar ? "تعلّم. نفّذ. ارفع ما يحتاج قرارك فقط." : "Learn. Work. Surface only what needs you."} action={<button className="btn-primary" onClick={()=>onNavigate("teach")}><GraduationCap/>{ar?"علّم نهج":"Teach NAHJ"}</button>}/>
+      <PageHeader eyebrow="NAHJ / PULSE" title={ar ? "العقل يعمل." : "The brain is working."} hint={ar ? "ما يظهر هنا هو ما يحتاجك أنت. الباقي يمشي وحده أو ينتظر دوره." : "What appears here needs you. The rest runs or waits its turn."} action={<button className="btn-primary" onClick={()=>onNavigate("teach")}><GraduationCap/>{ar?"علّم نهج":"Teach NAHJ"}</button>}/>
 
       <section className="hero-grid">
         <article className="brain-hero">
-          <div className="hero-floating-meta top-start"><span className="status-live"><i/>{ar?"حي":"LIVE"}</span><span>143</span></div>
+          <div className="hero-floating-meta top-start"><span className="status-live"><i/>{ar?"حي":"LIVE"}</span><span>{memory?.documentedSkills ?? 0}</span></div>
           <BrainAtlas/>
           <div className="brain-hero-caption">
             <div><span>COMPANY BRAIN</span><strong>{ar?"ذاكرة العمل الحيّة":"Living operational memory"}</strong></div>
@@ -37,8 +51,8 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
           </div>
         </article>
         <div className="pulse-stats">
-          <Stat label={ar?"أُنجز":"DONE"} value="137" tone="moss" icon={<CheckCircle2/>}/>
-          <Stat label={ar?"وقت مستعاد":"TIME BACK"} value={`${organization.hoursSavedMonth}h`} tone="sky" icon={<Clock3/>}/>
+          <Stat label={ar?"أُنجز اليوم":"DONE TODAY"} value={todayMetrics?.tasksCompletedToday ?? 0} tone="moss" icon={<CheckCircle2/>}/>
+          <Stat label={ar?"وقت مستعاد":"TIME BACK"} value={`${todayMetrics?.hoursSavedThisMonth ?? organization.hoursSavedMonth}h`} tone="sky" icon={<Clock3/>}/>
           <Stat label={ar?"تعلّم":"LEARNING"} value={open.length} tone="amber" icon={<Sparkles/>}/>
           <Stat label={ar?"قرارك":"NEEDS YOU"} value={approvals.filter(a=>a.status==="pending").length+conflictCount} tone="rose" icon={<ShieldCheck/>}/>
         </div>
@@ -70,18 +84,25 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
           <div className="work-mini-grid">
             {active.map((w,i)=><button key={w.id} className="work-mini" onClick={()=>onNavigate("work")}>
               <div><span className={`risk-dot risk-${w.riskLevel}`}/><b>{w.code}</b></div>
-              <strong>{w.details?.studentName || w.contactName}</strong>
+              {/* `studentName` حقلٌ تعليمي في شاشة عامّة — يعمل في مدرسة ويختفي في عيادة. */}
+              <strong>{w.contactName || w.title}</strong>
+              <small className="work-mini-state">{ar ? (WORK_STATE_PLAIN[w.state] || w.state) : w.state}</small>
               <WorkRiver progress={w.progressPercent} risk={w.riskLevel}/>
             </button>)}
           </div>
         </article>
       </section>
 
+      {/*
+        * كان هذا الشريط أربعة أرقام مكتوبة: 61 و37 و11 و29. وأصدقها الآن هو
+        * «غير الموثّقة»: تُعرض «—» لأنها غير قابلة للمعرفة — النظام لا يعلم ما
+        * لم يُعرض عليه قطّ.
+      */}
       <section className="memory-strip">
-        <MemoryGlyph icon={<BrainCircuit/>} value="61" label={ar?"موثقة":"Verified"}/>
-        <MemoryGlyph icon={<Route/>} value="37" label={ar?"غير موثقة":"Undocumented"}/>
-        <MemoryGlyph icon={<AlertTriangle/>} value="11" label={ar?"حرجة":"Critical"}/>
-        <MemoryGlyph icon={<Sparkles/>} value="29" label={ar?"قابلة للأتمتة":"Automatable"}/>
+        <MemoryGlyph icon={<BrainCircuit/>} value={String(memory?.documentedSkills ?? 0)} label={ar?"موثقة":"Verified"}/>
+        <MemoryGlyph icon={<Route/>} value={memory?.undocumentedProcesses === null || memory?.undocumentedProcesses === undefined ? "—" : String(memory.undocumentedProcesses)} label={ar?"غير موثقة":"Undocumented"}/>
+        <MemoryGlyph icon={<AlertTriangle/>} value={String(memory?.singlePersonDependencies ?? 0)} label={ar?"تعتمد على شخص":"Single-person"}/>
+        <MemoryGlyph icon={<Sparkles/>} value={String(memory?.candidatesForAutomation ?? 0)} label={ar?"جاهزة للترقية":"Ready to promote"}/>
       </section>
     </div>
   );

@@ -14,7 +14,7 @@ export function PageHeader({ eyebrow, title, hint, action }: { eyebrow?: string;
   );
 }
 
-export function SectionTitle({ title, meta, icon }: { title: string; meta?: string; icon?: React.ReactNode }) {
+export function SectionTitle({ title, meta, icon }: { title: React.ReactNode; meta?: string; icon?: React.ReactNode }) {
   return (
     <div className="section-title">
       <div className="flex items-center gap-2 min-w-0">

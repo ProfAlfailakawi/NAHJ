@@ -430,3 +430,185 @@
   .sub-headline{flex-direction:column}
   .ledger-line{grid-template-columns:1fr}
 }
+
+/* ---- القياس: الأساس، والفراغ الصادق ------------------------------------- */
+
+/* الرقم غير المتاح يُعرض باهتاً لا مُلوَّناً: غيابه معلومة، لا إنجاز ولا خطر. */
+.impact-metric,.guard-tile{position:relative}
+.impact-metric.is-empty strong,.guard-tile.is-empty strong{color:var(--muted-2);font-weight:800}
+.metric-basis-toggle{position:absolute;inset-block-start:7px;inset-inline-end:7px;width:20px;height:20px;
+  border:0;border-radius:7px;background:transparent;color:var(--muted-2);display:grid;place-items:center;
+  cursor:pointer;opacity:.5;transition:.18s var(--ease)}
+.metric-basis-toggle:hover{opacity:1;background:rgba(16,37,31,.06);color:var(--ink)}
+.metric-basis-toggle svg{width:12px;height:12px}
+.metric-basis{position:absolute;z-index:20;inset-block-start:30px;inset-inline-end:6px;width:min(250px,78vw);
+  padding:10px 12px;border-radius:13px;background:var(--ink);color:#fff;box-shadow:var(--shadow-2);text-align:start}
+.metric-basis p{margin:0 0 5px;font-size:10px;line-height:1.7;font-weight:650}
+.metric-basis small{font-size:9px;opacity:.65;font-weight:800}
+.metric-unavailable{display:flex;align-items:flex-start;gap:9px;padding:14px 15px;border-radius:15px;
+  background:rgba(16,37,31,.028);border:1px dashed var(--line-strong)}
+.metric-unavailable svg{width:15px;height:15px;flex:none;color:var(--muted-2);margin-top:1px}
+.metric-unavailable p{margin:0;font-size:10.5px;line-height:1.75;color:var(--muted);font-weight:700}
+
+/* التجاوزات — سطرٌ خاصّ لأن هذا هو الرقم الذي يُسأل عنه المسؤول. */
+.bypass-line{display:flex;align-items:flex-start;gap:11px;margin-top:13px;padding:13px 15px;border-radius:16px;
+  border:1px solid rgba(47,125,101,.2);background:var(--mint)}
+.bypass-line.is-alarming{background:var(--rose-soft);border-color:rgba(228,111,97,.3)}
+.bypass-line svg{width:17px;height:17px;flex:none;margin-top:1px;color:var(--moss-dark)}
+.bypass-line.is-alarming svg{color:var(--rose)}
+.bypass-line strong{display:block;font-size:12px;font-weight:1000;color:var(--moss-dark)}
+.bypass-line.is-alarming strong{color:#8c2f26}
+.bypass-line p{margin:3px 0 0;font-size:9.5px;line-height:1.7;color:var(--muted);font-weight:650}
+.guard-tile.is-alarming{background:var(--rose-soft);border-color:rgba(228,111,97,.28)}
+
+/* توزيع المخاطر وسُلّم الاستقلالية */
+.risk-bar{display:flex;height:30px;border-radius:11px;overflow:hidden;border:1px solid var(--line)}
+.risk-seg{display:grid;place-items:center;font-size:10px;font-weight:950;color:#fff;min-width:22px}
+.risk-seg.risk-low{background:var(--moss)}.risk-seg.risk-medium{background:var(--amber)}
+.risk-seg.risk-high{background:var(--rose)}.risk-seg.risk-critical{background:#8c2f26}
+.risk-visual{padding:18px 20px;border-radius:20px}
+.autonomy-spread{margin-top:16px;padding:20px 22px;border-radius:22px}
+.ladder-spread{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;align-items:end;height:132px}
+.ladder-spread>div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:100%}
+.ladder-spread i{width:100%;border-radius:8px 8px 3px 3px;background:rgba(16,37,31,.09);display:block}
+.ladder-spread .has i{background:var(--moss)}
+.ladder-spread b{font-size:11px;font-weight:1000}
+.ladder-spread small{font-size:9px;color:var(--muted);font-weight:850}
+
+/* ---- حزم الأنشطة -------------------------------------------------------- */
+
+.sector-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(262px,1fr));gap:12px}
+.sector-card{padding:17px 18px;border-radius:20px;border:1px solid var(--line);background:rgba(255,255,255,.62);
+  display:flex;flex-direction:column;gap:10px}
+.sector-card.is-current{border-color:rgba(47,125,101,.35);background:var(--mint);box-shadow:0 0 0 3px rgba(47,125,101,.07)}
+.sector-head{display:flex;align-items:flex-start;gap:11px}
+.sector-logo{font-size:26px;line-height:1;flex:none}
+.sector-head strong{display:block;font-size:13.5px;font-weight:1000}
+.sector-head small{font-size:10px;color:var(--muted);font-weight:700}
+.sector-flag{margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;font-style:normal;
+  font-size:9px;font-weight:950;color:var(--moss-dark);white-space:nowrap}
+.sector-flag svg{width:12px;height:12px}
+.sector-card>p{margin:0;font-size:10.5px;line-height:1.75;color:var(--muted);font-weight:650}
+.sector-counts{display:flex;flex-wrap:wrap;gap:6px 16px;padding-top:9px;border-top:1px dashed var(--line);
+  font-size:9.5px;color:var(--muted);font-weight:750}
+.sector-counts b{color:var(--ink);font-weight:950;font-size:11px}
+.sector-apply{align-self:flex-start;margin-top:auto}
+.sector-note{margin:6px 0 0;font-size:9.5px;color:var(--muted-2);line-height:1.7;font-weight:700}
+.sector-confirm{margin-top:auto;padding:12px 13px;border-radius:14px;background:var(--rose-soft);
+  border:1px solid rgba(228,111,97,.28);display:flex;flex-direction:column;gap:9px}
+.sector-confirm>svg{width:16px;height:16px;color:var(--rose)}
+.sector-confirm p{margin:0;font-size:10px;line-height:1.7;color:#8c2f26;font-weight:800}
+.sector-confirm>div{display:flex;flex-wrap:wrap;gap:7px}
+.sector-confirm button{padding:8px 12px;font-size:10px}
+
+.channel-preview{padding:15px 17px;border-radius:17px;background:rgba(16,37,31,.028);border:1px solid var(--line)}
+.channel-preview strong{display:inline-block;padding:4px 10px;border-radius:99px;background:var(--sky-soft);
+  color:#2f43a8;font-size:9.5px;font-weight:950;margin-bottom:9px}
+.channel-preview p{margin:0 0 11px;font-size:11.5px;line-height:1.8;font-weight:700}
+.channel-prompts{display:flex;flex-wrap:wrap;gap:7px}
+.channel-prompts span{padding:7px 12px;border-radius:12px;background:#fff;border:1px solid var(--line);
+  font-size:10px;color:var(--muted);font-weight:700}
+
+/* ---- طبقة الشرح: المصطلح ومعناه ----------------------------------------- */
+
+.term-wrap{position:relative;display:inline}
+.term{border:0;padding:0;background:none;font:inherit;color:inherit;cursor:help;
+  border-bottom:1.5px dotted var(--moss);border-radius:0;transition:.16s var(--ease)}
+.term:hover,.term.open{color:var(--moss-dark);border-bottom-style:solid}
+.term-pop{position:absolute;z-index:120;inset-block-start:calc(100% + 7px);inset-inline-start:0;
+  width:min(272px,80vw);padding:12px 14px;border-radius:15px;background:var(--ink);color:#fff;
+  box-shadow:var(--shadow-2);display:flex;flex-direction:column;gap:6px;text-align:start;
+  font-weight:600;animation:toastIn .16s var(--ease) both}
+.term-pop b{font-size:11.5px;font-weight:950}
+.term-pop b i{font-style:normal;opacity:.5;font-weight:700;font-size:9.5px;margin-inline-start:5px}
+.term-pop>span{font-size:10.5px;line-height:1.75;opacity:.92}
+.term-pop em{font-style:normal;font-size:9.5px;line-height:1.7;opacity:.66;padding-top:6px;
+  border-top:1px solid rgba(255,255,255,.14)}
+
+.autonomy-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:99px;
+  background:var(--mint);border:1px solid rgba(47,125,101,.2);font-size:9.5px;font-weight:900;color:var(--moss-dark)}
+.autonomy-badge i{font-style:normal;font-weight:950;opacity:.7}
+.autonomy-badge.compact{padding:3px 7px;font-size:9px}
+.autonomy-plain{margin:9px 0 13px;padding:11px 13px;border-radius:14px;background:rgba(16,37,31,.03);
+  border:1px solid var(--line)}
+.autonomy-plain strong{display:block;font-size:12px;font-weight:1000;margin-bottom:3px}
+.autonomy-plain small{font-size:10px;line-height:1.7;color:var(--muted);font-weight:700}
+.skill-risk-plain{margin-bottom:10px;padding:8px 12px;border-radius:12px;background:rgba(16,37,31,.028);
+  border:1px solid var(--line);font-size:10px;font-weight:800;color:var(--muted)}
+.work-mini-state{display:block;margin-top:3px;font-size:9px;color:var(--muted);font-weight:800}
+
+/* لوحة الدليل */
+.help-backdrop{position:fixed;inset:0;z-index:200;background:rgba(16,37,31,.36);backdrop-filter:blur(3px);
+  display:flex;justify-content:flex-end;animation:pageIn .2s var(--ease) both}
+.help-panel{width:min(475px,100vw);height:100%;overflow-y:auto;background:var(--paper);
+  border-inline-start:1px solid var(--line-strong);box-shadow:var(--shadow-2);padding:22px 24px 40px}
+.help-panel header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
+  margin-bottom:20px;padding-bottom:15px;border-bottom:1px solid var(--line)}
+.help-panel header em{display:block;font-style:normal;font-size:9px;font-weight:950;letter-spacing:.12em;color:var(--moss)}
+.help-panel header h2{margin:4px 0 0;font-size:21px;font-weight:1000;letter-spacing:-.04em}
+.help-panel header button{width:34px;height:34px;flex:none;border:1px solid var(--line);border-radius:12px;
+  background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+.help-panel header button svg{width:15px;height:15px}
+.help-section{margin-bottom:26px}
+.help-section h3{display:flex;align-items:center;gap:8px;margin:0 0 11px;font-size:12.5px;font-weight:1000}
+.help-section h3 svg{width:15px;height:15px;color:var(--moss)}
+.help-note{margin:0 0 12px;font-size:10.5px;line-height:1.8;color:var(--muted);font-weight:650}
+.help-steps{margin:0;padding-inline-start:18px;display:flex;flex-direction:column;gap:9px}
+.help-steps li{font-size:11px;line-height:1.8;color:var(--muted);font-weight:650}
+.help-steps b{color:var(--ink);font-weight:950}
+.ladder-list{display:flex;flex-direction:column;gap:7px}
+.ladder-list>div{display:flex;align-items:flex-start;gap:11px;padding:11px 13px;border-radius:14px;
+  background:rgba(255,255,255,.6);border:1px solid var(--line)}
+.ladder-list i{flex:none;width:28px;height:28px;border-radius:9px;background:var(--ink);color:#fff;
+  display:grid;place-items:center;font-style:normal;font-size:10px;font-weight:950}
+.ladder-list>div>div{flex:1;min-width:0}
+.ladder-list strong{display:block;font-size:11.5px;font-weight:950;margin-bottom:2px}
+.ladder-list small{font-size:10px;line-height:1.7;color:var(--muted);font-weight:650}
+.ladder-list em{font-style:normal;font-size:8.5px;color:var(--muted-2);font-weight:800;white-space:nowrap}
+.glossary-list{display:flex;flex-direction:column;gap:11px}
+.glossary-list>div{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.6);border:1px solid var(--line)}
+.glossary-list strong{display:block;font-size:11.5px;font-weight:950}
+.glossary-list strong i{font-style:normal;font-size:9px;opacity:.45;font-weight:700;margin-inline-start:5px}
+.glossary-list p{margin:5px 0 0;font-size:10.5px;line-height:1.75;color:var(--muted);font-weight:650}
+.glossary-list small{display:block;margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);
+  font-size:9.5px;line-height:1.7;color:var(--muted-2);font-weight:700}
+.help-foot{margin-top:6px;padding:13px 15px;border-radius:15px;background:var(--mint);
+  border:1px solid rgba(47,125,101,.2);font-size:10.5px;line-height:1.8;color:var(--moss-dark);font-weight:850}
+@media(max-width:560px){.help-panel{padding:18px 16px 36px}}
+
+/* ---- لوحة الأوامر -------------------------------------------------------- */
+
+/* الحقل صار زرّاً؛ يحتفظ بشكله ويُعلن أنه قابل للنقر. */
+.command-search{cursor:pointer;text-align:start;appearance:none}
+.command-search span{flex:1;min-width:0;font-size:11px;font-weight:750;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.command-search:hover{background:#fff;border-color:rgba(47,125,101,.22)}
+
+.palette-backdrop{position:fixed;inset:0;z-index:210;background:rgba(16,37,31,.34);backdrop-filter:blur(4px);
+  display:flex;justify-content:center;align-items:flex-start;padding:11vh 16px 16px;animation:pageIn .16s var(--ease) both}
+.palette{width:min(620px,100%);max-height:72vh;display:flex;flex-direction:column;border-radius:22px;
+  background:var(--white);border:1px solid var(--line-strong);box-shadow:var(--shadow-2);overflow:hidden}
+.palette-input{display:flex;align-items:center;gap:11px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.palette-input svg{width:17px;height:17px;color:var(--muted);flex:none}
+.palette-input input{flex:1;min-width:0;border:0;outline:none;background:transparent;font:inherit;
+  font-size:14px;font-weight:750;color:var(--ink)}
+.palette-input kbd{font-size:9px;padding:4px 7px;border-radius:7px;background:rgba(16,37,31,.05);
+  border:1px solid var(--line);color:var(--muted);font-weight:800}
+.palette-results{flex:1;overflow-y:auto;padding:8px}
+.palette-row{width:100%;display:flex;align-items:center;gap:12px;padding:11px 13px;border:0;border-radius:14px;
+  background:transparent;text-align:start;cursor:pointer;color:inherit;transition:.12s var(--ease)}
+.palette-row.active{background:var(--mint)}
+.palette-icon{width:32px;height:32px;flex:none;border-radius:11px;display:grid;place-items:center;
+  background:rgba(16,37,31,.05);color:var(--muted)}
+.palette-icon svg{width:15px;height:15px}
+.palette-icon.kind-approval{background:var(--rose-soft);color:var(--rose)}
+.palette-icon.kind-skill{background:var(--mint);color:var(--moss-dark)}
+.palette-icon.kind-work{background:var(--sky-soft);color:var(--sky)}
+.palette-icon.kind-audit{background:var(--violet-soft);color:var(--violet)}
+.palette-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.palette-copy strong{font-size:12px;font-weight:950;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.palette-copy small{font-size:10px;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.palette-empty{margin:0;padding:26px 14px;text-align:center;font-size:11px;color:var(--muted);font-weight:700}
+.palette-foot{display:flex;gap:16px;padding:10px 18px;border-top:1px solid var(--line);
+  background:rgba(16,37,31,.022);font-size:9px;color:var(--muted-2);font-weight:850}
+@media(max-width:560px){.palette-backdrop{padding-top:6vh}.palette-foot{display:none}}

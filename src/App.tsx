@@ -10,12 +10,15 @@ import { WorkView } from "./components/views/WorkView";
 import { SimulatorView,type SimulatorState } from "./components/views/SimulatorView";
 import { ConnectionsView } from "./components/views/ConnectionsView";
 import { AnalyticsView,type AnalyticsData } from "./components/views/AnalyticsView";
-import { ControlView } from "./components/views/ControlView";
+import { ControlView, type GovernanceData } from "./components/views/ControlView";
 import { AuditView } from "./components/views/AuditView";
 import { AccountsView } from "./components/views/AccountsView";
 import { BillingView } from "./components/views/BillingView";
 import { OwnerView } from "./components/views/OwnerView";
 import { SubscriptionBanner } from "./components/SubscriptionBanner";
+import { SectorsView } from "./components/views/SectorsView";
+import { HelpPanel } from "./components/Explain";
+import { CommandPalette, type CommandTarget } from "./components/CommandPalette";
 import { ApprovalModal } from "./components/ApprovalModal";
 import { apiOrNull, authApi, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
 import { LoginScreen } from "./components/LoginScreen";
@@ -25,11 +28,19 @@ import {
 } from "./data/seedData";
 import type { ApprovalRequest,AuditEvent,AutonomyLevel,Connector,LearningProposal,Organization,ShadowComparison,Skill,TestCase,User,WorkItem } from "./types";
 
+/*
+ * الارتداد عند تعذّر الخادم.
+ *
+ * كان هذا الكائن نسخةً ثانية من الأرقام المخترعة: 412 مهمة و84.5 ساعة و78.4%
+ * أتمتة. أي أن فشل الطلب كان يُظهر أرقاماً جميلة بدل أن يقول إنه فشل. صار فارغاً
+ * صراحةً — والشاشة تعرض «—» و«لا قياس بعد».
+ */
 const fallbackAnalytics:AnalyticsData={
-  kpis:{totalTasksCompleted:412,totalHoursSaved:84.5,automationRatePercent:78.4,shadowMatchRatePercent:94.2,errorRatePercent:.8,humanTakeoverPercent:3.9,avgProcessDurationMin:5.4,institutionalCoverageScore:88},
-  weeklyTrend:[{day:"الأحد",tasks:48,savedHours:12.5},{day:"الإثنين",tasks:62,savedHours:15},{day:"الثلاثاء",tasks:54,savedHours:13.2},{day:"الأربعاء",tasks:71,savedHours:18.4},{day:"الخميس",tasks:68,savedHours:17.1}],
-  riskDistribution:{low:65,medium:25,high:10},
-  topSkillsByUsage:initialSkills.map(s=>({name:s.name,usageCount:s.usageCount,hoursSaved:s.hoursSavedTotal,successRate:s.successRate,reliabilityTier:s.reliabilityTier}))
+  kpis:{totalTasksCompleted:0,totalHoursSaved:0,automationRatePercent:null,shadowMatchRatePercent:null,
+    errorRatePercent:null,humanTakeoverPercent:null,avgProcessDurationMin:null,institutionalCoverageScore:null},
+  trend:{available:false,reason:"لم تصل بيانات من الخادم بعد.",points:[]},
+  riskDistribution:{low:0,medium:0,high:0,critical:0,total:0},
+  topSkillsByUsage:[]
 };
 const fallbackSimulator:SimulatorState={step:"initial",messages:[{id:"welcome",sender:"ai",text:"أهلاً بك في أكاديمية المستقبل. يسعدنا مساعدتك في التسجيل.",timestamp:"الآن"}]};
 
@@ -73,6 +84,8 @@ export default function App(){
   const [billing,setBilling]=useState<BillingSnapshot|null>(null);
   const [plans,setPlans]=useState<Plan[]>([]);
   const [billingLoading,setBillingLoading]=useState(true);
+  const [governance,setGovernance]=useState<GovernanceData|null>(null);
+  const [todayData,setTodayData]=useState<{metrics:any;institutionalMemoryCoverage:any}|null>(null);
 
   const notify=useCallback((text:string,error=false)=>{setToast({text,error});window.setTimeout(()=>setToast(null),2800)},[]);
   const refreshAudit=useCallback(async()=>{const d=await apiOrNull<{auditEvents:AuditEvent[]}>("/audit");if(d?.auditEvents)setAudit(d.auditEvents)},[]);
@@ -93,8 +106,27 @@ export default function App(){
 
   useEffect(()=>{document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.documentElement.lang=lang},[lang]);
   /*
+   * الاختصار المكتوب على الحقل منذ البداية ولم يكن مربوطاً بشيء. ويُلتقط على
+   * مستوى النافذة ليعمل من أي شاشة، ويُمنع السلوك الافتراضي للمتصفح.
+   */
+  useEffect(()=>{
+    const onKey=(event:KeyboardEvent)=>{
+      if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==="k"){event.preventDefault();setPaletteOpen(v=>!v)}
+    };
+    window.addEventListener("keydown",onKey);
+    return()=>window.removeEventListener("keydown",onKey);
+  },[]);
+  /*
    * فحص الهوية. قابل لإعادة النداء لأن الدخول إلى البيئة التجريبية يغيّر الجواب:
    * الزائر التجريبي يمرّ من الحارس بلا حساب، فيصير "authenticated" داخل صندوقه.
+   */
+  /*
+   * ويُنادى بعد الدخول والتهيئة أيضاً، لا عند الإقلاع وحده.
+   *
+   * كان الدخول يضبط `authState` مباشرةً ولا يملأ `account` إطلاقاً — فيبقى null
+   * حتى إعادة تحميل الصفحة. والنتيجة أن الدور مجهول في أول جلسة: لا يظهر مدخل
+   * لوحة المالك لمالك النظام، ولا يُعرض زرّ تركيب حزمة النشاط لمن يملك تركيبها.
+   * يدخل صاحب المنصة فلا يجد شاشته، ولا شيء يفسّر له لماذا.
    */
   const checkAuth=useCallback(async()=>{
     try{ const me=await authApi.me(); setAccount({id:me.account.id,role:me.account.role}); setAuthState("authenticated"); return true; }
@@ -113,7 +145,7 @@ export default function App(){
     try{
       const health=await apiOrNull<{status:string}>("/health"); setServerLive(health?.status==="ok");
       void refreshBilling();
-      const [context,learn,sk,wo,ap,co,au,an,si]=await Promise.all([
+      const [context,learn,sk,wo,ap,co,au,an,gv,td,si]=await Promise.all([
         apiOrNull<ContextResponse>("/context"),
         apiOrNull<{proposals:LearningProposal[]}>("/learn"),
         apiOrNull<{skills:Skill[]}>("/skills"),
@@ -122,12 +154,14 @@ export default function App(){
         apiOrNull<{connectors:Connector[]}>("/connections"),
         apiOrNull<{auditEvents:AuditEvent[]}>("/audit"),
         apiOrNull<AnalyticsData>("/analytics"),
+        apiOrNull<{governance:GovernanceData}>("/governance"),
+        apiOrNull<{metrics:any;institutionalMemoryCoverage:any}>("/today"),
         apiOrNull<{state:SimulatorState}>("/simulator/state"),
       ]);
       if(context){setOrganization(context.organization);setUser(context.currentUser)}
       if(learn?.proposals)setProposals(learn.proposals); if(sk?.skills)setSkills(sk.skills); if(wo?.workItems)setWork(wo.workItems);
       if(ap?.approvalRequests)setApprovals(ap.approvalRequests); if(co?.connectors)setConnectors(co.connectors); if(au?.auditEvents)setAudit(au.auditEvents);
-      if(an)setAnalytics(an); if(si?.state)setSim(si.state);
+      if(an)setAnalytics(an); if(gv?.governance)setGovernance(gv.governance); if(td)setTodayData(td); if(si?.state)setSim(si.state);
     }catch(error){
       // انتهاء الجلسة أثناء التحميل يعيدنا للبوابة بدل عرض بيانات بذرة كأنها سجلّ المؤسسة.
       if(error instanceof UnauthorizedError)setAuthState("anonymous");
@@ -171,6 +205,8 @@ export default function App(){
    * وفشلُ الطلب لا يُدّعى نجاحًا: الكوكي لم تُمسح، والجلسة قائمة — فيُقال ذلك
    * ولا يُعاد التحميل، لأن إعادته تُظهر شاشة دخولٍ بينما الحساب ما زال مفتوحًا.
    */
+  const [helpOpen,setHelpOpen]=useState(false);
+  const [paletteOpen,setPaletteOpen]=useState(false);
   const [signingOut,setSigningOut]=useState(false);
   const signOut=async()=>{
     setSigningOut(true);
@@ -225,11 +261,11 @@ export default function App(){
   if(authState==="checking")return <div className="boot-gate"/>;
   if(authState==="anonymous"||authState==="setup")
     return <LoginScreen lang={lang} needsSetup={authState==="setup"} demoEnabled={demoEnabled} demoBusy={demoBusy}
-      onEnterDemo={()=>void enterDemo()} onAuthenticated={()=>setAuthState("authenticated")}/>;
+      onEnterDemo={()=>void enterDemo()} onAuthenticated={()=>void checkAuth()}/>;
 
   let view:React.ReactNode;
   switch(section){
-    case "today":view=<TodayView lang={lang} organization={organization} onNavigate={setSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval}/>;break;
+    case "today":view=<TodayView lang={lang} organization={organization} onNavigate={setSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval} todayMetrics={todayData?.metrics||null} memory={todayData?.institutionalMemoryCoverage||null}/>;break;
     case "learn":view=<LearnView lang={lang} proposals={proposals} onResolve={resolve}/>;break;
     case "teach":view=<TeachView lang={lang} onSkillCodified={()=>void codified()} onNotify={notify}/>;break;
     case "skills":view=<SkillsView lang={lang} skills={skills} onPromote={(id,l)=>void promote(id,l)} onRollback={(id,v)=>void rollback(id,v)} onToggleKill={id=>void toggleSkill(id)}/>;break;
@@ -238,17 +274,22 @@ export default function App(){
     case "simulator":view=<SimulatorView lang={lang} state={sim} busy={simBusy} onSend={t=>void simSend(t)} onReset={()=>void simReset()} onUpload={()=>void simUpload()} onOpenApproval={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id)}}/>;break;
     case "connections":view=<ConnectionsView lang={lang} connectors={connectors} testingId={testingConnector} onTest={id=>void testConnector(id)}/>;break;
     case "analytics":view=<AnalyticsView lang={lang} data={analytics}/>;break;
-    case "control":view=<ControlView lang={lang} paused={paused} onPause={()=>{setPaused(v=>!v);notify(!paused?(lang==="ar"?"تم إيقاف التنفيذ الآلي":"Execution paused"):(lang==="ar"?"تم الاستئناف":"Execution resumed"))}}/>;break;
+    case "control":view=<ControlView lang={lang} governance={governance} paused={paused} onPause={()=>{setPaused(v=>!v);notify(!paused?(lang==="ar"?"تم إيقاف التنفيذ الآلي":"Execution paused"):(lang==="ar"?"تم الاستئناف":"Execution resumed"))}}/>;break;
     case "audit":view=<AuditView lang={lang} events={audit}/>;break;
     case "accounts":view=<AccountsView lang={lang} currentAccountId={account?.id||""} isAdmin={account?.role==="admin"||account?.role==="owner"} notify={notify}/>;break;
+    case "sectors":view=<SectorsView lang={lang} isDemo={demoActive} canApply={account?.role==="admin"||account?.role==="owner"} notify={notify} onApplied={()=>void loadAll()}/>;break;
     case "billing":view=<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={account?.role==="admin"||account?.role==="manager"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
     /* لوحة المالك لا تُركَّب أصلاً لغير المالك — والخادم يرفضها أيضاً، فالحجب في الطبقتين. */
     case "owner":view=isOwner?<OwnerView lang={lang} notify={notify} onChanged={()=>void refreshBilling()}/>:<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={false} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
   }
 
   return <>
-    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut} isOwner={isOwner} licenceBanner={<SubscriptionBanner snapshot={billing} lang={lang} onOpen={()=>setSection("billing")}/>}>{paused&&<div className="pause-banner"><TriangleAlert/>{lang==="ar"?"التنفيذ الآلي متوقف. التعلم والمراجعة يعملان.":"Autonomous execution is paused. Learning and review remain active."}</div>}{view}</Shell>
+    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut} onHelp={()=>setHelpOpen(true)} onSearch={()=>setPaletteOpen(true)} isOwner={isOwner} licenceBanner={<SubscriptionBanner snapshot={billing} lang={lang} onOpen={()=>setSection("billing")}/>}>{paused&&<div className="pause-banner"><TriangleAlert/>{lang==="ar"?"التنفيذ الآلي متوقف. التعلم والمراجعة يعملان.":"Autonomous execution is paused. Learning and review remain active."}</div>}{view}</Shell>
     <ApprovalModal lang={lang} approval={activeApprovalObj} busy={approvalBusy} onClose={()=>setActiveApproval(null)} onApprove={id=>void decideApproval(id,"approved")} onReject={(id,r)=>void decideApproval(id,"rejected",r)} onTakeOver={id=>void takeOver(id)}/>
+    <HelpPanel open={helpOpen} onClose={()=>setHelpOpen(false)}/>
+    <CommandPalette open={paletteOpen} onClose={()=>setPaletteOpen(false)} lang={lang} skills={skills} workItems={work}
+      approvals={approvals} audit={audit} isOwner={isOwner}
+      onGo={(target:CommandTarget)=>{setSection(target.section);if(target.approvalId)setActiveApproval(target.approvalId)}}/>
     {toast&&<div className={`toast ${toast.error?"error":""}`}>{toast.error?<TriangleAlert/>:<CheckCircle2/>}<span>{toast.text}</span></div>}
   </>;
 }

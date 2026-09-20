@@ -250,3 +250,21 @@ export function toMinor(input: string | number, currency = "KWD"): number {
 
 export const fromMinor = (amountMinor: number, currency = "KWD") =>
   (amountMinor / 10 ** currencyExponent(currency)).toFixed(currencyExponent(currency));
+
+/* ------------------------------------------------------- حزم الأنشطة */
+
+export interface SectorSummary {
+  code: string; nameAr: string; nameEn: string; descriptionAr: string; logo: string;
+  organizationName: string; skills: number; policies: number; connectors: number; isSeeded: boolean;
+}
+
+export interface SectorChannel { counterpart: string; welcome: string; samplePrompts: string[] }
+
+export const sectorsApi = {
+  list: () => api<{ sectors: SectorSummary[]; current: string; channel: SectorChannel }>("/sectors"),
+  /** هادمة: تمحو المهارات والسياسات وحالات العمل. سجلّ التدقيق يبقى. */
+  apply: (code: string) =>
+    api<{ ok: boolean; sector: string; counts: { skills: number; policies: number; connectors: number } }>(
+      "/sectors/apply", { method: "POST", body: JSON.stringify({ code, confirm: "REPLACE" }) },
+    ),
+};

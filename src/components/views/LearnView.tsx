@@ -17,14 +17,31 @@ const meta={
 
 export function LearnView({lang,proposals,onResolve}:Props){
   const ar=lang==="ar"; const open=proposals.filter(p=>p.status==="pending");
+  /* كل رقم على هذه الشاشة يُشتق من الإشارات نفسها — لا ثابت واحد. */
+  const observedCases=proposals.reduce((sum,p)=>sum+Number(p.observedCasesCount||0),0);
+  const conflicts=proposals.filter(p=>p.type==="conflict"||p.type==="process_drift").length;
+  const improvements=proposals.filter(p=>p.type==="improvement").length;
+  const resolvedShare=proposals.length?Math.round((proposals.filter(p=>p.status!=="pending").length/proposals.length)*100):0;
+
   return <div className="page-enter">
     <PageHeader eyebrow="LEARN / SIGNALS" title={ar?"نهج لاحظ شيئًا.":"NAHJ noticed something."} hint={ar?"المشاهدة ليست حقيقة. أنت من يحوّلها إلى معرفة معتمدة.":"Observation becomes truth only after review."}/>
     <div className="learn-layout">
       <aside className="learn-radar surface">
-        <LearningLens progress={76}/>
-        <div className="learn-radar-caption"><strong>76%</strong><span>{ar?"من العمل معروف":"work mapped"}</span></div>
+        {/*
+          * كانت هذه الأرقام الأربعة مكتوبة: 76% و168 و7 و4 — ومعها حلقة الرادار
+          * نفسها عند 76 ثابتة. تُشتق الآن من الإشارات المعروضة على الشاشة، فما
+          * يراه القارئ في القائمة هو ما تعدّه البطاقات فوقها.
+          *
+          * و«حصّة المحسوم» هي ما بُتّ فيه من مجموع ما رُصد — لا «كم من العمل
+          * معروف»، فتلك لا يعرفها النظام: لا يعلم ما لم يُعرض عليه.
+        */}
+        <LearningLens progress={resolvedShare}/>
+        <div className="learn-radar-caption"><strong>{proposals.length?`${resolvedShare}%`:"—"}</strong><span>{ar?"من الإشارات محسوم":"signals resolved"}</span></div>
         <div className="signal-quads">
-          <Mini value={open.length} label={ar?"بانتظارك":"OPEN"}/><Mini value="168" label={ar?"ملاحظة":"OBSERVED"}/><Mini value="7" label={ar?"تعارض":"CONFLICT"}/><Mini value="4" label={ar?"تحسين":"BETTER"}/>
+          <Mini value={open.length} label={ar?"بانتظارك":"OPEN"}/>
+          <Mini value={observedCases} label={ar?"حالة مرصودة":"OBSERVED"}/>
+          <Mini value={conflicts} label={ar?"تعارض":"CONFLICT"}/>
+          <Mini value={improvements} label={ar?"تحسين":"BETTER"}/>
         </div>
       </aside>
       <section className="learning-feed surface-strong">

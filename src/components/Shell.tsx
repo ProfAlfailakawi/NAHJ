@@ -1,9 +1,9 @@
 import React from "react";
-import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, CreditCard, Crown, FlaskConical, GraduationCap, History, Languages, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
+import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, Building2, CreditCard, Crown, FlaskConical, GraduationCap, History, Languages, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
 import { BrandLockup, NahjMark } from "./Brand";
 import type { Organization, User } from "../types";
 
-export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts" | "billing" | "owner";
+export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts" | "billing" | "owner" | "sectors";
 
 type ShellProps = {
   section: SectionId;
@@ -23,6 +23,10 @@ type ShellProps = {
   onExitDemo?: () => void;
   onSignOut?: () => void;
   signingOut?: boolean;
+  /** يفتح دليل نهج السريع. كان زرّ المساعدة أيقونةً بلا مُعالج نقر. */
+  onHelp?: () => void;
+  /** يفتح لوحة الأوامر. كان حقل البحث يَعِد بـ⌘K ولا يفعل شيئاً. */
+  onSearch?: () => void;
   /** يُخفي مدخل لوحة المالك عمّن ليس مالكاً — لا يُعرض قفلٌ على باب لا يخصّه. */
   isOwner?: boolean;
   /** شريط حالة الترخيص، يُمرَّر كما هو ليُرسم فوق كل سطح. */
@@ -44,13 +48,14 @@ const nav: { id: SectionId; ar: string; en: string; icon: React.ElementType; gro
   { id: "audit", ar: "السجل", en: "Audit", icon: History, group:"govern" },
   { id: "accounts", ar: "الحسابات", en: "Accounts", icon: Users, group:"govern" },
   { id: "billing", ar: "الاشتراك", en: "Subscription", icon: CreditCard, group:"govern" },
+  { id: "sectors", ar: "النشاط", en: "Sector", icon: Building2, group:"govern" },
   { id: "owner", ar: "لوحة المالك", en: "Owner console", icon: Crown, group:"owner" },
 ];
 
 export function Shell({
   section, onSection, organization, user, lang, onToggleLang, alerts, onAlert, serverLive = false,
   demoEnabled = false, demoActive = false, demoBusy = false, onEnterDemo, onResetDemo, onExitDemo,
-  onSignOut, signingOut = false, isOwner = false, licenceBanner, children,
+  onSignOut, signingOut = false, isOwner = false, licenceBanner, onHelp, onSearch, children,
 }: ShellProps) {
   const ar = lang === "ar";
   /* مدخل المالك يُحذف من القائمة لا يُعطَّل: قائمةٌ فيها بابٌ مقفل تدعو إلى طرقه. */
@@ -79,7 +84,8 @@ export function Shell({
             );
           })}
         </nav>
-        <button className="nav-icon rail-help" aria-label={ar?"مساعدة":"Help"}><CircleHelp/></button>
+        {/* كان هذا الزرّ بلا مُعالج نقر — أيقونةٌ تُرى ولا تفعل. */}
+        <button className="nav-icon rail-help" onClick={onHelp} aria-label={ar?"دليل سريع":"Quick guide"} title={ar?"دليل سريع":"Quick guide"}><CircleHelp/></button>
       </aside>
 
       <div className="shell-body">
@@ -104,11 +110,17 @@ export function Shell({
               </div>
             </div>
           </div>
-          <div className="command-search">
+          {/*
+            * كان حقلَ إدخالٍ حقيقياً يُكتب فيه فلا يبحث، ويحمل «⌘K» ولا يستجيب
+            * للاختصار. وهذا أسوأ من غيابه: يَعِد بقدرة غير موجودة فيجرّبها من
+            * يُعرض عليه المنتج. صار زرّاً يفتح لوحة الأوامر فعلاً.
+          */}
+          <button type="button" className="command-search" onClick={onSearch}
+            aria-label={ar ? "ابحث في عقل المؤسسة" : "Search the company brain"}>
             <Search/>
-            <input placeholder={ar ? "ابحث في عقل المؤسسة" : "Search the company brain"}/>
+            <span>{ar ? "ابحث في عقل المؤسسة" : "Search the company brain"}</span>
             <kbd>⌘K</kbd>
-          </div>
+          </button>
           <div className="top-actions">
             {demoActive ? (
               /* The badge is deliberately loud. Anyone looking over a shoulder
