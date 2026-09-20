@@ -312,3 +312,28 @@ test("نقل شركة إلى مسوّق آخر لا يمحو استحقاق ال
   assert.equal(listCommissions({ partnerId: first.id }).length, earned, "مُحي استحقاق المسوّق الأول بنقل الشركة");
   assert.ok(listClients({ partnerId: second.id }).length === 1);
 });
+
+test("تعليق مسوّق بإرسال الحالة وحدها يعمل — ولا يمحو اتفاقه", () => {
+  /*
+   * سقط هذا في مراجعة: زرّ التعليق في الشاشة يُرسل `{ status }` وحده، وكان
+   * الفحص يقرأ الاسم فارغاً فيردّ «اسم المسوّق غير صالح». أي أن الزرّ المعروض
+   * لا يعمل، ولا يملك المالك تعليق مسوّقٍ من مكانه الطبيعي.
+   */
+  freshDatabase();
+  const partner = upsertPartner({
+    name: "بدر المطيري", email: "badr@example.com",
+    model: "percent_of_contract", rateBps: 1_500, durationMonths: 12, notes: "اتفاق 2026",
+  });
+
+  const suspended = upsertPartner({ status: "suspended" } as any, partner.id);
+  assert.equal(suspended.status, "suspended");
+  assert.equal(suspended.name, "بدر المطيري", "مُحي الاسم في تعديلٍ جزئي");
+  assert.equal(suspended.email, "badr@example.com");
+  assert.equal(suspended.rateBps, 1_500, "ضاعت النسبة المتّفق عليها");
+  assert.equal(suspended.durationMonths, 12);
+  assert.equal(suspended.notes, "اتفاق 2026");
+
+  const reactivated = upsertPartner({ status: "active" } as any, partner.id);
+  assert.equal(reactivated.status, "active");
+  assert.equal(reactivated.rateBps, 1_500);
+});

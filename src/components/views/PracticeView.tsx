@@ -5,7 +5,16 @@ import { PageHeader, SectionTitle } from "../Primitives";
 
 type Props={lang:"ar"|"en";cases:TestCase[];shadow:ShadowComparison[];running:boolean;shadowRunning:boolean;onRunPractice:()=>void;onRunShadow:()=>void};
 export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPractice,onRunShadow}:Props){
-  const ar=lang==="ar"; const passed=cases.filter(c=>c.resultStatus==="pass").length; const matched=shadow.filter(s=>s.matched).length;
+  const ar=lang==="ar"; const passed=cases.filter(c=>c.resultStatus==="pass").length;
+  /*
+   * الحالة التي لم تُقارَن لا تُعدّ تطابقاً ولا انحرافاً.
+   *
+   * وبدون هذا الفصل كان مقامُ النسبة يضمّ حالاتٍ بلا وقائع مسجَّلة — فتبدو
+   * المطابقة أسوأ ممّا هي، أو يُعرض «≠» على حالةٍ لم يُقارنها أحد.
+   */
+  const compared=shadow.filter(s=>s.evaluated!==false);
+  const matched=compared.filter(s=>s.matched).length;
+  const skipped=shadow.length-compared.length;
   return <div className="page-enter">
     <PageHeader eyebrow="GRADUATION / EVALS" title={ar?"قبل أن يعمل… يثبت نفسه.":"Before it works, it proves itself."} hint={ar?"اختبارات ثم ظل حقيقي. الاستقلالية تُكتسب ولا تُمنح.":"Practice first. Shadow next. Autonomy is earned."}/>
     <div className="graduation-grid">
@@ -26,8 +35,8 @@ export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPract
         <div className="eval-list">{cases.map(c=><div key={c.id} className={`eval-row ${c.resultStatus||"pending"}`}><span>{c.resultStatus==="pass"?<CheckCircle2/>:c.resultStatus==="fail"?<XCircle/>:<FlaskConical/>}</span><div><strong>{c.name}</strong><small>{c.scenario}</small></div><b>{c.executionTimeMs?`${c.executionTimeMs}ms`:"—"}</b></div>)}</div>
       </section>
       <section className="shadow-deck surface-strong">
-        <div className="shadow-head"><div><em>SHADOW</em><strong>{matched}/{shadow.length}</strong></div><button className="round-action" disabled={shadowRunning} onClick={onRunShadow}><Play/></button></div>
-        <div className="shadow-pairs">{shadow.map(s=><div key={s.id} className={s.matched?"match":"drift"}><span><i>H</i><small>{s.humanAction||s.humanDecision}</small></span><b>{s.matched?"=":"≠"}</b><span><i>AI</i><small>{s.aiAction||s.aiDecision}</small></span></div>)}</div>
+        <div className="shadow-head"><div><em>SHADOW</em><strong>{matched}/{compared.length}</strong>{skipped>0&&<small className="shadow-skipped">{ar?`${skipped} بلا وقائع مسجَّلة — لم تُقارَن`:`${skipped} not compared`}</small>}</div><button className="round-action" disabled={shadowRunning} onClick={onRunShadow}><Play/></button></div>
+        <div className="shadow-pairs">{shadow.map(s=><div key={s.id} className={s.evaluated===false?"unmeasured":s.matched?"match":"drift"} title={s.evaluated===false?(ar?"لا وقائع مسجَّلة لهذه الحالة — لم يُشتق لها قرار":"No recorded facts"):s.divergenceReason||""}><span><i>H</i><small>{s.humanAction||s.humanDecision}</small></span><b>{s.evaluated===false?"?":s.matched?"=":"≠"}</b><span><i>AI</i><small>{s.aiAction||s.aiDecision}</small></span></div>)}</div>
       </section>
     </div>
   </div>

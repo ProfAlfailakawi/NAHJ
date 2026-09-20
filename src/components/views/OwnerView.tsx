@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle, BadgeDollarSign, CalendarPlus, Crown, FilePlus2, History, Layers, PauseCircle,
+  AlertTriangle, BadgeDollarSign, CalendarPlus, CreditCard, Crown, FilePlus2, History, Layers, PauseCircle,
   PlayCircle, Plus, RefreshCw, Save, Trash2, TrendingUp, Wallet, X,
 } from "lucide-react";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
 import {
-  billingApi, fromMinor, money, toMinor,
-  type BillingCycle, type InvoiceLine, type OwnerOverview, type Plan, type PlanFeatureKey,
+  billingApi, fromMinor, money, paymentsApi, toMinor,
+  type BillingCycle, type InvoiceLine, type OwnerOverview, type PaymentIntentView, type Plan, type PlanFeatureKey,
 } from "../../lib/api";
 
 /*
@@ -86,6 +86,14 @@ const draftFromPlan = (plan: Plan): PlanDraft => ({
   isPublic: plan.isPublic, sortOrder: String(plan.sortOrder),
 });
 
+const INTENT_STATUS_AR: Record<string, string> = {
+  pending: "معلّقة",
+  paid: "محصَّلة ومسجَّلة",
+  failed: "فشلت",
+  canceled: "أُلغيت",
+  mismatch: "تحتاج مراجعة",
+};
+
 export function OwnerView({ lang, notify, onChanged }: Props) {
   const ar = lang === "ar";
   const [data, setData] = useState<OwnerOverview | null>(null);
@@ -94,6 +102,18 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
   const [draft, setDraft] = useState<PlanDraft | null>(null);
   const [autonomyCeiling, setAutonomyCeiling] = useState("3");
   const [terminateText, setTerminateText] = useState("");
+  /*
+   * دفتر التحصيل الإلكتروني.
+   *
+   * وأهمّ ما فيه ليس القائمة بل `needsAttention`: عمليةٌ حُصِّلت بمبلغٍ مخالف أو
+   * حُصِّلت ولم تُسجَّل. هذه لا تُدفن في سجلّ طويل — من يفوته سطرٌ منها يكتشفه
+   * في مراجعةٍ بنكية بعد شهر.
+   */
+  const [gateway, setGateway] = useState<Awaited<ReturnType<typeof paymentsApi.ownerIntents>> | null>(null);
+  const loadGateway = useCallback(() => {
+    paymentsApi.ownerIntents().then(setGateway).catch(() => setGateway(null));
+  }, []);
+  useEffect(() => { loadGateway(); }, [loadGateway]);
 
   const load = useCallback(async () => {
     try {
@@ -343,6 +363,73 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
               </button>
             </div>
           </>
+        )}
+      </section>
+
+      {/* --------------------------------------------- بوابة الدفع */}
+      <section className="surface-strong owner-block">
+        <SectionTitle title="بوابة الدفع" icon={<CreditCard />}
+          meta={gateway?.gateway.configured ? `${gateway.gateway.providerLabel} — ${gateway.gateway.environment === "live" ? "حيّة" : "اختبار"}` : "غير مربوطة"} />
+
+        {!gateway ? (
+          <p className="owner-hint">جارٍ قراءة حالة البوابة...</p>
+        ) : !gateway.gateway.configured ? (
+          <>
+            {/* لا وسمَ أخضر لبوابةٍ غير مربوطة: يُقال ما ينقص ليُضبط. */}
+            <p className="owner-hint">{gateway.gateway.note}</p>
+            {gateway.gateway.missing.length > 0 && (
+              <ul className="owner-missing">
+                {gateway.gateway.missing.map(item => <li key={item}><AlertTriangle /> {item}</li>)}
+              </ul>
+            )}
+            <p className="owner-hint">
+              الخطوات كاملة في <code>PAYMENTS.md</code>: مفتاح المزوّد، وسرّ التوقيع، وعنوان النشر — ثم إعادة تشغيل الخدمة.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="owner-hint">{gateway.gateway.note}</p>
+            <div className="owner-form">
+              <label>عنوان الإشعار (يُسجَّل عند المزوّد)
+                <input readOnly value={gateway.gateway.webhookUrl} />
+              </label>
+              <label>عنوان العودة
+                <input readOnly value={gateway.gateway.returnUrl} />
+              </label>
+            </div>
+          </>
+        )}
+
+        {gateway && gateway.needsAttention.length > 0 && (
+          <div className="owner-attention">
+            <h4><AlertTriangle /> عمليات تحتاج تدخّلك ({gateway.needsAttention.length})</h4>
+            {gateway.needsAttention.map((intent: PaymentIntentView) => (
+              <div key={intent.id} className="owner-attention-row">
+                <span className="mono">{intent.invoiceNumber}</span>
+                <span className="mono">{intent.formattedAmount}</span>
+                <span className="mono">{intent.providerRef}</span>
+                <span>{intent.failureReason}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {gateway && gateway.intents.length > 0 && (
+          <div className="ledger compact">
+            <div className="ledger-head four">
+              <span>الفاتورة</span><span>المبلغ</span><span>مرجع المزوّد</span><span>الحالة</span>
+            </div>
+            {gateway.intents.slice(0, 12).map((intent: PaymentIntentView) => (
+              <div key={intent.id} className="ledger-row four static">
+                <span className="mono">{intent.invoiceNumber}</span>
+                <span className="mono">{intent.formattedAmount}</span>
+                <span className="mono">{intent.providerRef}</span>
+                <span><i className={`ledger-badge tone-${intent.status === "paid" ? "moss" : intent.status === "pending" ? "sky" : intent.status === "mismatch" ? "rose" : "muted"}`}>
+                  {INTENT_STATUS_AR[intent.status] || intent.status}
+                </i></span>
+              </div>
+            ))}
+          </div>
         )}
       </section>
 

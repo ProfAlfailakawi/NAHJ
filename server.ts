@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { apiRouter, authRouter } from "./server/routes.ts";
+import { paymentPublicRouter } from "./server/paymentRoutes.ts";
 import { bootstrapFirstAccount, ensureOwnerAccount, purgeExpiredSessions } from "./server/auth.ts";
 import { ensureSubscription, startBillingWorker, stopBillingWorker } from "./server/billing.ts";
 import { DemoSandbox, DEMO_SESSION_TTL_MS, persistence } from "./server/db.ts";
@@ -56,6 +57,18 @@ async function startServer() {
     res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
     next();
   });
+
+  /*
+   * إشعارات بوابة الدفع تُركَّب قبل قارئ JSON.
+   *
+   * التوقيع محسوبٌ على البايتات كما أرسلها المزوّد، و`express.json` يستهلك
+   * الجسم ويُعيد بناءه — فيضيع ما يُتحقق منه. وموضعُها هنا، قبل المصادقة
+   * وحارس CSRF وحارس الاشتراك، مقصود: المزوّد لا يملك جلسة، ومؤسسةٌ مجمّدة
+   * لعدم السداد يجب أن يصل إشعار سدادها لا أن يُردّ بـ402.
+   *
+   * وحمايتها توقيعها وحده: بلا توقيعٍ صحيح لا يُقرأ من الإشعار حرف.
+   */
+  app.use("/api/payments", paymentPublicRouter);
 
   // Cap JSON body size to mitigate trivial memory-exhaustion payloads
   app.use(express.json({ limit: "1mb" }));

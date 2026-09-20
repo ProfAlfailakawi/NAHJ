@@ -17,6 +17,15 @@ import path from "path";
 
 let firebaseApp: FirebaseApp | null = null;
 let firestoreDb: Firestore | null = null;
+/*
+ * «موصول» تعني: نجحت عمليةٌ واحدة على الأقل ولم تفشل بعدها.
+ *
+ * كانت تُرفع بمجرّد إنشاء عميل SDK — وهو بناءُ كائنٍ في الذاكرة لا يلمس الشبكة،
+ * ينجح بمفاتيح ملفَّقة وبلا إنترنت أصلاً. فكان النشر الذي ترفض قواعدُه كلَّ
+ * كتابة يعرض «وصلة قائمة» وختمَ مزامنةٍ ناجحة، وهو بالضبط النشر القائم اليوم.
+ *
+ * فالإثبات صار من عملٍ نجح لا من كائنٍ أُنشئ.
+ */
 let isConnected = false;
 let lastSyncTime: string | null = null;
 let connectionError: string | null = null;
@@ -91,9 +100,12 @@ export function initFirebase() {
       firestoreDb = getFirestore(firebaseApp);
     }
 
-    isConnected = true;
-    lastSyncTime = new Date().toISOString();
-    console.log(`[Firebase] Initialized connected to project: ${config.projectId}`);
+    /*
+     * لا تُرفع «موصول» هنا: العميل جاهز، ولا شيء أُثبت بعد. أول كتابةٍ ناجحة
+     * هي التي ترفعها، وأول فشلٍ يُسقطها.
+     */
+    connectionError = null;
+    console.log(`[Firebase] Client ready for project: ${config.projectId} (liveness unproven until first successful write)`);
   } catch (err: any) {
     connectionError = err?.message || String(err);
     console.error("[Firebase] Initialization error:", err);
@@ -111,7 +123,10 @@ export function getFirestoreDb(): Firestore | null {
 export function getFirebaseStatus() {
   const config = getFirebaseConfig();
   return {
-    connected: isConnected && !!firestoreDb,
+    /* لا يكفي وجود عميل: يلزم عملٌ نجح ولم يُنقض بفشلٍ بعده. */
+    connected: isConnected && !!firestoreDb && !!lastSyncTime && !connectionError,
+    /** العميل مُنشأ وجاهز — وهذا غير كونه موصولاً. */
+    clientReady: !!firestoreDb,
     /* بلا إعداد لا يُذكر مشروعٌ بعينه: ذكرُه يوحي بوصلٍ غير قائم. */
     projectId: config?.projectId || "",
     databaseId: config?.firestoreDatabaseId || "",
@@ -131,10 +146,18 @@ export async function syncDocToFirestore(collectionName: string, docId: string, 
     // Sanitize undefined fields which Firestore rejects
     const cleanData = JSON.parse(JSON.stringify(data));
     await setDoc(docRef, cleanData, { merge: true });
+    /* كتابةٌ نجحت: هذا وحده ما يُثبت الوصل، ويمسح خطأً سابقاً. */
+    isConnected = true;
+    connectionError = null;
     lastSyncTime = new Date().toISOString();
     return true;
   } catch (err: any) {
     console.warn(`[Firebase] Failed to sync ${collectionName}/${docId}:`, err?.message || err);
+    /*
+     * وفشلٌ يُسقط الوصل ولا يكتفي بتسجيل السبب. وكان الفشل يُسجَّل بينما تبقى
+     * «موصول» مرفوعة — فيتعايش على الشاشة وسمٌ أخضر مع خطأ منع صلاحية.
+     */
+    isConnected = false;
     connectionError = err?.message || String(err);
     return false;
   }

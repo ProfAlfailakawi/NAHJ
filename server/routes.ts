@@ -10,8 +10,10 @@ import { synthesize } from "./engine/teachEngine.ts";
 import { generateAiResponse } from "./gemini.ts";
 import { AutonomyLevel, SkillStep, LearningSession, Skill } from "../src/types/index.ts";
 import { getFirebaseStatus } from "./firebase.ts";
+import { gatewayStatus } from "./payments.ts";
 import { billingRouter, enforceSubscription } from "./billingRoutes.ts";
 import { confinePartners, partnerRouter } from "./partnerRoutes.ts";
+import { paymentRouter } from "./paymentRoutes.ts";
 import { incrementUsage, maxAutonomyLevel } from "./billing.ts";
 import {
   AuthenticatedRequest,
@@ -241,6 +243,13 @@ apiRouter.use("/partners", partnerRouter);
 apiRouter.use(confinePartners);
 
 apiRouter.use("/billing", billingRouter);
+/*
+ * الدفع قبل حارس الاشتراك.
+ *
+ * مؤسسةٌ جُمِّدت لعدم السداد هي بالضبط من يحتاج أن يدفع. ولو رُكِّب هذا بعد
+ * الحارس لردّ 402 على محاولة السداد نفسها — وهو قفلٌ لا مخرج منه.
+ */
+apiRouter.use("/payments", paymentRouter);
 apiRouter.use(enforceSubscription);
 
 // 1. Context & User Switching
@@ -966,10 +975,23 @@ apiRouter.post("/simulator/upload-doc", async (req: Request, res: Response) => {
  */
 apiRouter.get("/connections", (req: Request, res: Response) => {
   const firebase = getFirebaseStatus();
+  /* بوابة الدفع وصلةٌ حقيقية حين تُضبط: مفتاحٌ ومزوّدٌ وطلبٌ يخرج فعلاً. */
+  const gateway = gatewayStatus();
   res.json({
     connectors: db.connectors.map(connector => {
-      const live = connector.id === "conn_firebase" && firebase.connected;
-      if (live) return { ...connector, mode: "live" as const, lastSync: firebase.lastSyncTime || connector.lastSync };
+      const live = (connector.id === "conn_firebase" && firebase.connected)
+        || (connector.id === "conn_knet" && gateway.configured);
+      if (live) {
+        return connector.id === "conn_knet"
+          ? {
+              ...connector,
+              name: `بوابة الدفع — ${gateway.providerLabel}`,
+              mode: "live" as const,
+              status: "healthy" as const,
+              lastSync: gateway.environment === "live" ? "مربوطة (بيئة حيّة)" : "مربوطة (بيئة اختبار)",
+            }
+          : { ...connector, mode: "live" as const, lastSync: firebase.lastSyncTime || connector.lastSync };
+      }
       /*
        * نصُّ «آخر مزامنة» مخزَّنٌ من البذرة («قبل دقيقتين»، «الآن (متصل ومباشر)»)
        * فيبقى يزعم وصلاً حديثاً وإن لم يجرِ شيء. يُستبدل بما هو صحيح.

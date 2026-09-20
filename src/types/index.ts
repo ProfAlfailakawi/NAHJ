@@ -249,6 +249,14 @@ export interface Connector {
 export interface TestCase {
   id: string;
   name: string;
+  /*
+   * المهارة التي تُختبر بهذه الحالة.
+   *
+   * وبدونه كانت نتيجةُ الحزمة كلّها تُطبَّق على كل مهارةٍ تحت التقييم: حالات
+   * قبولٍ تنجح فترفع موثوقية مهارة استرجاعٍ لا علاقة لها بها فوق عتبة الـ85٪
+   * التي تحرس الطيار الآلي. فصار ما لم يُختبر لا تتحرّك موثوقيته.
+   */
+  skillId?: string;
   scenario: string;
   expectedAction: string;
   expectedStatus: 'pass' | 'fail';
@@ -268,12 +276,22 @@ export interface ShadowComparison {
   matched: boolean;
   driftDetected: boolean;
   workItemId?: string;
+  /*
+   * وقائع الحالة كما سُجِّلت — لا عنوانها المعروض.
+   *
+   * وبدونها كان قرار نهج يُشتقّ من العنوان وتعليل الموظف، وهما نصٌّ للعرض لا
+   * وقائع: «استفسار عن خصم الأشقاء» لا يحمل سنّاً ولا مستنداً ولا مبلغاً، فيُصنَّف
+   * استفساراً عاماً ويُمحى تطابقٌ حقيقي ويُسجَّل انحرافٌ لم يقع.
+   */
+  scenario?: string;
   title?: string;
   humanActor?: string;
   humanDecision?: string;
   aiDecision?: string;
   confidence?: number;
   divergenceReason?: string;
+  /** هل جرت مقارنةٌ فعلية؟ غيابُ الوقائع يُعلَن ولا يُحتسب تطابقاً ولا انحرافاً. */
+  evaluated?: boolean;
 }
 
 export type WorkStatus = 'queued' | 'collecting_data' | 'waiting_documents' | 'waiting_approval' | 'executing' | 'completed' | 'escalated' | 'needs_human_decision' | 'human_takeover' | 'in_progress';

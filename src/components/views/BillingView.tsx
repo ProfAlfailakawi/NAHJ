@@ -1,10 +1,13 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle, ArrowUpRight, BadgeCheck, CalendarClock, CheckCircle2, CircleSlash, CreditCard,
   FileText, Gauge, Layers, Receipt, RefreshCw, ShieldCheck, Sparkles, Timer, Wallet,
 } from "lucide-react";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
-import { billingApi, money, type BillingSnapshot, type Plan, type PlanFeatureKey, type SubscriptionStatus } from "../../lib/api";
+import {
+  billingApi, money, paymentsApi,
+  type BillingSnapshot, type GatewayState, type Plan, type PlanFeatureKey, type SubscriptionStatus,
+} from "../../lib/api";
 
 /*
  * شاشة الاشتراك — ما تراه المؤسسة المشترية.
@@ -20,6 +23,14 @@ interface Props {
   plans: Plan[];
   loading: boolean;
   canRequest: boolean;
+  /*
+   * هل يملك صاحب الجلسة أن يدفع؟
+   *
+   * الخادم يقصر `POST /payments/checkout` على المشرف والمدير (والمالك). وزرٌّ
+   * يُعرض لمن سيُردّ طلبه بـ403 أسوأ من غيابه: يَعِد المُطَّلع بقدرةٍ لا يملكها،
+   * ويجعله يظنّ أن النظام معطّل لا أن الصلاحية ليست له.
+   */
+  canPay: boolean;
   onRefresh: () => void;
   notify: (text: string, error?: boolean) => void;
 }
@@ -168,11 +179,45 @@ const METHOD_LABEL: Record<string, { ar: string; en: string }> = {
   credit: { ar: "رصيد", en: "Credit" },
 };
 
-export function BillingView({ lang, snapshot, plans, loading, canRequest, onRefresh, notify }: Props) {
+export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay, onRefresh, notify }: Props) {
   const ar = lang === "ar";
   const [openInvoice, setOpenInvoice] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
   const [requestNote, setRequestNote] = useState("");
+  /*
+   * حالة بوابة الدفع.
+   *
+   * `null` تعني «لم تُقرأ بعد» لا «غير مربوطة» — والفرق مهم: زرّ دفعٍ يظهر ثم
+   * يختفي أسوأ من زرٍّ يتأخر لحظة.
+   */
+  const [gateway, setGateway] = useState<GatewayState | null>(null);
+  const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    paymentsApi.gateway()
+      .then(state => { if (alive) setGateway(state); })
+      .catch(() => { if (alive) setGateway(null); });
+    return () => { alive = false; };
+  }, []);
+
+  /*
+   * نتيجة العودة من صفحة المزوّد.
+   *
+   * الخادم يسأل البوابة ثم يُعيد المتصفح بـ`?payment=`؛ وتُقرأ مرةً واحدة ثم
+   * تُنزع من العنوان حتى لا يعيد التحديثُ عرضَ بشارةٍ قديمة.
+   */
+  const [payResult, setPayResult] = useState<string | null>(null);
+  useEffect(() => {
+    const outcome = new URLSearchParams(window.location.search).get("payment");
+    if (!outcome) return;
+    setPayResult(outcome);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("payment");
+    url.hash = "";
+    window.history.replaceState({}, "", url.toString());
+    if (outcome === "paid") onRefresh();
+  }, [onRefresh]);
 
   const publicPlans = useMemo(() => plans.filter(plan => plan.isPublic && !plan.archived), [plans]);
 
@@ -195,6 +240,24 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, onRefr
   const { state, subscription, plan, usage, limits, features } = snapshot;
   const meta = STATUS_META[state.status];
   const StatusIcon = meta.icon;
+
+  /**
+   * يفتح صفحة الدفع عند المزوّد.
+   *
+   * ولا يُرسل مبلغاً: الخادم يشتقّه من المتبقّي. والانتقال يجري في اللسان نفسه
+   * عمداً — نافذةٌ جديدة تحجبها المتصفحات فيظنّ الدافع أن الزرّ معطّل.
+   */
+  const payInvoice = async (invoiceId: string) => {
+    setPayingInvoice(invoiceId);
+    try {
+      const session = await paymentsApi.checkout(invoiceId);
+      if (!session?.url) throw new Error(ar ? "لم تُعِد البوابة رابطاً." : "The gateway returned no link.");
+      window.location.href = session.url;
+    } catch (error) {
+      notify(error instanceof Error ? error.message : ar ? "تعذّر فتح صفحة الدفع." : "Could not open the payment page.", true);
+      setPayingInvoice(null);
+    }
+  };
 
   const sendRequest = async (kind: string) => {
     setRequesting(true);
@@ -343,6 +406,23 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, onRefr
         </section>
       )}
 
+      {/* نتيجة العودة من صفحة المزوّد — تُقال كما هي، لا "شكراً" مهما حدث. */}
+      {payResult && (
+        <section className={`surface-strong sub-block pay-result tone-${payResult === "paid" ? "moss" : payResult === "pending" ? "amber" : "rose"}`} role="status">
+          {payResult === "paid" ? <CheckCircle2 /> : <AlertTriangle />}
+          <p>
+            {payResult === "paid"
+              ? (ar ? "وصل السداد وسُجِّل على الفاتورة." : "Payment received and recorded.")
+              : payResult === "pending"
+                ? (ar ? "لم تكتمل العملية عند المزوّد بعد. إن خُصم المبلغ فسيظهر هنا حال تأكيد البوابة." : "The payment is still pending at the provider.")
+                : payResult === "mismatch"
+                  ? (ar ? "حُصِّل مبلغ يخالف قيمة الفاتورة — العملية موقوفة للمراجعة ولم تُسجَّل." : "A mismatched amount was captured — held for review.")
+                  : (ar ? "لم تكتمل عملية الدفع." : "The payment did not go through.")}
+          </p>
+          <button className="btn-secondary" onClick={() => setPayResult(null)}>{ar ? "إخفاء" : "Dismiss"}</button>
+        </section>
+      )}
+
       {/* الفواتير — بالبنود، لا بمجموعٍ يُطلب تصديقه. */}
       <section className="surface-strong sub-block">
         <SectionTitle title={ar ? "الفواتير" : "Invoices"} icon={<FileText />} meta={`${snapshot.invoices.length}`} />
@@ -387,6 +467,46 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, onRefr
                         <span>{ar ? "الإجمالي" : "Total"}: <b className="mono">{money(invoice.total, invoice.currency)}</b></span>
                       </div>
                       {invoice.notes && <p className="ledger-note">{invoice.notes}</p>}
+
+                      {/*
+                        * الدفع من داخل الفاتورة نفسها.
+                        *
+                        * وبلا بوابةٍ مربوطة لا يُعرض زرٌّ يقود إلى لا شيء — تُقال
+                        * الطريقة الفعلية للسداد صراحةً. وعد دفعٍ لا يعمل يُكلّف
+                        * أكثر ممّا يُكلّف غيابه.
+                      */}
+                      {invoice.status !== "void" && invoice.amountPaid < invoice.total && (
+                        <div className="invoice-pay">
+                          {gateway?.configured && canPay ? (
+                            <>
+                              <button
+                                className="btn-primary"
+                                disabled={payingInvoice === invoice.id}
+                                onClick={() => void payInvoice(invoice.id)}
+                              >
+                                <CreditCard />
+                                {payingInvoice === invoice.id
+                                  ? (ar ? "جارٍ فتح صفحة الدفع..." : "Opening payment page...")
+                                  : (ar ? `ادفع ${money(invoice.total - invoice.amountPaid, invoice.currency)}` : `Pay ${money(invoice.total - invoice.amountPaid, invoice.currency)}`)}
+                              </button>
+                              <small>
+                                {gateway.providerLabel}
+                                {gateway.environment === "test" && (ar ? " — بيئة اختبار، لا تُحصَّل مبالغ حقيقية" : " — test environment")}
+                              </small>
+                            </>
+                          ) : (
+                            <small className="invoice-pay-manual">
+                              {gateway?.configured
+                                ? (ar
+                                  ? "السداد من هذه الشاشة متاح للمشرف أو المدير — راجع من يملك الصرف في مؤسستك."
+                                  : "Paying from this screen is available to an admin or a manager.")
+                                : (ar
+                                  ? "لا بوابة دفع مربوطة في هذا النشر — تُسدَّد الفاتورة بتحويل بنكي أو كي نت، ويُسجّل مالك المنصة الدفعة بمرجعها فتظهر هنا."
+                                  : "No payment gateway is connected — settle by transfer and the owner records the payment with its reference.")}
+                            </small>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </React.Fragment>

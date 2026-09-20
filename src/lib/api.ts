@@ -329,6 +329,53 @@ export interface PartnerOverview {
   contractedValueFormatted: string;
 }
 
+/* --------------------------------------------------------------- الدفع */
+
+export interface GatewayState {
+  provider: "manual" | "myfatoorah" | "tap";
+  providerLabel: string;
+  configured: boolean;
+  environment: "test" | "live";
+  missing: string[];
+  note: string;
+}
+
+export interface PaymentIntentView {
+  id: string;
+  invoiceId: string;
+  invoiceNumber?: string;
+  provider: string;
+  providerRef: string;
+  amount: number;
+  currency: string;
+  formattedAmount?: string;
+  status: "pending" | "paid" | "failed" | "canceled" | "mismatch";
+  checkoutUrl: string;
+  createdAt: string;
+  settledAt: string | null;
+  failureReason: string;
+}
+
+export const paymentsApi = {
+  /** حالة البوابة — تقرّر الواجهةُ بها هل تعرض زرّ دفع أم تقول إن الدفع يدوي. */
+  gateway: () => api<GatewayState>("/payments/gateway"),
+
+  /*
+   * لا يُرسل مبلغ: الخادم يشتقّه من المتبقّي على الفاتورة. وإرساله من المتصفح
+   * يعني أن يدفع من يشاء ما يشاء وتُعدّ الفاتورة مسدّدة.
+   */
+  checkout: (invoiceId: string) =>
+    post<{ intentId: string; url: string; formattedAmount: string; environment: string }>("/payments/checkout", { invoiceId }),
+
+  intent: (id: string) =>
+    api<{ id: string; status: string; formattedAmount: string; failureReason: string }>(`/payments/intents/${encodeURIComponent(id)}`),
+
+  ownerIntents: () =>
+    api<{ gateway: GatewayState & { webhookUrl: string; returnUrl: string }; needsAttention: PaymentIntentView[]; intents: PaymentIntentView[] }>(
+      "/payments/owner/intents",
+    ),
+};
+
 export const partnersApi = {
   /** لوحة صاحب الجلسة — معرّفه من حسابه لا من معامل يرسله. */
   me: () => api<PartnerPortal>("/partners/me"),

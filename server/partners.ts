@@ -232,23 +232,51 @@ function partnerFromRow(row: Record<string, unknown>): Partner {
 }
 
 export interface PartnerInput {
-  name: string; email: string; phone?: string; accountId?: string | null;
+  /* على الإنشاء إلزاميان، وعلى التعديل الجزئي يُكمَّلان من المسجَّل. */
+  name?: string; email?: string; phone?: string; accountId?: string | null;
   model?: CommissionModel; rateBps?: number; fixedAmount?: number;
   currency?: string; durationMonths?: number; notes?: string; status?: PartnerStatus;
 }
 
 export function upsertPartner(input: PartnerInput, id?: string, actor = "system"): Partner {
-  const name = String(input.name ?? "").trim();
-  const email = normalizeEmail(input.email);
+  /*
+   * تعديلٌ جزئي يُكمَّل ممّا هو مسجَّل، لا يُفحص كأنه إنشاءٌ من الصفر.
+   *
+   * كان زرّ التعليق يُرسل `{ status }` وحده، فيُقرأ الاسم فارغاً ويُردّ الطلب
+   * بـ«اسم المسوّق غير صالح» — أي أن الزرّ المعروض في الشاشة لا يعمل إطلاقاً،
+   * ولا يملك المالك تعليق مسوّقٍ من مكانه الطبيعي.
+   *
+   * والدمج يسبق الفحص كلّه: ما لم يُرسَل يبقى كما هو، وما أُرسل يُفحص.
+   */
+  const current = id ? getPartner(id) : undefined;
+  if (id && !current) throw Object.assign(new Error("المسوّق غير موجود."), { status: 404 });
+  const merged: PartnerInput = current
+    ? {
+        name: input.name ?? current.name,
+        email: input.email ?? current.email,
+        phone: input.phone ?? current.phone,
+        accountId: input.accountId === undefined ? current.accountId : input.accountId,
+        model: input.model ?? current.model,
+        rateBps: input.rateBps ?? current.rateBps,
+        fixedAmount: input.fixedAmount ?? current.fixedAmount,
+        currency: input.currency ?? current.currency,
+        durationMonths: input.durationMonths ?? current.durationMonths,
+        notes: input.notes ?? current.notes,
+        status: input.status ?? current.status,
+      }
+    : input;
+
+  const name = String(merged.name ?? "").trim();
+  const email = normalizeEmail(merged.email);
   if (name.length < 2 || name.length > 120) throw Object.assign(new Error("اسم المسوّق غير صالح."), { status: 400 });
   if (!email) throw Object.assign(new Error("بريد المسوّق غير صالح."), { status: 400 });
 
-  const currency = String(input.currency || DEFAULT_CURRENCY).toUpperCase();
+  const currency = String(merged.currency || DEFAULT_CURRENCY).toUpperCase();
   if (!CURRENCY_MINOR_UNITS[currency]) throw Object.assign(new Error(`عملة غير مدعومة: ${currency}`), { status: 400 });
 
-  const model = MODELS.includes(input.model as CommissionModel) ? input.model as CommissionModel : "percent_of_contract";
-  const rateBps = assertBps(input.rateBps ?? 0, "نسبة العمولة");
-  const fixedAmount = assertMinor(input.fixedAmount ?? 0, "مبلغ العمولة");
+  const model = MODELS.includes(merged.model as CommissionModel) ? merged.model as CommissionModel : "percent_of_contract";
+  const rateBps = assertBps(merged.rateBps ?? 0, "نسبة العمولة");
+  const fixedAmount = assertMinor(merged.fixedAmount ?? 0, "مبلغ العمولة");
 
   /*
    * اتفاقٌ بلا قيمة ليس اتفاقاً. رفضُه هنا أرحم من دفترٍ يُراكم عمولاتٍ بصفر ثم
@@ -261,8 +289,7 @@ export function upsertPartner(input: PartnerInput, id?: string, actor = "system"
     throw Object.assign(new Error("مبلغ العمولة صفر — حدّد المبلغ المتّفق عليه."), { status: 400 });
   }
 
-  const existing = id ? getPartner(id) : undefined;
-  if (id && !existing) throw Object.assign(new Error("المسوّق غير موجود."), { status: 404 });
+  const existing = current;
 
   const duplicate = db().prepare("SELECT id FROM partners WHERE email = ? AND id != ? LIMIT 1")
     .get(email, existing?.id ?? "") as { id?: string } | undefined;
@@ -271,12 +298,12 @@ export function upsertPartner(input: PartnerInput, id?: string, actor = "system"
   const partner: Partner = {
     id: existing?.id || `prt_${randomUUID()}`,
     name, email,
-    phone: String(input.phone ?? existing?.phone ?? "").trim().slice(0, 40),
-    accountId: input.accountId === undefined ? existing?.accountId ?? null : (input.accountId || null),
-    status: input.status ?? existing?.status ?? "active",
+    phone: String(merged.phone ?? existing?.phone ?? "").trim().slice(0, 40),
+    accountId: merged.accountId === undefined ? existing?.accountId ?? null : (merged.accountId || null),
+    status: merged.status ?? existing?.status ?? "active",
     model, rateBps, fixedAmount, currency,
-    durationMonths: Math.max(0, Math.min(600, Number(input.durationMonths ?? existing?.durationMonths ?? 0) || 0)),
-    notes: String(input.notes ?? existing?.notes ?? "").slice(0, 1_000),
+    durationMonths: Math.max(0, Math.min(600, Number(merged.durationMonths ?? existing?.durationMonths ?? 0) || 0)),
+    notes: String(merged.notes ?? existing?.notes ?? "").slice(0, 1_000),
     createdAt: existing?.createdAt || now(),
     updatedAt: now(),
   };
