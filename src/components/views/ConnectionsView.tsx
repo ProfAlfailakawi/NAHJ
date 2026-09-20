@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   CalendarDays,
   CheckCircle2,
@@ -20,6 +20,28 @@ import { PageHeader, SectionTitle } from "../Primitives";
 import { ConnectionConstellation } from "../Visuals";
 import { apiOrNull } from "../../lib/api";
 
+/*
+ * شاشة الربط.
+ *
+ * كانت تقول: «جميع المهارات وسجلات التدقيق والاعتمادات وسير العمل متصلة
+ * ومزامنة مع سحابة Firebase في باسم المشروع»، وتعرض وسماً أخضر نابضاً «سحابة
+ * نشطة ومتصلة» وووسمَي «القواعد منشورة» و«عشر مجموعات مرآة» — كل ذلك ثابتٌ في
+ * الشيفرة لا يُقرأ من حالة. والواقع أن المزامنة تُردّ بـ PERMISSION_DENIED،
+ * وأن الموصلات الخمسة الأخرى لا تُخرج طلب شبكة واحداً.
+ *
+ * وعدٌ بتكاملٍ غير قائم يُكتشف بعد الشراء، فيُسقط الثقة بكل رقمٍ آخر في
+ * المنتج — بما فيه الصادق. فالشاشة الآن تقرأ الحالة الحقيقية، وتُعلن المحاكاة
+ * محاكاةً. القدرة تُبنى لاحقاً؛ الصدق شرطُ البيع اليوم.
+ */
+
+interface FirebaseStatus {
+  connected: boolean;
+  projectId: string;
+  databaseId: string;
+  lastSyncTime: string | null;
+  error: string | null;
+}
+
 type Props = {
   lang: "ar" | "en";
   connectors: Connector[];
@@ -34,6 +56,13 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [syncFailed, setSyncFailed] = useState(false);
+  const [cloud, setCloud] = useState<FirebaseStatus | null>(null);
+
+  const readCloud = async () => {
+    const res = await apiOrNull<{ status: FirebaseStatus }>("/firebase/status");
+    if (res?.status) setCloud(res.status);
+  };
+  useEffect(() => { void readCloud(); }, []);
 
   const status = {
     healthy: connectors.filter((c) => c.status === "healthy").length,
@@ -53,11 +82,12 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
        * `success: false` كان يسقط في فرع يقول "اكتملت المزامنة بنجاح" — أي أن الزر
        * يُبلّغ نجاحاً بينما لم يُكتب شيء. الفشل يُعرض الآن فشلاً، وبسببه إن عرفه الخادم.
        */
+      await readCloud();
       if (res?.success) {
         setSyncResult(
           ar
-            ? `تمت مزامنة ${res.count} عنصراً تشغيلياً بنجاح في nahj-a27a4`
-            : `Successfully synced ${res.count} entities to nahj-a27a4`
+            ? `تمت مزامنة ${res.count} عنصراً إلى المرآة السحابية`
+            : `Synced ${res.count} entities to the cloud mirror`
         );
         setSyncFailed(false);
       } else {
@@ -78,41 +108,54 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
   return (
     <div className="page-enter">
       <PageHeader
-        eyebrow="CONNECTIONS & CLOUD PERSISTENCE"
-        title={ar ? "العقل يتصل بالأنظمة ويوثق في Firebase." : "The brain connects to systems & persists to Firebase."}
+        eyebrow="CONNECTIONS / الربط"
+        title={ar ? "ما هو موصولٌ فعلاً، وما هو محاكاة." : "What is actually wired, and what is simulated."}
         hint={
           ar
-            ? "جميع المهارات، وسجلات التدقيق، وقرارات الاعتماد، وسير العمل متصلة ومزامنة مع سحابة Firebase Firestore في nahj-a27a4."
-            : "All operational skills, audit logs, approvals, and workflows are synchronized live to Firebase Firestore project nahj-a27a4."
+            ? "بيانات نهج تُحفظ في مخزن المحرّك المحلي — وهو مصدر الحقيقة. وما دونه هنا يُعلن حالته: وصلةٌ قائمة أو محاكاةٌ لم تُطرق فيها أي نظام خارجي."
+            : "NAHJ's data lives in the local engine store — the source of truth. Everything below states its real state: a live link, or a simulation that touches no external system."
         }
       />
 
-      {/* Firebase Cloud Card Banner */}
-      <div className="mb-6 p-5 rounded-2xl bg-gradient-to-l from-amber-500/10 via-emerald-500/5 to-transparent border border-emerald-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      {/* بطاقة المرآة السحابية — كل سطرٍ فيها يُقرأ من /firebase/status. */}
+      <div className={`mb-6 p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${cloud?.connected ? "bg-emerald-500/5 border-emerald-500/30" : "bg-slate-800/40 border-slate-700"}`}>
         <div className="flex items-start gap-3.5">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${cloud?.connected ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-slate-700/40 text-slate-400 border-slate-600"}`}>
             <Cloud className="w-6 h-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-bold text-white text-base tracking-wide">
-                Firebase Firestore — nahj-a27a4
+                {ar ? "المرآة السحابية (Firestore)" : "Cloud mirror (Firestore)"}
               </h3>
-              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                {ar ? "سحابة نشطة ومتصلة" : "Active Cloud Connected"}
+              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border flex items-center gap-1 ${cloud?.connected ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-slate-700/60 text-slate-300 border-slate-600"}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${cloud?.connected ? "bg-emerald-400" : "bg-slate-400"}`} />
+                {cloud === null
+                  ? (ar ? "جارٍ قراءة الحالة" : "Reading state")
+                  : cloud.connected
+                    ? (ar ? "وصلةٌ قائمة" : "Link established")
+                    : (ar ? "غير موصولة" : "Not connected")}
               </span>
             </div>
             <p className="text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
               {ar
-                ? "قاعدة البيانات السحابية (ai-studio-nahj-e90f35fb) جاهزة وتستقبل كافة سجلات التعلم، قواعد الأمان (Rules) منشورة، وبيانات المهارات والاعتمادات تُحفظ بشكل مستدام."
-                : "Cloud database (ai-studio-nahj-e90f35fb) is live. Rules deployed. Skills, learning sessions, approvals, and audit events are durably persisted."}
+                ? "مصدر الحقيقة هو مخزن المحرّك المحلي؛ وهذه نسخةٌ اختيارية تُرفع إليها. وإن لم تُضبط بيانات المشروع أو رفضت قواعد الأمان الكتابة، لا تُكتب نسخة — ويُقال ذلك هنا بدل أن يُعرض وسمٌ أخضر."
+                : "The local engine store is the source of truth; this is an optional copy. If the project is unconfigured or security rules reject the write, nothing is copied — and that is said here."}
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-400">
-              <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">Project: nahj-a27a4</span>
-              <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">Rules: deployed</span>
-              <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">Collections: 10 mirrored</span>
+              <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">
+                {ar ? "المشروع" : "Project"}: {cloud?.projectId || (ar ? "غير مضبوط" : "unset")}
+              </span>
+              <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">
+                {ar ? "آخر مزامنة ناجحة" : "Last successful sync"}: {cloud?.lastSyncTime ? new Date(cloud.lastSyncTime).toLocaleString("ar-KW") : (ar ? "لا شيء" : "none")}
+              </span>
             </div>
+            {cloud?.error && (
+              <div className="mt-2 text-xs font-medium flex items-start gap-1.5 text-amber-400">
+                <TriangleAlert className="w-4 h-4 shrink-0 mt-px" />
+                <span className="break-all">{cloud.error}</span>
+              </div>
+            )}
             {syncResult && (
               /* اللون والأيقونة يتبعان النتيجة الحقيقية — لا أخضر دائماً مهما حدث. */
               <div className={`mt-2 text-xs font-medium flex items-start gap-1.5 ${syncFailed ? "text-amber-400" : "text-emerald-400"}`}>
@@ -126,10 +169,10 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
         <button
           onClick={handleFirebaseSync}
           disabled={syncing}
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-medium text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/30 transition-all shrink-0 cursor-pointer"
+          className="px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer"
         >
           <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
-          <span>{syncing ? (ar ? "جارٍ المزامنة السحابية..." : "Syncing to Cloud...") : (ar ? "مزامنة السحابة كاملة" : "Sync All to Firebase")}</span>
+          <span>{syncing ? (ar ? "جارٍ المحاولة..." : "Trying...") : (ar ? "جرّب رفع نسخة" : "Try a cloud copy")}</span>
         </button>
       </div>
 
@@ -140,8 +183,10 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
 
         <section className="connection-list surface-strong">
           <SectionTitle
-            title={ar ? "الموصلات النشطة" : "Active Connectors"}
-            meta={`${status.healthy}/${connectors.length}`}
+            title={ar ? "الموصلات" : "Connectors"}
+            meta={ar
+              ? `${connectors.filter(c => c.mode !== "live").length} محاكاة من ${connectors.length}`
+              : `${connectors.filter(c => c.mode !== "live").length} simulated of ${connectors.length}`}
           />
           <div>
             {connectors.map((c, i) => {
@@ -156,6 +201,12 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
                     <small>
                       {c.type} · {c.lastSync}
                     </small>
+                    {/* وسمُ المحاكاة لا يُخفى: من يشتري يعرف ما اشترى. */}
+                    {c.mode !== "live" && (
+                      <small className="connector-simulated">
+                        {ar ? "محاكاة — لا يخرج منها طلب شبكة، والأرقام للعرض" : "Simulated — no network calls; figures are illustrative"}
+                      </small>
+                    )}
                   </div>
                   <span className={`health status-${c.status}`}>
                     {c.status === "healthy" ? <CheckCircle2 /> : <TriangleAlert />}

@@ -6,10 +6,12 @@ import { ConnectorLayer } from "./engine/connectors.ts";
 import { McpEngine } from "./engine/mcpEngine.ts";
 import { deriveMetrics, type MetricsInput } from "./engine/metricsEngine.ts";
 import { listSectors, EDUCATION_CODE } from "./packs/index.ts";
+import { synthesize } from "./engine/teachEngine.ts";
 import { generateAiResponse } from "./gemini.ts";
 import { AutonomyLevel, SkillStep, LearningSession, Skill } from "../src/types/index.ts";
 import { getFirebaseStatus } from "./firebase.ts";
 import { billingRouter, enforceSubscription } from "./billingRoutes.ts";
+import { confinePartners, partnerRouter } from "./partnerRoutes.ts";
 import { incrementUsage, maxAutonomyLevel } from "./billing.ts";
 import {
   AuthenticatedRequest,
@@ -220,6 +222,24 @@ apiRouter.use(requireAuth);
  * كل ما تحته بلا استثناء، بدل أن يُفحص في كل مسار على حدة — وهو ما يُنسى في واحد
  * منها حتماً. والقراءة تمرّ كاملة.
  */
+/*
+ * الترتيب هنا هو العزل نفسه، لا تنظيمٌ للقراءة.
+ *
+ *   ١. دفتر المسوّقين أولاً، ليبلغ المسوّق لوحته.
+ *   ٢. ثم حبسُه فيها، فلا يبلغ شيئاً بعدها.
+ *   ٣. ثم الاشتراك وباقي الأسطح التشغيلية.
+ *
+ * وموضع الحارس قبل موجّه الاشتراك مقصود وحاسم: كان مركَّباً بعده، فكان المسوّق
+ * يقرأ اشتراك المؤسسة كاملاً — باقتها وفواتيرها ودفعاتها واستهلاكها. وهي بيانات
+ * عميلٍ لا شأن لوسيطٍ بها، ولم يكشفها فحصُ أنواعٍ ولا اختبار وحدة: كشفها طلبٌ
+ * واحد على خادم حيّ ردّ 200 حيث كان يجب أن يردّ 403.
+ *
+ * ولوحة المسوّق قبل حارس الاشتراك عمداً: عمولته مستحقّةٌ عليه حتى لو توقّف اشتراك
+ * المؤسسة. لا يُحجب عن دفتره لأن عميلاً تأخّر في السداد.
+ */
+apiRouter.use("/partners", partnerRouter);
+apiRouter.use(confinePartners);
+
 apiRouter.use("/billing", billingRouter);
 apiRouter.use(enforceSubscription);
 
@@ -409,104 +429,64 @@ apiRouter.post("/teach/record-event", (req: Request, res: Response) => {
 });
 
 // WOW Moment Synthesis (Prompt Section 72)
+/*
+ * تركيب المهارة ممّا عُلِّم.
+ *
+ * كان هذا المسار يتجاهل الجلسة تجاهلاً تاماً: يُعيد خمس خطوات مكتوبة في الشيفرة
+ * عن تسجيل طالب في مدرسة، مهما فعل الموظف ومهما كان قطاع المؤسسة. بل ويُنادي
+ * النموذج اللغوي ثم يرمي جوابه بلا استعمال.
+ *
+ * أي أن «نهج يتعلّم منك» كانت تُعرض على الشاشة بينما لا يُقرأ حرفٌ ممّا عُلِّم —
+ * وهي الميزة التي بُني عليها المنتج كلّه.
+ */
 apiRouter.post("/teach/synthesize", async (req: Request, res: Response) => {
   const { sessionId } = req.body;
   const session = db.learningSessions.find((s) => s.id === sessionId) || db.learningSessions[0];
 
-  const stepsDetected: SkillStep[] = [
-    {
-      id: "syn_st_1",
-      order: 1,
-      title: "فحص السن القانوني وتحديد المرحلة المناسبة",
-      description: "مطابقة تاريخ ميلاد الطفل مع لائحة معايير السن لوزارة التربية.",
-      system: "SIS Registration Portal",
-      isAutomated: true,
-    },
-    {
-      id: "syn_st_2",
-      order: 2,
-      title: "التحقق من سعة المقاعد المتاحة",
-      description: "استعلام فوري من قاعدة بيانات المقاعد المدرسية لمنع تكدس الصفوف.",
-      system: "Future SIS Capacity API",
-      isAutomated: true,
-    },
-    {
-      id: "syn_st_3",
-      order: 3,
-      title: "إلزامية التحقق من البطاقة المدنية وجودة المستند",
-      description: "فحص الوجهين واستخراج الأرقام والبيانات ومطابقة الاسم الرباعي.",
-      system: "Document OCR Engine",
-      isAutomated: true,
-    },
-    {
-      id: "syn_st_4",
-      order: 4,
-      title: "حجز موعد المقابلة المدرسية والجولة",
-      description: "تنسيق موعد مع لجنة التقييم المبدئي وتثبيت الموعد بالتقويم.",
-      system: "School Calendar Gateway",
-      isAutomated: true,
-    },
-    {
-      id: "syn_st_5",
-      order: 5,
-      title: "اعتماد الرسوم وإنشاء ملف القبول النهائي",
-      description: "إرسال بطاقة موافقة لمدير القبول لاعتماد القيمة واستخراج رابط K-Net.",
-      system: "Executive Approval Gate & K-Net",
-      isAutomated: false,
-    },
-  ];
-
-  const rulesDetected = [
-    "الرسوم الدراسية تؤخذ حصراً من جدول الفوترة المركزي (1,500 د.ك لمرحلة KG2).",
-    "أي استثناء في المقاعد أو خصم مالي يتطلب توقيع مدير القبول.",
-    "لا يُقبل طلب غير مكتمل البطاقة المدنية تحت أي ظرف.",
-  ];
-
-  const clarificationQuestions = [
-    {
-      id: "q_syn_1",
-      question: "هل المقابلة الشخصية مطلوبة لجميع الطلاب أم يُعفى منها أبناء الهيئة التدريسية؟",
-      answered: false,
-    },
-    {
-      id: "q_syn_2",
-      question: "في حال عدم توفر مقاعد في KG2، هل يُحوّل الطالب تلقائيًا لقائمة الانتظار أم يُعرض عليه فرع الأكاديمية الثاني؟",
-      answered: false,
-    },
-  ];
-
-  if (session) {
-    session.status = "synthesized";
-    session.discoveredSteps = stepsDetected;
-    session.discoveredRules = rulesDetected;
-    session.clarificationQuestions = clarificationQuestions;
+  if (!session) {
+    return void res.status(404).json({ success: false, message: "جلسة التعلم غير متوفرة." });
   }
 
-  // Attempt dynamic enhancement with Gemini if available
-  const prompt = `Synthesize organizational steps for school admission taught by staff: ${session?.events.map((e) => e.action).join(", ")}`;
-  await generateAiResponse(prompt);
+  const synthesis = synthesize(session.events);
+
+  /* جلسةٌ فارغة لا تُنتج مهارة — ويُقال السبب بدل تركيب شيء لم يُعلّمه أحد. */
+  if (synthesis.emptyReason) {
+    return void res.json({
+      success: false,
+      message: synthesis.emptyReason,
+      stepsCount: 0, rulesCount: 0, exceptionsCount: 0, systemsCount: 0,
+      steps: [], rules: [], questions: [],
+    });
+  }
+
+  session.discoveredSteps = synthesis.steps;
+  session.discoveredRules = synthesis.rules;
+  session.clarificationQuestions = synthesis.questions.map(({ id, question, answered }) => ({ id, question, answered }));
+  session.status = "synthesized";
 
   db.logAudit({
     actorType: "ai",
     actorName: "NAHJ Learning Synthesizer",
     action: "SYNTHESIZE_TAUGHT_SKILL",
-    provenance: "Teach Session Capture & Event Stream",
+    provenance: `جلسة تعليم: ${session.events.length} حدثاً في ${synthesis.systems.length} نظاماً`,
     risk: "medium",
-    latencyMs: 420,
-    details: `تم تحليل الجلسة التعليمية واستخراج 5 خطوات تشغيلية، 3 قواعد حتمية، وطرح سؤالين توضيحيين قبل الاعتماد.`,
+    latencyMs: 40,
+    details: `رُكِّبت المهارة من ${session.events.length} حدثاً: ${synthesis.steps.length} خطوة، و${synthesis.rules.length} قاعدة، و${synthesis.exceptions.length} استثناء، و${synthesis.questions.length} سؤالاً توضيحياً.`,
     status: "success",
   });
 
   res.json({
     success: true,
-    message: "I learned a new skill! تم استخلاص المهارة بنجاح وطرح الأسئلة التوضيحية.",
-    stepsCount: stepsDetected.length,
-    rulesCount: rulesDetected.length,
-    exceptionsCount: 2,
-    systemsCount: 3,
-    steps: stepsDetected,
-    rules: rulesDetected,
-    questions: clarificationQuestions,
+    message: `رُكِّبت المهارة من ${session.events.length} حدثاً سجّلتَها.`,
+    stepsCount: synthesis.steps.length,
+    rulesCount: synthesis.rules.length,
+    exceptionsCount: synthesis.exceptions.length,
+    systemsCount: synthesis.systems.length,
+    steps: synthesis.steps,
+    rules: synthesis.rules,
+    exceptions: synthesis.exceptions,
+    questions: synthesis.questions,
+    systems: synthesis.systems,
   });
 });
 
@@ -974,30 +954,65 @@ apiRouter.post("/simulator/upload-doc", async (req: Request, res: Response) => {
 });
 
 // 10. Connectors
+/*
+ * الموصلات.
+ *
+ * `ConnectorLayer` كلّه `setTimeout` ثم جوابٌ مكتوب في الشيفرة: لا طلب شبكة
+ * واحداً يخرج إلى نظام معلومات طلاب ولا إلى بوابة دفع. وكانت الشاشة تعرضها
+ * «صحيّة/متصلة» بأرقام استدعاءات يومية — فيظنّ المشتري أن التكامل قائم.
+ *
+ * فالوضع يُحسب هنا لا يُخزَّن: موصل فايربيس وحده قد يكون حيّاً (له عميلٌ فعلي)
+ * وذلك حين يُثبت `getFirebaseStatus()` وصلاً قائماً، وما عداه محاكاة معلنة.
+ */
 apiRouter.get("/connections", (req: Request, res: Response) => {
-  res.json({ connectors: db.connectors });
+  const firebase = getFirebaseStatus();
+  res.json({
+    connectors: db.connectors.map(connector => {
+      const live = connector.id === "conn_firebase" && firebase.connected;
+      if (live) return { ...connector, mode: "live" as const, lastSync: firebase.lastSyncTime || connector.lastSync };
+      /*
+       * نصُّ «آخر مزامنة» مخزَّنٌ من البذرة («قبل دقيقتين»، «الآن (متصل ومباشر)»)
+       * فيبقى يزعم وصلاً حديثاً وإن لم يجرِ شيء. يُستبدل بما هو صحيح.
+       */
+      return {
+        ...connector,
+        /* الاسم المخزَّن من بذرةٍ قديمة يذكر مشروعاً بعينه؛ لا يُعرض قبل قيام وصلة. */
+        name: connector.id === "conn_firebase" ? "المرآة السحابية (Firebase Firestore)" : connector.name,
+        mode: "simulated" as const,
+        status: connector.id === "conn_firebase" ? ("disconnected" as const) : connector.status,
+        lastSync: "محاكاة — لا مزامنة",
+      };
+    }),
+  });
 });
 
 apiRouter.post("/connections/:id/test", async (req: Request, res: Response) => {
   const conn = db.connectors.find((c) => c.id === req.params.id);
   if (!conn) return res.status(404).json({ success: false });
 
+  /*
+   * لا يوجد ما يُفحص: ما من عنوانٍ يُطرَق ولا بروتوكول يُجاب. فالفحص محاكاة،
+   * والسجل يقولها — سطرُ تدقيقٍ يزعم «فحص اتصال حي» يُفسد أثمن ما في النظام.
+   */
+  const live = conn.id === "conn_firebase" && getFirebaseStatus().connected;
   await new Promise((r) => setTimeout(r, 90));
-  conn.lastSync = "الآن";
-  conn.status = "healthy";
+  conn.lastSync = live ? "الآن" : "محاكاة — لم يُطرق أي نظام خارجي";
+  conn.status = live ? "healthy" : conn.status;
 
   db.logAudit({
     actorType: "system",
     actorName: "Connector Health Monitor",
-    action: "PING_CONNECTOR",
+    action: live ? "PING_CONNECTOR" : "SIMULATE_CONNECTOR_PING",
     provenance: conn.name,
     risk: "low",
     latencyMs: 90,
-    details: `فحص الاتصال الحي بنجاح لموصل: ${conn.name}. زمن الاستجابة طبيعي.`,
+    details: live
+      ? `فحص اتصال قائم بنجاح لموصل: ${conn.name}.`
+      : `فحصٌ محاكى لموصل: ${conn.name}. لم يُرسل أي طلب شبكة — الوصلة غير مبنية بعد.`,
     status: "success",
   });
 
-  res.json({ success: true, connector: conn });
+  res.json({ success: true, connector: { ...conn, mode: live ? "live" : "simulated" }, simulated: !live });
 });
 
 // 11. Analytics & Executive ROI
@@ -1180,7 +1195,7 @@ apiRouter.get("/mcp/executions", (req: Request, res: Response) => {
   });
 });
 
-// 12. Firebase Firestore Integration (Project: nahj-a27a4)
+// 12. Firebase Firestore Integration — مرآةٌ اختيارية، لا مصدر الحقيقة
 apiRouter.get("/firebase/status", (req: Request, res: Response) => {
   res.json({
     status: getFirebaseStatus(),
@@ -1193,10 +1208,12 @@ apiRouter.post("/firebase/sync", async (req: Request, res: Response) => {
     actorType: "human",
     actorName: db.getCurrentUser().name,
     action: "FIREBASE_FULL_SYNC",
-    provenance: "nahj-a27a4.firestore",
+    provenance: "firestore.mirror",
     risk: "low",
     latencyMs: 120,
-    details: `مزامنة شاملة لذاكرة المنصة التشغيلية إلى قاعدة بيانات سحابة Firebase Firestore (nahj-a27a4) بإجمالي ${result.count} كائن.`,
+    details: result.success
+      ? `مزامنة مرآة سحابية: ${result.count} كائناً.`
+      : `تعذّرت المزامنة السحابية — لم يُكتب أي كائن.`,
     status: result.success ? "success" : "warning",
   });
   res.json(result);

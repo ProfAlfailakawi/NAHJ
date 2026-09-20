@@ -288,3 +288,32 @@ test("الرفض يُطفئ أعلام الانشغال فلا يبقى الزر
   assert.match(wrapper, /setPracticeBusy\(false\)/, "علم التدرّب يبقى مشتعلاً بعد الرفض");
   assert.match(wrapper, /setSimBusy\(false\)/, "علم المحادثة يبقى مشتعلاً بعد الرفض");
 });
+
+test("حارس المسوّقين يسبق موجّه الاشتراك", () => {
+  /*
+   * الترتيب هنا هو العزل نفسه.
+   *
+   * كان `confinePartners` مركَّباً بعد موجّه الاشتراك، فكان حساب المسوّق يقرأ
+   * اشتراك المؤسسة كاملاً — باقتها وفواتيرها ودفعاتها واستهلاكها. وهي بيانات
+   * عميلٍ لا شأن لوسيطٍ بها.
+   *
+   * ولم يكشفه فحصُ أنواعٍ ولا اختبارُ وحدة: كشفه طلبٌ واحد على خادم حيّ ردّ 200
+   * حيث كان يجب أن يردّ 403.
+   */
+  const routes = read("server/routes.ts");
+  const confineAt = routes.indexOf("apiRouter.use(confinePartners)");
+  const billingAt = routes.indexOf('apiRouter.use("/billing", billingRouter)');
+  const portalAt = routes.indexOf('apiRouter.use("/partners", partnerRouter)');
+
+  assert.ok(confineAt > 0 && billingAt > 0 && portalAt > 0, "تعذّر العثور على التركيبات الثلاث");
+  assert.ok(portalAt < confineAt, "الحارس قبل لوحة المسوّق — فلا يبلغها أصلاً");
+  assert.ok(confineAt < billingAt, "المسوّق يبلغ اشتراك المؤسسة: الحارس بعد موجّه الفوترة");
+});
+
+test("المسوّق خارج سلسلة أدوار المؤسسة", () => {
+  const auth = read("server/auth.ts");
+  /* رتبته صفر: ليس «أقلّ صلاحية» بل من سلسلة أخرى، فلا يرث ما دونه. */
+  assert.match(auth, /partner: 0/, "المسوّق على سُلّم المؤسسة — سيرث ما دونه");
+  assert.match(auth, /isPartnerRole\(req\.account\.role\) && !allowed\.includes\("partner"\)/,
+    "حارس الأدوار لا يستثني المسوّق");
+});

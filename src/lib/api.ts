@@ -282,3 +282,88 @@ export const sectorsApi = {
       "/sectors/apply", { method: "POST", body: JSON.stringify({ code, confirm: "REPLACE" }) },
     ),
 };
+
+/* --------------------------------------------------- المسوّقون والعمولات */
+
+export type CommissionModel = "percent_of_contract" | "fixed_per_cycle" | "fixed_once";
+export type ClientStatus = "prospect" | "active" | "past_due" | "churned";
+export type CommissionStatus = "accrued" | "approved" | "paid" | "void";
+
+export interface Partner {
+  id: string; name: string; email: string; phone: string; accountId: string | null;
+  status: "active" | "suspended"; model: CommissionModel; rateBps: number; fixedAmount: number;
+  currency: string; durationMonths: number; notes?: string; createdAt: string; updatedAt: string;
+}
+
+export interface PartnerClient {
+  id: string; name: string; sector: string; contactName: string; contactEmail: string; contactPhone: string;
+  partnerId: string | null; planCode: string; cycle: BillingCycle; contractValue: number; currency: string;
+  startedAt: string; endsAt: string; status: ClientStatus; deploymentUrl: string; notes: string;
+  createdAt: string; updatedAt: string;
+}
+
+export interface Commission {
+  id: string; partnerId: string; clientId: string; periodStart: string; periodEnd: string;
+  baseAmount: number; model: CommissionModel; rateBps: number; amount: number; currency: string;
+  status: CommissionStatus; paidAt: string | null; paymentReference: string; note: string; createdAt: string;
+}
+
+export interface CommissionTotals {
+  accrued: number; paid: number; due: number; currency: string;
+  formatted: { accrued: string; paid: string; due: string };
+}
+
+export interface PartnerPortal {
+  partner: Partner;
+  clients: Array<PartnerClient & { commissionToDate: number; commissionFormatted: string; daysToRenewal: number }>;
+  commissions: Commission[];
+  totals: CommissionTotals;
+}
+
+export interface PartnerOverview {
+  partners: Array<Partner & { clientCount: number; totals: CommissionTotals }>;
+  clients: PartnerClient[];
+  commissions: Commission[];
+  totals: CommissionTotals;
+  contractedValue: number;
+  contractedValueFormatted: string;
+}
+
+export const partnersApi = {
+  /** لوحة صاحب الجلسة — معرّفه من حسابه لا من معامل يرسله. */
+  me: () => api<PartnerPortal>("/partners/me"),
+
+  overview: () => api<PartnerOverview>("/partners/owner/overview"),
+  savePartner: (body: Record<string, unknown>) => post<{ partner: Partner }>("/partners/owner/partners", body),
+  updatePartner: (id: string, body: Record<string, unknown>) =>
+    api<{ partner: Partner }>(`/partners/owner/partners/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deletePartner: (id: string) => api<{ ok: boolean }>(`/partners/owner/partners/${encodeURIComponent(id)}`, { method: "DELETE" }),
+
+  saveClient: (body: Record<string, unknown>) => post<{ client: PartnerClient }>("/partners/owner/clients", body),
+  updateClient: (id: string, body: Record<string, unknown>) =>
+    api<{ client: PartnerClient }>(`/partners/owner/clients/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteClient: (id: string) => api<{ ok: boolean }>(`/partners/owner/clients/${encodeURIComponent(id)}`, { method: "DELETE" }),
+
+  preview: (partnerId: string, contractValue: number) =>
+    post<{ firstCycle: number; laterCycle: number; model: CommissionModel; currency: string }>("/partners/owner/preview", { partnerId, contractValue }),
+  payCommissions: (ids: string[], reference: string) =>
+    post<{ paid: number; amount: number; currency: string }>("/partners/owner/commissions/pay", { ids, reference }),
+  voidCommission: (id: string, note: string) =>
+    post<{ commission: Commission }>(`/partners/owner/commissions/${encodeURIComponent(id)}/void`, { note }),
+  accrue: () => post<{ created: number }>("/partners/owner/accrue", {}),
+  partnerPortal: (id: string) => api<PartnerPortal>(`/partners/owner/partners/${encodeURIComponent(id)}/portal`),
+};
+
+export const COMMISSION_MODEL_AR: Record<CommissionModel, string> = {
+  percent_of_contract: "نسبة من قيمة العقد",
+  fixed_per_cycle: "مبلغ مقطوع لكل دورة",
+  fixed_once: "مبلغ مقطوع مرة واحدة",
+};
+
+export const CLIENT_STATUS_AR: Record<ClientStatus, string> = {
+  prospect: "محتملة", active: "نشطة", past_due: "متأخرة السداد", churned: "منتهية",
+};
+
+export const COMMISSION_STATUS_AR: Record<CommissionStatus, string> = {
+  accrued: "مستحقّة", approved: "معتمدة", paid: "مدفوعة", void: "ملغاة",
+};

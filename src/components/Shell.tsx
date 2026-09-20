@@ -1,9 +1,9 @@
 import React from "react";
-import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, Building2, CreditCard, Crown, FlaskConical, GraduationCap, History, Languages, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
+import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, Building2, CreditCard, Crown, FlaskConical, HandCoins, GraduationCap, History, Languages, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
 import { BrandLockup, NahjMark } from "./Brand";
 import type { Organization, User } from "../types";
 
-export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts" | "billing" | "owner" | "sectors";
+export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts" | "billing" | "owner" | "sectors" | "partners" | "partnerPortal";
 
 type ShellProps = {
   section: SectionId;
@@ -50,6 +50,7 @@ const nav: { id: SectionId; ar: string; en: string; icon: React.ElementType; gro
   { id: "billing", ar: "الاشتراك", en: "Subscription", icon: CreditCard, group:"govern" },
   { id: "sectors", ar: "النشاط", en: "Sector", icon: Building2, group:"govern" },
   { id: "owner", ar: "لوحة المالك", en: "Owner console", icon: Crown, group:"owner" },
+  { id: "partners", ar: "المسوّقون", en: "Partners", icon: HandCoins, group:"owner" },
 ];
 
 export function Shell({
@@ -59,7 +60,12 @@ export function Shell({
 }: ShellProps) {
   const ar = lang === "ar";
   /* مدخل المالك يُحذف من القائمة لا يُعطَّل: قائمةٌ فيها بابٌ مقفل تدعو إلى طرقه. */
-  const visibleNav = nav.filter(item => item.id !== "owner" || isOwner);
+  /*
+   * المسوّق لا يرى شريط التنقّل أصلاً — لوحته سطحٌ واحد. وما عداه يُخفى مدخل
+   * المالك عمّن ليس مالكاً: قائمةٌ فيها بابٌ مقفل تدعو إلى طرقه.
+   */
+  const ownerOnly = new Set<SectionId>(["owner", "partners"]);
+  const visibleNav = nav.filter(item => !ownerOnly.has(item.id) || isOwner);
   let lastGroup: string | undefined;
   return (
     <div className="app-shell" dir={ar ? "rtl" : "ltr"}>
@@ -99,12 +105,13 @@ export function Shell({
                 <div className="org-meta flex items-center gap-2">
                   <span className={`live-dot ${demoActive ? "demo" : serverLive ? "on" : "demo"}`}/>
                   <span>{demoActive ? (ar?"صندوق معزول":"Isolated sandbox") : serverLive ? (ar?"المحرك متصل":"Engine live") : (ar?"وضع العرض":"Demo mode")}</span>
-                  {/* داخل الصندوق التجريبي لا تُكتب ولا تُقرأ وثيقةٌ واحدة من Firebase، فوسمُ
-                      «متصل» باسم المشروع الحقيقي كان يقول على الشاشة ما ليس صحيحًا — ويكشف
-                      اسم مشروعٍ داخلي أمام من يُعرض عليه المنتج. */}
+                  {/* الوسم يذكر مصدر الحقيقة كما هو: مخزن المحرّك المحلي. وكان يقول
+                      «Firebase: <اسم المشروع>» دائماً — يزعم وصلاً سحابياً ترفضه قواعد
+                      الأمان أصلاً، ويكشف اسم مشروعٍ داخلي أمام من يُعرض عليه المنتج.
+                      وتفصيل حالة المرآة السحابية في شاشة الربط، مقروءاً من حالتها. */}
                   <span className={`hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border ${demoActive ? "bg-amber-500/15 text-amber-300 border-amber-500/30" : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${demoActive ? "bg-amber-400" : "bg-emerald-400"}`}></span>
-                    {demoActive ? (ar?"بلا اتصال بأي قاعدة بيانات":"No database connection") : "Firebase: nahj-a27a4"}
+                    {demoActive ? (ar?"بلا اتصال بأي قاعدة بيانات":"No database connection") : (ar?"مخزن المحرّك المحلي":"Local engine store")}
                   </span>
                 </div>
               </div>
