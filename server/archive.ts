@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
-import { db } from "./db.ts";
+import { db, persistence } from "./db.ts";
 import { openDatabase, resolveDatabasePath } from "./persistence.ts";
 import {
-  evaluateSubscription, getPlan, getSubscription, listBillingEvents, listInvoices, listPayments,
-  listPlans, formatMoney, outstandingBalance,
+  EXPORT_LIMIT, evaluateSubscription, getPlan, getSubscription, listBillingEvents, listInvoices,
+  listPayments, listPlans, formatMoney, outstandingBalance,
 } from "./billing.ts";
 import { listCommissions, listPartners, listClients } from "./partners.ts";
 import { listIntents } from "./payments.ts";
@@ -67,12 +67,15 @@ export const LEDGER_LABELS: Record<LedgerName, string> = {
 /** دفاتر المالك وحده — فيها أرقام عقوده مع المسوّقين. */
 export const OWNER_ONLY: LedgerName[] = ["commissions"];
 
+/** أحداثٌ تصف كتالوج المالك وعقوده، لا ترخيص المؤسسة. */
+export const OWNER_EVENT_PREFIXES = ["plan.", "partner.", "client.", "commission."];
+
 export function buildLedgerCsv(ledger: LedgerName): string {
   switch (ledger) {
     case "invoices":
       return toCsv(
         ["رقم الفاتورة", "النوع", "من", "إلى", "أُصدرت", "الاستحقاق", "العملة", "المجموع الفرعي", "الخصم", "الضريبة", "الإجمالي", "المسدَّد", "الحالة"],
-        listInvoices(5_000).map(invoice => [
+        listInvoices(EXPORT_LIMIT).map(invoice => [
           invoice.number, invoice.kind, invoice.periodStart ?? "", invoice.periodEnd ?? "", invoice.issuedAt, invoice.dueAt,
           invoice.currency, invoice.subtotal, invoice.discount, invoice.tax, invoice.total, invoice.amountPaid, invoice.status,
         ]),
@@ -81,7 +84,7 @@ export function buildLedgerCsv(ledger: LedgerName): string {
     case "payments":
       return toCsv(
         ["المعرّف", "الفاتورة", "المبلغ", "العملة", "الوسيلة", "المرجع", "التاريخ", "سجّلها"],
-        listPayments(5_000).map(payment => [
+        listPayments(EXPORT_LIMIT).map(payment => [
           payment.id, payment.invoiceId ?? "", payment.amount, payment.currency,
           payment.method, payment.reference, payment.paidAt, payment.recordedBy,
         ]),
@@ -173,10 +176,24 @@ export function buildFullExport(options: ExportOptions) {
       subscription,
       plan: subscription ? getPlan(subscription.planCode) ?? null : null,
       state: evaluateSubscription(),
-      invoices: listInvoices(5_000),
-      payments: listPayments(5_000),
-      events: listBillingEvents(2_000),
-      plans: listPlans(true),
+      invoices: listInvoices(EXPORT_LIMIT),
+      payments: listPayments(EXPORT_LIMIT),
+      /*
+       * سجلّ الترخيص للمؤسسة — لا دفتر المالك التجاري.
+       *
+       * أحداث إدارة الباقات والمسوّقين والعمولات تصف كتالوج المالك وعقوده،
+       * وتحمل في تفاصيلها رموز باقاتٍ خاصة وأسعارها. فحجبُ الباقة نفسها ثم
+       * تركُ الحدث الذي أنشأها حجبٌ من بابٍ وتسريبٌ من آخر.
+       */
+      events: listBillingEvents(EXPORT_LIMIT).filter(event => !OWNER_EVENT_PREFIXES.some(prefix => event.type.startsWith(prefix))),
+      /*
+       * الباقات العلنية وحدها في تصدير المؤسسة.
+       *
+       * `listPlans(true)` تُخرج الخاصة والمؤرشفة معاً — وهي عروض المالك
+       * التجارية وتاريخ تسعيره. ومسار `/billing/plans` يحجبها عن غير المالك،
+       * فتصديرٌ يُخرجها ينقض الحجب من بابٍ آخر.
+       */
+      plans: listPlans(false).filter(plan => plan.isPublic),
     },
   };
 
@@ -188,7 +205,10 @@ export function buildFullExport(options: ExportOptions) {
       partners: listPartners(),
       clients: listClients(),
       commissions: listCommissions({}),
-      paymentIntents: listIntents(500).map(intent => ({
+      /* وللمالك وحده: الباقات كلها بما فيها الخاصة والمؤرشفة، وسجلّه كاملاً. */
+      allPlans: listPlans(true),
+      events: listBillingEvents(EXPORT_LIMIT),
+      paymentIntents: listIntents(EXPORT_LIMIT).map(intent => ({
         ...intent,
         /* الرابط ينتهي عند المزوّد ولا معنى له بعد التصدير. */
         checkoutUrl: undefined,
@@ -257,6 +277,15 @@ export function runBackup(): BackupResult {
     return { ok: false, reason: "القاعدة في الذاكرة — لا شيء يُنسخ.", pruned: [] };
   }
 
+  /*
+   * ما في الذاكرة يُكتب قبل أن تُؤخذ اللقطة.
+   *
+   * الحالة التشغيلية تُدفَق إلى القاعدة كل ثلاث ثوانٍ، فنسخةٌ تُؤخذ داخل تلك
+   * النافذة تفقد آخر ما جرى: مهارةٌ رُقّيت، أو موافقةٌ صدرت، أو حدث تدقيق.
+   * ونسخةٌ تنقصها ثوانٍ أسوأ من نسخةٍ متأخرة دقيقة، لأن ما نقص منها لا يُعرف.
+   */
+  try { persistence.flush(); } catch { /* الدفق يُعاد في دورته التالية */ }
+
   const directory = backupDirectory();
   fs.mkdirSync(directory, { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
@@ -288,6 +317,7 @@ export function runBackup(): BackupResult {
 /* ------------------------------------------------------ المُجدوِل */
 
 let timer: NodeJS.Timeout | null = null;
+let firstTimer: NodeJS.Timeout | null = null;
 
 /** فترة النسخ بالساعات. صفر أو أقل يُعطّل الجدولة ولا يُعطّل النسخ اليدوي. */
 export const backupIntervalHours = () => {
@@ -304,15 +334,40 @@ export const backupIntervalHours = () => {
 export function startBackupWorker(): void {
   const hours = backupIntervalHours();
   if (timer || !hours) return;
-  timer = setInterval(() => {
+
+  const take = () => {
     const result = runBackup();
     if (!result.ok) console.warn("[NAHJ] تعذّرت النسخة الاحتياطية:", result.reason);
-    else console.log(`[NAHJ] نسخة احتياطية: ${result.file!.name} (${(result.file!.sizeBytes / 1024).toFixed(0)} KB)`);
-  }, hours * 3_600_000);
-  timer.unref();
+    else console.log(`[NAHJ] نسخة احتياطية: ${result.file!.name} (${humanBytes(result.file!.sizeBytes)})`);
+  };
+
+  /*
+   * الجدولة من آخر نسخةٍ نجحت، لا من لحظة الإقلاع.
+   *
+   * كان المؤقّت يُصفَّر مع كل تشغيل: نشرٌ يومي مع فترة أربعٍ وعشرين ساعة يعني
+   * ألّا تُكتب نسخةٌ واحدة أبداً — والحالة تقول «النسخ الدوري مفعّل». وهذا
+   * أسوأ من تعطيله: من يظنّ أن له نسخاً لا يبحث عن غيرها.
+   *
+   * فيُقرأ عمر آخر نسخة: إن تجاوز الفترة تُؤخذ واحدة بعد دقيقة من الإقلاع
+   * (لا فوراً، فلا تتزاحم نسخٌ متطابقة مع نشرٍ متكرّر)، وإلا يُنتظر ما بقي.
+   */
+  const latest = listBackups()[0];
+  const intervalMs = hours * 3_600_000;
+  const age = latest ? Date.now() - new Date(latest.createdAt).getTime() : Number.POSITIVE_INFINITY;
+  const firstDelay = age >= intervalMs ? 60_000 : Math.max(60_000, intervalMs - age);
+
+  firstTimer = setTimeout(() => {
+    firstTimer = null;
+    take();
+    timer = setInterval(take, intervalMs);
+    timer.unref();
+  }, firstDelay);
+  firstTimer.unref();
 }
 
 export function stopBackupWorker(): void {
+  /* والمؤقّت الأول يُلغى أيضاً: إيقافٌ قبل أول نسخةٍ كان يترك دورةً تبدأ بعده. */
+  if (firstTimer) { clearTimeout(firstTimer); firstTimer = null; }
   if (timer) { clearInterval(timer); timer = null; }
 }
 
@@ -350,8 +405,8 @@ export const describeExport = () => {
     skills: db.skills.length,
     workItems: db.workItems.length,
     auditEvents: db.auditEvents.length,
-    invoices: listInvoices(5_000).length,
-    payments: listPayments(5_000).length,
+    invoices: listInvoices(EXPORT_LIMIT).length,
+    payments: listPayments(EXPORT_LIMIT).length,
     outstanding: formatMoney(outstanding.amount, outstanding.currency),
   };
 };

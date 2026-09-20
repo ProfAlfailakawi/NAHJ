@@ -230,3 +230,39 @@ test("لا يُسقط إشعارٌ لأن المؤسسة بلا مشرفٍ بع�
   delete process.env.NAHJ_ADMIN_EMAIL;
   delete process.env.NAHJ_ADMIN_PASSWORD;
 });
+
+test("تذكير التجديد يصل عند كل عتبة لا عند الأولى وحدها", async () => {
+  /*
+   * سقط هذا في مراجعة: العتبات كانت مرتّبة تنازلياً `[14,7,3,1]` والبحث يُعيد
+   * أول ما يشمل المتبقّي — و`2 <= 14` صحيح، فيثبت المفتاح على عتبة الأربعة
+   * عشر ولا يصل تذكير السبعة ولا الثلاثة ولا اليوم الأخير أبداً. وهو التذكير
+   * الوحيد الذي يهمّ فعلاً.
+   */
+  freshDatabase();
+  configure();
+  ensureSubscription();
+  startSubscription({ planCode: "growth", cycle: "monthly", issueInvoice: false });
+
+  const setRemaining = (days: number) => {
+    /* ساعةٌ أقلّ من اليوم الكامل: `daysBetween` يُقرّب لأعلى، فيخرج العدد المقصود بالضبط. */
+    const end = new Date(Date.now() + days * 86_400_000 - 3_600_000).toISOString();
+    openDatabase().prepare("UPDATE billing_subscription SET current_period_end = ?").run(end);
+  };
+
+  /*
+   * يقترب الموعد يوماً بعد يوم. والمطلوب إثباتُه أن العتبات الأربع كلّها
+   * تُبلَغ — لا أن تثبت الأولى على كل ما دونها.
+   */
+  for (const days of [12, 6, 2, 1]) {
+    setRemaining(days);
+    notifyRenewalDue();
+  }
+
+  const reminders = listNotifications(50).filter(item => item.kind === "renewal.due");
+  const thresholds = reminders.map(item => item.dedupeKey.split(":")[2]);
+  assert.deepEqual([...new Set(thresholds)].sort(), ["1", "14", "3", "7"],
+    `العتبات التي أُرسلت: ${thresholds.join(",")} — يجب أن تُبلَغ الأربع`);
+
+  /* وتذكير اليوم الأخير — وهو الوحيد الذي يهمّ فعلاً — موجود. */
+  assert.ok(reminders.some(item => /ينتهي غداً/.test(item.subject)), "لم يصل تذكير اليوم الأخير");
+});

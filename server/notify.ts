@@ -395,8 +395,15 @@ export function notifyPaymentReceived(paymentId: string, amount: number, currenc
   }));
 }
 
-/** عتبات التذكير قبل التجديد — تنازلياً. */
-export const RENEWAL_THRESHOLDS = [14, 7, 3, 1];
+/**
+ * عتبات التذكير قبل التجديد.
+ *
+ * وتُقرأ تصاعدياً عمداً: البحث عن أول عتبةٍ تشمل ما بقي كان يُعيد ١٤ لكل يومٍ
+ * بين الأربعة عشر والصفر (لأن `2 <= 14` صحيح)، فيثبت مفتاح التفرّد على عتبة
+ * الأربعة عشر ولا يصل تذكيرُ السبعة ولا الثلاثة ولا اليوم الأخير أبداً — وهو
+ * التذكير الوحيد الذي يهمّ فعلاً.
+ */
+export const RENEWAL_THRESHOLDS = [1, 3, 7, 14];
 
 /**
  * يُذكّر بالتجديد قبل أن يقع التجميد لا بعده.
@@ -411,13 +418,16 @@ export function notifyRenewalDue(): number {
 
   const state = evaluateSubscription(subscription);
   const remaining = daysBetween(new Date().toISOString(), subscription.currentPeriodEnd);
-  const threshold = RENEWAL_THRESHOLDS.find(days => remaining <= days && remaining >= 0);
+  if (remaining < 0) return 0;
+  /* أقرب عتبةٍ تشمل ما بقي: يومان ⇒ عتبة الثلاثة، ويومٌ واحد ⇒ عتبة اليوم. */
+  const threshold = RENEWAL_THRESHOLDS.find(days => remaining <= days);
   if (threshold === undefined) return 0;
 
   const outstanding = outstandingBalance();
   return fanOut([...institutionRecipients(), ...ownerRecipient()], recipient => ({
     kind: "renewal.due",
-    dedupeKey: `renewal.due:${subscription.currentPeriodEnd}:${threshold}:${recipient}`,
+    /* التاريخ وحده في المفتاح: الطابع الكامل يحمل نقاطاً تُربك أي قراءة لاحقة. */
+    dedupeKey: `renewal.due:${subscription.currentPeriodEnd.slice(0, 10)}:${threshold}:${recipient}`,
     recipient,
     subject: remaining <= 1 ? "اشتراك نهج ينتهي غداً" : `اشتراك نهج ينتهي خلال ${remaining} يوماً`,
     body: [
@@ -443,7 +453,7 @@ export function notifySuspended(): number {
 
   return fanOut([...institutionRecipients(), ...ownerRecipient()], recipient => ({
     kind: "subscription.suspended",
-    dedupeKey: `subscription.suspended:${subscription.currentPeriodEnd}:${recipient}`,
+    dedupeKey: `subscription.suspended:${subscription.currentPeriodEnd.slice(0, 10)}:${recipient}`,
     recipient,
     subject: "تجمّدت الكتابة في نهج",
     body: [

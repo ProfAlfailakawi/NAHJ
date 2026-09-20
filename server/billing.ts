@@ -349,6 +349,18 @@ export function resetBillingSchemaCache(): void {
   schemaReady = false;
 }
 
+/**
+ * سقف القراءة.
+ *
+ * كان خمسمائة صفّاً مهما طُلب، فتصديرٌ يطلب خمسة آلاف يأخذ خمسمائة ويُسمّي
+ * نفسه «كاملاً»: مؤسسةٌ تجاوزت خمسمائة فاتورة تأخذ نسخةً ناقصة ولا تعلم.
+ * والسقف يبقى حارساً من طلبٍ بلا حدّ، لكنه لا يكذب على من طلب التاريخ كلّه.
+ *
+ * والمسارات تمرّر حدودها الصغيرة كما هي، فلا يتضخّم ردُّ شاشةٍ بهذا.
+ */
+export const EXPORT_LIMIT = 100_000;
+const clampLimit = (limit: number) => Math.min(Math.max(Math.floor(limit) || 1, 1), EXPORT_LIMIT);
+
 /* ------------------------------------------------------------ سجلّ الأحداث */
 
 export interface BillingEvent {
@@ -368,7 +380,7 @@ export function recordBillingEvent(type: string, summary: string, actor = "syste
 }
 
 export function listBillingEvents(limit = 100): BillingEvent[] {
-  const rows = db().prepare("SELECT * FROM billing_events ORDER BY at DESC LIMIT ?").all(Math.min(Math.max(limit, 1), 500)) as Array<Record<string, unknown>>;
+  const rows = db().prepare("SELECT * FROM billing_events ORDER BY at DESC LIMIT ?").all(clampLimit(limit)) as Array<Record<string, unknown>>;
   return rows.map(row => ({
     id: String(row.id), at: String(row.at), type: String(row.type), actor: String(row.actor),
     summary: String(row.summary), detail: safeJson(String(row.detail), {}),
@@ -696,7 +708,7 @@ function invoiceFromRow(row: Record<string, unknown>): Invoice {
 
 export function listInvoices(limit = 60): Invoice[] {
   const rows = db().prepare("SELECT * FROM billing_invoices ORDER BY issued_at DESC, number DESC LIMIT ?")
-    .all(Math.min(Math.max(limit, 1), 500)) as Array<Record<string, unknown>>;
+    .all(clampLimit(limit)) as Array<Record<string, unknown>>;
   return rows.map(invoiceFromRow);
 }
 
@@ -885,7 +897,7 @@ export function recordPayment(input: RecordPaymentInput, actor = "system"): { pa
 
 export function listPayments(limit = 60): Payment[] {
   const rows = db().prepare("SELECT * FROM billing_payments ORDER BY paid_at DESC LIMIT ?")
-    .all(Math.min(Math.max(limit, 1), 500)) as Array<Record<string, unknown>>;
+    .all(clampLimit(limit)) as Array<Record<string, unknown>>;
   return rows.map(row => ({
     id: String(row.id),
     invoiceId: row.invoice_id ? String(row.invoice_id) : null,

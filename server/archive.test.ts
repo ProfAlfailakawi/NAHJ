@@ -20,7 +20,11 @@ import {
   backupDirectory, backupStatus, buildFullExport, buildLedgerCsv, csvCell, listBackups, runBackup, toCsv,
 } from "./archive.ts";
 import { closeDatabase, openDatabase } from "./persistence.ts";
-import { ensureBillingSchema, issueInvoice, recordPayment, resetBillingSchemaCache, seedDefaultPlans } from "./billing.ts";
+import {
+  ensureBillingSchema, issueInvoice, listInvoices, recordPayment, resetBillingSchemaCache,
+  seedDefaultPlans, upsertPlan,
+} from "./billing.ts";
+import { db } from "./db.ts";
 import { resetPaymentSchemaCache } from "./payments.ts";
 import { resetPartnerSchemaCache } from "./partners.ts";
 import { DatabaseSync } from "node:sqlite";
@@ -175,4 +179,76 @@ test("حالة النسخ لا تكشف مسارات الخادم الكاملة
   assert.ok(status.latest, "لا نسخة لتُفحص");
   assert.equal((status.latest as Record<string, unknown>).path, undefined, "خرج مسار الملف الكامل إلى الواجهة");
   assert.ok(status.latest!.name.startsWith("nahj-"));
+});
+
+/* --------------------------------------------- ما كشفته المراجعة */
+
+test("الباقات الخاصة لا تخرج في تصدير المؤسسة", () => {
+  /*
+   * `/billing/plans` يحجب الخاصة عن غير المالك، وتصديرٌ يُخرجها ينقض الحجب من
+   * بابٍ آخر: عروضُ المالك التجارية وتاريخ تسعيره في يد مشرف المؤسسة.
+   */
+  freshDatabase();
+  upsertPlan({
+    code: "private_offer", nameAr: "عرض خاص", nameEn: "Private offer",
+    currency: "KWD", priceMonthly: 7_777_777, priceQuarterly: 0, priceAnnual: 0, isPublic: false,
+  });
+
+  const institution = JSON.stringify(buildFullExport({ includeOwnerLedgers: false }));
+  assert.ok(!institution.includes("private_offer"), "خرجت باقة خاصة في تصدير المؤسسة");
+  assert.ok(!institution.includes("عرض خاص"), "خرج اسم باقة خاصة في تصدير المؤسسة");
+  /* وحجبُ الباقة مع ترك الحدث الذي أنشأها حجبٌ من بابٍ وتسريبٌ من آخر. */
+  assert.ok(!institution.includes("7777777"), "خرج سعر باقةٍ خاصة في سجلّ الأحداث");
+
+  const owner = JSON.stringify(buildFullExport({ includeOwnerLedgers: true }));
+  assert.ok(owner.includes("private_offer"), "حُجبت الباقة الخاصة عن المالك نفسه");
+});
+
+test("التصدير الكامل لا يتوقّف عند خمسمائة سجلّ", () => {
+  /*
+   * دوالّ القراءة كانت تحدّ بخمسمائة مهما طُلب، فتصديرٌ يُسمّى «كاملاً» يأخذ
+   * خمسمائة فاتورة ويترك الباقي — ومؤسسةٌ تجاوزتها تأخذ نسخةً ناقصة ولا تعلم.
+   */
+  freshDatabase();
+  for (let index = 0; index < 520; index += 1) {
+    issueInvoice({ currency: "KWD", lines: [{ description: `بند ${index}`, quantity: 1, unitAmount: 1_000, amount: 1_000 }] });
+  }
+
+  assert.equal(listInvoices(10_000).length, 520, "ما زال السقف يقطع التاريخ");
+  const exported = buildFullExport({ includeOwnerLedgers: false }) as any;
+  assert.equal(exported.billing.invoices.length, 520, "التصدير الكامل ناقص");
+  assert.equal(buildLedgerCsv("invoices").trim().split("\r\n").length, 521, "دفتر CSV ناقص (بترويسته)");
+});
+
+test("النسخة تحمل ما كُتب قبلها بلحظة", () => {
+  /*
+   * الحالة التشغيلية تُدفَق كل ثلاث ثوانٍ. ونسخةٌ تُؤخذ داخل تلك النافذة كانت
+   * تفقد آخر ما جرى — وما نقص من نسخةٍ لا يُعرف أنه نقص.
+   */
+  freshDatabase();
+  db.logAudit({
+    actorType: "human", actorName: "فحص", action: "PROBE_BEFORE_BACKUP",
+    provenance: "فحص", risk: "low", latencyMs: 1, details: "حدثٌ يجب أن يظهر في النسخة", status: "success",
+  });
+
+  const result = runBackup();
+  assert.equal(result.ok, true, `تعذّرت النسخة: ${result.reason}`);
+
+  const copy = new DatabaseSync(result.file!.path, { readOnly: true });
+  const row = copy.prepare("SELECT value FROM operational_state WHERE key = 'auditEvents'").get() as { value?: string } | undefined;
+  copy.close();
+  assert.ok(String(row?.value ?? "").includes("PROBE_BEFORE_BACKUP"), "النسخة لا تحمل ما كُتب قبلها بلحظة");
+});
+
+test("جدولة النسخ تُقرأ من آخر نسخةٍ نجحت لا من لحظة الإقلاع", () => {
+  /*
+   * كان المؤقّت يُصفَّر مع كل تشغيل: نشرٌ يومي مع فترة أربعٍ وعشرين ساعة يعني
+   * ألّا تُكتب نسخةٌ واحدة أبداً — والحالة تقول «مفعّل». ومن يظنّ أن له نسخاً
+   * لا يبحث عن غيرها.
+   */
+  const source = fs.readFileSync(path.join(process.cwd(), "server", "archive.ts"), "utf8");
+  const worker = source.slice(source.indexOf("export function startBackupWorker"), source.indexOf("export function stopBackupWorker"));
+  assert.match(worker, /listBackups\(\)\[0\]/, "الجدولة لا تقرأ آخر نسخة");
+  assert.match(worker, /intervalMs - age/, "لا يُحسب ما بقي من الفترة");
+  assert.ok(!/^\s*timer = setInterval/m.test(worker.split("firstTimer")[0]), "ما زالت الدورة تبدأ من لحظة الإقلاع");
 });
