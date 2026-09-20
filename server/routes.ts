@@ -1255,18 +1255,24 @@ apiRouter.get("/mcp/servers", (req: Request, res: Response) => {
   });
 });
 
-apiRouter.post("/mcp/servers", (req: Request, res: Response) => {
+/*
+ * تسجيل خادم وإزالته فعلان إداريان.
+ *
+ * وكانا مفتوحين لكل من يملك جلسة: مُطَّلعٌ يستطيع حذف خوادم المؤسسة أو تسجيل
+ * عنوانٍ باسمها. وسجلُّ التدقيق يكتب اسمه — لكن بعد وقوع الفعل.
+ */
+apiRouter.post("/mcp/servers", requireAuth, requireRole("admin"), (req: AuthenticatedRequest, res: Response) => {
   const server = McpEngine.registerServer(req.body);
   res.json({ success: true, server });
 });
 
-apiRouter.delete("/mcp/servers/:id", (req: Request, res: Response) => {
+apiRouter.delete("/mcp/servers/:id", requireAuth, requireRole("admin"), (req: AuthenticatedRequest, res: Response) => {
   const success = McpEngine.removeServer(req.params.id);
   res.json({ success });
 });
 
-apiRouter.post("/mcp/servers/:id/ping", (req: Request, res: Response) => {
-  const result = McpEngine.pingServer(req.params.id);
+apiRouter.post("/mcp/servers/:id/ping", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const result = await McpEngine.pingServer(req.params.id);
   res.json({ success: true, ...result });
 });
 
