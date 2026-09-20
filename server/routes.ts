@@ -18,6 +18,7 @@ import {
   LEDGER_LABELS, OWNER_ONLY, backupStatus, buildFullExport, buildLedgerCsv, describeExport,
   humanBytes, listBackups, runBackup, type LedgerName,
 } from "./archive.ts";
+import { flushNotifications, listNotifications, notifyStatus } from "./notify.ts";
 import { incrementUsage, maxAutonomyLevel } from "./billing.ts";
 import {
   AuthenticatedRequest,
@@ -325,6 +326,15 @@ apiRouter.get("/export/:ledger.csv", ...exportGuard, (req: AuthenticatedRequest,
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader("Content-Disposition", `attachment; filename="nahj-${ledger}-${stamp}.csv"`);
   res.send(buildLedgerCsv(ledger));
+});
+
+/* الإشعارات: حالتها وطابورها — لمن يملك النشر. */
+apiRouter.get("/notifications", requireAuth, requireOwner, (_req: AuthenticatedRequest, res: Response) => {
+  res.json({ status: notifyStatus(), recent: listNotifications(40) });
+});
+
+apiRouter.post("/notifications/flush", requireAuth, requireOwner, async (_req: AuthenticatedRequest, res: Response) => {
+  res.json(await flushNotifications());
 });
 
 /* النسخ الاحتياطي يخصّ من يملك النشر — لا من يستعمله. */

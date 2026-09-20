@@ -388,6 +388,19 @@ export interface ExportSummary {
   };
 }
 
+export interface NotifyState {
+  status: {
+    provider: string; configured: boolean; missing: string[]; from: string; note: string;
+    counts: { pending: number; sent: number; failed: number; skipped: number };
+  };
+  recent: Array<{ id: string; kind: string; recipient: string; subject: string; status: string; attempts: number; lastError: string; createdAt: string; sentAt: string | null }>;
+}
+
+export const notifyApi = {
+  state: () => api<NotifyState>("/notifications"),
+  flush: () => post<{ sent: number; failed: number; skipped: number }>("/notifications/flush", {}),
+};
+
 export const archiveApi = {
   summary: () => api<ExportSummary>("/export/summary"),
 

@@ -162,6 +162,26 @@ if (sameDisk) {
   line('✓', C.green, 'مجلد النسخ', backupDir);
 }
 
+console.log(`\n${C.bold}  الإشعارات${C.off}`);
+const mailProvider = val('NAHJ_MAIL_PROVIDER').toLowerCase();
+if (!mailProvider) {
+  line('○', C.dim, 'بلا بريد', 'الأحداث تُسجَّل في لوحة المالك ولا تُرسل — التبليغ يدوي. وهذا وضعٌ صالح للبيع.');
+} else if (!['resend', 'sendgrid', 'webhook'].includes(mailProvider)) {
+  blocking += 1;
+  line('✗', C.red, 'مزوّد بريد غير معروف', `NAHJ_MAIL_PROVIDER=${mailProvider} — المدعوم: resend أو sendgrid أو webhook`);
+} else if (mailProvider === 'webhook') {
+  if (has('NAHJ_MAIL_WEBHOOK_URL')) line('✓', C.green, 'عنوان استقبال الإشعارات', val('NAHJ_MAIL_WEBHOOK_URL'));
+  else { blocking += 1; line('✗', C.red, 'عنوان الاستقبال مفقود', 'NAHJ_MAIL_WEBHOOK_URL مطلوب مع webhook'); }
+} else {
+  const missingMail = ['NAHJ_MAIL_API_KEY', 'NAHJ_MAIL_FROM'].filter(name => !has(name));
+  if (missingMail.length) {
+    blocking += 1;
+    line('✗', C.red, `${mailProvider} — إعداد ناقص`, `ينقص: ${missingMail.join('، ')}`);
+  } else {
+    line('✓', C.green, `${mailProvider} — مضبوط`, `المُرسِل: ${val('NAHJ_MAIL_FROM')}`);
+  }
+}
+
 console.log('\n  ─────────────────────────────────────────────');
 console.log(`  ${blocking ? C.red : C.green}${blocking} مانع${C.off} · ${C.amber}${warnings} تنبيه${C.off}`);
 if (blocking) console.log(`  ${C.red}لا تنشر قبل معالجة الموانع أعلاه.${C.off}`);

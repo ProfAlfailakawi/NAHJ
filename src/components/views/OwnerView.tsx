@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle, BadgeDollarSign, CalendarPlus, CreditCard, Crown, DatabaseBackup, FilePlus2, History, Layers, PauseCircle,
-  PlayCircle, Plus, RefreshCw, Save, Trash2, TrendingUp, Wallet, X,
+  PlayCircle, Plus, RefreshCw, Save, Send, Trash2, TrendingUp, Wallet, X,
 } from "lucide-react";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
 import {
-  archiveApi, billingApi, fromMinor, money, paymentsApi, toMinor,
+  archiveApi, billingApi, fromMinor, money, notifyApi, paymentsApi, toMinor,
   type BillingCycle, type InvoiceLine, type OwnerOverview, type PaymentIntentView, type Plan, type PlanFeatureKey,
 } from "../../lib/api";
 
@@ -86,6 +86,10 @@ const draftFromPlan = (plan: Plan): PlanDraft => ({
   isPublic: plan.isPublic, sortOrder: String(plan.sortOrder),
 });
 
+const NOTIFY_STATUS_AR: Record<string, string> = {
+  sent: "أُرسل", pending: "في الطابور", failed: "فشل", skipped: "لم يُرسل",
+};
+
 const INTENT_STATUS_AR: Record<string, string> = {
   pending: "معلّقة",
   paid: "محصَّلة ومسجَّلة",
@@ -126,6 +130,13 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
     archiveApi.backups().then(setBackups).catch(() => setBackups(null));
   }, []);
   useEffect(() => { loadBackups(); }, [loadBackups]);
+
+  /* الإشعارات: ما أُرسل، وما تُرك لغياب مزوّد، وما فشل — ولماذا. */
+  const [mailQueue, setMailQueue] = useState<Awaited<ReturnType<typeof notifyApi.state>> | null>(null);
+  const loadMailQueue = useCallback(() => {
+    notifyApi.state().then(setMailQueue).catch(() => setMailQueue(null));
+  }, []);
+  useEffect(() => { loadMailQueue(); }, [loadMailQueue]);
 
   const load = useCallback(async () => {
     try {
@@ -374,6 +385,60 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
                 أنهِ الترخيص
               </button>
             </div>
+          </>
+        )}
+      </section>
+
+      {/* --------------------------------------------- الإشعارات */}
+      <section className="surface-strong owner-block">
+        <SectionTitle title="الإشعارات" icon={<Send />}
+          meta={mailQueue?.status.configured ? mailQueue.status.provider : "لا مزوّد بريد"} />
+
+        {!mailQueue ? (
+          <p className="owner-hint">جارٍ قراءة حالة الإشعارات...</p>
+        ) : (
+          <>
+            <p className="owner-hint">{mailQueue.status.note}</p>
+            {mailQueue.status.missing.length > 0 && (
+              <ul className="owner-missing">
+                {mailQueue.status.missing.map(item => <li key={item}><AlertTriangle /> {item}</li>)}
+              </ul>
+            )}
+
+            <div className="stat-grid compact">
+              <Stat label="أُرسلت" value={mailQueue.status.counts.sent} tone="moss" icon={<Send />} />
+              <Stat label="في الطابور" value={mailQueue.status.counts.pending} tone="sky" icon={<History />} />
+              <Stat label="لم تُرسل (لا مزوّد)" value={mailQueue.status.counts.skipped} tone={mailQueue.status.counts.skipped ? "amber" : "sky"} icon={<AlertTriangle />} />
+              <Stat label="فشلت" value={mailQueue.status.counts.failed} tone={mailQueue.status.counts.failed ? "rose" : "moss"} icon={<AlertTriangle />} />
+            </div>
+
+            {mailQueue.status.configured && (
+              <button className="btn-secondary" disabled={busy}
+                onClick={() => void run(async () => { await notifyApi.flush(); loadMailQueue(); }, "أُفرغ الطابور")}>
+                <Send /> أرسل ما في الطابور الآن
+              </button>
+            )}
+
+            {mailQueue.recent.length > 0 && (
+              <div className="ledger compact" style={{ marginTop: 10 }}>
+                <div className="ledger-head four">
+                  <span>الحدث</span><span>إلى</span><span>الحالة</span><span>السبب</span>
+                </div>
+                {mailQueue.recent.slice(0, 10).map(item => (
+                  <div key={item.id} className="ledger-row four static">
+                    <span>{item.subject}</span>
+                    <span className="mono">{item.recipient}</span>
+                    <span><i className={`ledger-badge tone-${item.status === "sent" ? "moss" : item.status === "failed" ? "rose" : item.status === "pending" ? "sky" : "amber"}`}>
+                      {NOTIFY_STATUS_AR[item.status] || item.status}
+                    </i></span>
+                    <span className="owner-hint">{item.lastError || "—"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="owner-hint">
+              لا يُرسل نهج كلمة مرور ولا رابط دخول في بريد — البريد قناة تُخزَّن وتُعاد توجيهاً. الكلمة المؤقتة تُسلَّم باليد.
+            </p>
           </>
         )}
       </section>

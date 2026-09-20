@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { openDatabase } from "./persistence.ts";
+import { notifyInvoiceIssued, notifyPaymentReceived } from "./notify.ts";
 
 /*
  * الاشتراك والفوترة — طبقة الترخيص.
@@ -788,6 +789,8 @@ export function issueInvoice(input: IssueInvoiceInput, actor = "system"): Invoic
   recordBillingEvent("invoice.issued", `فاتورة ${invoice.number} بقيمة ${formatMoney(invoice.total, currency)}`, actor, {
     invoiceId: invoice.id, number: invoice.number, total: invoice.total, currency,
   });
+  /* الإخبار تالٍ للإصدار ولا يُبطله — وفاتورةٌ لا يعلم بها أحد تُسدَّد متأخرة. */
+  try { void notifyInvoiceIssued(invoice.id); } catch { /* الطابور يحمل سببه */ }
   return invoice;
 }
 
@@ -866,6 +869,17 @@ export function recordPayment(input: RecordPaymentInput, actor = "system"): { pa
   recordBillingEvent("payment.recorded", `دفعة ${formatMoney(amount, currency)}${invoice ? ` على ${invoice.number}` : ""}`, actor, {
     paymentId: payment.id, invoiceId: payment.invoiceId, amount, method: payment.method, reference: payment.reference,
   });
+
+  /*
+   * الإشعار لا يُعطّل القيد ولا يُفشله.
+   *
+   * تسجيل المال نجح، وإخبار الناس به أمرٌ تالٍ له: لو رمى الطابور لسببٍ ما
+   * لَبَطلت دفعةٌ صحيحة. فيُحاط بحارسٍ صامت، وأثره مكتوبٌ في جدول الإشعارات.
+   */
+  try {
+    void notifyPaymentReceived(payment.id, payment.amount, payment.currency, invoice?.number ?? "—");
+  } catch { /* الطابور يحمل سببه */ }
+
   return { payment, invoice: updated };
 }
 
