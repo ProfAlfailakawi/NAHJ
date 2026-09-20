@@ -59,3 +59,25 @@ test("every seeded connector declares its mode", () => {
     assert.match(row, /mode: 'simulated'/, `موصلٌ مبدئي بلا إعلان وضعه:\n${row.slice(0, 120)}`);
   }
 });
+
+test("«موصول» تعني عملاً نجح، لا عميلاً أُنشئ", () => {
+  /*
+   * سقط هذا في مراجعة: `initFirebase` كانت ترفع `isConnected` وتختم وقت مزامنة
+   * بمجرّد إنشاء عميل SDK — وهو بناء كائنٍ في الذاكرة ينجح بمفاتيح ملفَّقة وبلا
+   * إنترنت. وفشلُ الكتابة كان يسجّل السبب ولا يُسقط الوصل. فالنشر الذي ترفض
+   * قواعدُه كلّ كتابة — وهو النشر القائم — يعرض وسماً أخضر وختمَ نجاح.
+   */
+  const source = read("server/firebase.ts");
+
+  const init = source.slice(source.indexOf("export function initFirebase"), source.indexOf("export function getFirestoreDb"));
+  assert.ok(!/isConnected\s*=\s*true/.test(init), "يُرفع الوصل عند إنشاء العميل لا عند نجاح عمل");
+  assert.ok(!/lastSyncTime\s*=\s*new Date/.test(init), "يُختم وقت مزامنة قبل أن تجري مزامنة");
+
+  /* والكتابة الناجحة هي التي ترفع، والفاشلة تُسقط. */
+  const sync = source.slice(source.indexOf("export async function syncDocToFirestore"));
+  assert.match(sync, /isConnected = true/, "الكتابة الناجحة لا تُثبت الوصل");
+  assert.match(sync, /isConnected = false/, "الفشل لا يُسقط الوصل");
+
+  assert.match(source, /connected: isConnected && !!firestoreDb && !!lastSyncTime && !connectionError/,
+    "الحالة المعروضة لا تشترط عملاً ناجحاً بلا فشلٍ بعده");
+});

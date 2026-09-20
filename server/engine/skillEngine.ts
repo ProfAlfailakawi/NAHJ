@@ -1,5 +1,5 @@
 import { db } from "../db.ts";
-import { actionsMatch, decide, extractFacts, runSuite, smoothReliability } from "./evaluationEngine.ts";
+import { actionsMatch, decide, deriveMinAge, extractFacts, runSuite, smoothReliability } from "./evaluationEngine.ts";
 import { Skill, AutonomyLevel, TestCase, ShadowComparison } from "../../src/types/index.ts";
 
 export class SkillEngine {
@@ -121,7 +121,12 @@ export class SkillEngine {
     passRate: number | null;
     testCases: TestCase[];
   }> {
-    const suite = runSuite(db.testCases, db.policies);
+    /*
+     * عتبات المؤسسة تُقرأ من لوائحها، فتُقيَّم المهارة بما تلتزم به المؤسسة
+     * فعلاً لا بما افترضه كاتب المحرّك.
+     */
+    const context = { minAgeYears: deriveMinAge(db.knowledgeSources, db.skills) };
+    const suite = runSuite(db.testCases, db.policies, context);
 
     for (const result of suite.results) {
       result.testCase.resultStatus = result.passed ? "pass" : "fail";
@@ -130,21 +135,42 @@ export class SkillEngine {
     }
 
     /*
-     * الموثوقية تتحرّك بما لوحظ.
+     * الموثوقية تتحرّك بما لوحظ — لكلّ مهارةٍ بنتيجة حالاتها هي.
      *
-     * تتحرّك للمهارات تحت التقييم وحدها (تتدرّب أو في الظل): المهارة الحيّة
+     * كانت نتيجة الحزمة كلّها تُطبَّق على كل مهارةٍ تحت التقييم. فحالاتُ قبولٍ
+     * تنجح ترفع موثوقية مهارة استرجاعٍ لم تُختبر أصلاً، فوق عتبة الـ85٪ التي
+     * تحرس الترقية إلى L5/L6. أي أن إعادة تشغيل الحزمة كانت تشتري صلاحيةً
+     * لمهارةٍ لم تُقيَّم — وهو نقضُ «يكتسب حقّ التنفيذ» من أساسه.
+     *
+     * وتتحرّك للمهارات تحت التقييم وحدها (تتدرّب أو في الظل): المهارة الحيّة
      * موثوقيتها من تشغيلها الفعلي لا من مقعد الاختبار، والمسوّدة لم تبدأ بعد.
+     *
+     * وحالةٌ بلا مهارةٍ محدَّدة تُقيَّم وتظهر في نسبة الحزمة، ولا تحرّك موثوقية
+     * أحد: ما لم يُختبر لا يُكافأ ولا يُعاقب.
      */
-    if (suite.passRate !== null) {
-      for (const skill of db.skills) {
-        if (skill.status !== "practicing" && skill.status !== "shadow") continue;
-        skill.reliabilityScore = smoothReliability(Number(skill.reliabilityScore) || 0, suite.passRate);
-        skill.reliabilityTier =
-          skill.reliabilityScore >= 95 ? "verified"
-          : skill.reliabilityScore >= 85 ? "high"
-          : skill.reliabilityScore >= 70 ? "medium" : "low";
-      }
+    const bySkill = new Map<string, { passed: number; total: number }>();
+    for (const result of suite.results) {
+      const skillId = String(result.testCase.skillId || "").trim();
+      if (!skillId) continue;
+      const bucket = bySkill.get(skillId) || { passed: 0, total: 0 };
+      bucket.total += 1;
+      if (result.passed) bucket.passed += 1;
+      bySkill.set(skillId, bucket);
     }
+
+    for (const skill of db.skills) {
+      if (skill.status !== "practicing" && skill.status !== "shadow") continue;
+      const bucket = bySkill.get(skill.id);
+      if (!bucket || !bucket.total) continue;
+      const observed = Math.round((bucket.passed / bucket.total) * 100);
+      skill.reliabilityScore = smoothReliability(Number(skill.reliabilityScore) || 0, observed);
+      skill.reliabilityTier =
+        skill.reliabilityScore >= 95 ? "verified"
+        : skill.reliabilityScore >= 85 ? "high"
+        : skill.reliabilityScore >= 70 ? "medium" : "low";
+    }
+
+    const untargeted = suite.results.filter(result => !String(result.testCase.skillId || "").trim()).length;
 
     const failed = suite.totalCount - suite.passedCount;
     db.logAudit({
@@ -156,7 +182,8 @@ export class SkillEngine {
       latencyMs: suite.results.reduce((sum, result) => sum + result.durationMs, 0),
       details: suite.totalCount === 0
         ? "لا حالات اختبار معرَّفة — لم يجرِ تقييم، ولم تتحرّك موثوقية."
-        : `تقييم ${suite.totalCount} حالة: اجتازت ${suite.passedCount}، ورسبت ${failed}. النسبة ${suite.passRate}%.`,
+        : `تقييم ${suite.totalCount} حالة: اجتازت ${suite.passedCount}، ورسبت ${failed}. النسبة ${suite.passRate}%.`
+          + (untargeted ? ` (${untargeted} حالة بلا مهارة محدَّدة — لم تحرّك موثوقية أحد.)` : ""),
       status: failed > 0 ? "warning" : "success",
     });
 
@@ -186,9 +213,45 @@ export class SkillEngine {
   }> {
     const comps = db.shadowComparisons;
 
+    /*
+     * ما يُقارَن هو وقائع الحالة، لا نصُّ عنوانها.
+     *
+     * كان القرار يُشتقّ من `caseTitle + humanReason` — وهما نصٌّ للعرض: لا سنّ
+     * فيهما ولا مستند ولا مبلغ. فحالةُ خصم الأشقاء تُصنَّف «استفساراً عاماً»
+     * ويُكتب فوق تطابقٍ حقيقي انحرافٌ لم يقع. وقياسُ انحرافٍ مُختلَق أسوأ من
+     * ألّا يُقاس شيء: يُرسل فريقاً يبحث عن خطأ موظفٍ لم يُخطئ.
+     *
+     * فالوقائع تُقرأ من مصدرٍ حقيقي وحده — حقل الوقائع المسجَّل، أو حالة العمل
+     * المرتبطة ببياناتها المهيكلة. وما لا مصدر له لا يُقارَن ولا يُحتسب.
+     */
+    const workItems = new Map<string, any>();
+    for (const item of db.workItems) {
+      workItems.set(String(item.id), item);
+      workItems.set(String(item.code), item);
+    }
+
+    /** يبني نصّ وقائع من حقول حالة العمل المهيكلة — لا من عنوانها. */
+    const factsFromWorkItem = (item: any): string => {
+      if (!item) return "";
+      const details = item.details || {};
+      const parts: string[] = [];
+      if (details.birthDate) {
+        const years = (Date.now() - new Date(String(details.birthDate)).getTime()) / (365.25 * 86_400_000);
+        if (Number.isFinite(years) && years > 0) parts.push(`عمره ${Math.floor(years * 10) / 10} سنوات`);
+      }
+      if (details.ageYears !== undefined) parts.push(`عمره ${details.ageYears} سنوات`);
+      if (details.civilIdVerified === true) parts.push("بطاقة مدنية سليمة");
+      if (details.civilIdVerified === false) parts.push("بطاقة منتهية");
+      if (details.amountKwd !== undefined) parts.push(`${details.amountKwd} د.ك`);
+      if (details.daysElapsed !== undefined) parts.push(`بعد مضي ${details.daysElapsed} يوماً`);
+      if (details.intent) parts.push(String(details.intent));
+      return parts.join("، ");
+    };
+
+    const shadowContext = { minAgeYears: deriveMinAge(db.knowledgeSources, db.skills) };
+    const unevaluated: string[] = [];
     for (const comparison of comps) {
       const humanAction = String(comparison.humanAction || comparison.humanDecision || "");
-      const scenario = `${comparison.caseTitle || comparison.title || ""} ${comparison.humanReason || ""}`;
 
       /*
        * حالةٌ بلا قرار بشري لا تُقارَن: لا يوجد ما يُقاس عليه. وتُترك كما هي بدل
@@ -196,7 +259,28 @@ export class SkillEngine {
        */
       if (!humanAction.trim()) continue;
 
-      const decision = decide(extractFacts(scenario), db.policies);
+      const recorded = String(comparison.scenario || "").trim();
+      const scenario = recorded || factsFromWorkItem(workItems.get(String(comparison.workItemId || "")));
+      if (!scenario.trim()) {
+        /* لا وقائع ⇒ لا قرار مُختلَق، ولا كتابة فوق السجل. */
+        comparison.evaluated = false;
+        unevaluated.push(comparison.id);
+        continue;
+      }
+
+      const decision = decide(extractFacts(scenario), db.policies, shadowContext);
+      if (decision.undecidable) {
+        /*
+         * وقائع ناقصة لا تُكوّن قراراً. وتُعلَن غير مُقاسة بدل أن تُحسب تطابقاً
+         * أو انحرافاً — وهو مبدأ المحرّك نفسه: ما يتعذّر تقييمه لا ينجح.
+         */
+        comparison.evaluated = false;
+        comparison.divergenceReason = decision.rationale;
+        unevaluated.push(comparison.id);
+        continue;
+      }
+
+      comparison.evaluated = true;
       comparison.aiAction = decision.action;
       comparison.aiDecision = decision.action;
       comparison.divergenceReason = decision.rationale;
@@ -205,7 +289,8 @@ export class SkillEngine {
       comparison.driftDetected = !comparison.matched;
     }
 
-    const decided = comps.filter(comparison => String(comparison.humanAction || comparison.humanDecision || "").trim());
+    const decided = comps.filter(comparison =>
+      comparison.evaluated === true && String(comparison.humanAction || comparison.humanDecision || "").trim());
     const matches = decided.filter(comparison => comparison.matched).length;
     const drifts = decided.filter(comparison => comparison.driftDetected).length;
     const matchRate = decided.length ? Math.round((matches / decided.length) * 100) : null;
@@ -218,8 +303,9 @@ export class SkillEngine {
       risk: drifts > 0 ? "medium" : "low",
       latencyMs: 160,
       details: decided.length === 0
-        ? "لا حالات ظلّ تحمل قراراً بشرياً — لم تجرِ مقارنة."
-        : `قورن ${decided.length} قراراً: تطابق ${matches}، وانحرف ${drifts}. نسبة التطابق ${matchRate}%.`,
+        ? `لا حالة ظلٍّ قابلة للمقارنة — لم تجرِ مقارنة.${unevaluated.length ? ` (${unevaluated.length} حالة بلا وقائع مسجَّلة.)` : ""}`
+        : `قورن ${decided.length} قراراً: تطابق ${matches}، وانحرف ${drifts}. نسبة التطابق ${matchRate}%.`
+          + (unevaluated.length ? ` و${unevaluated.length} حالة تُركت بلا مقارنة لغياب وقائعها — لا تُحتسب.` : ""),
       status: drifts > 0 ? "warning" : "success",
     });
 
