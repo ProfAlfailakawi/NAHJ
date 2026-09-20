@@ -339,6 +339,18 @@ export interface McpServerInfo {
   description: string;
   transport: 'sse' | 'http' | 'stdio' | 'in_memory';
   endpointUrl: string;
+  /*
+   * ما هذا الخادم في الواقع؟
+   *
+   *   `self`      — نهج نفسه: يستقبل JSON-RPC فعلاً على مساره، وأدواته تُنفَّذ.
+   *   `declared`  — عنوانٌ سجّله المالك ولم يُتصل به بعد.
+   *   `simulated` — بيانُ عرضٍ لا يقابله خادم.
+   *
+   * وكانت خمسة خوادم تُعرض «connected» بعناوين تشير إلى التطبيق نفسه
+   * (`0.0.0.0:3000`) وبأنواع مصادقة (mTLS، JWT) لا وجود لها — ووقت استجابةٍ
+   * يُولَّد بـ`Math.random`. فمن يقرأ الشاشة يظنّ المؤسسة موصولةً بخمسة أنظمة.
+   */
+  mode: 'self' | 'declared' | 'simulated';
   status: 'connected' | 'healthy' | 'degraded' | 'disconnected';
   protocolVersion: string;
   latencyMs: number;
@@ -402,5 +414,12 @@ export interface McpToolExecutionRecord {
   idempotencyKey: string;
   policyCode?: string;
   requiresApproval?: boolean;
+  /*
+   * هل نُفِّذت الأداة على نظامٍ حقيقي؟
+   *
+   * أدوات MCP اليوم تمرّ بطبقة الموصلات، وهي محاكاة. وسجلُّ تنفيذٍ لا يقول
+   * ذلك يُقرأ بعد شهر على أنه إثبات أن النظام فعل شيئاً في الخارج.
+   */
+  simulated?: boolean;
 }
 

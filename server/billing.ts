@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { openDatabase } from "./persistence.ts";
+import { notifyInvoiceIssued, notifyPaymentReceived } from "./notify.ts";
 
 /*
  * الاشتراك والفوترة — طبقة الترخيص.
@@ -348,6 +349,18 @@ export function resetBillingSchemaCache(): void {
   schemaReady = false;
 }
 
+/**
+ * سقف القراءة.
+ *
+ * كان خمسمائة صفّاً مهما طُلب، فتصديرٌ يطلب خمسة آلاف يأخذ خمسمائة ويُسمّي
+ * نفسه «كاملاً»: مؤسسةٌ تجاوزت خمسمائة فاتورة تأخذ نسخةً ناقصة ولا تعلم.
+ * والسقف يبقى حارساً من طلبٍ بلا حدّ، لكنه لا يكذب على من طلب التاريخ كلّه.
+ *
+ * والمسارات تمرّر حدودها الصغيرة كما هي، فلا يتضخّم ردُّ شاشةٍ بهذا.
+ */
+export const EXPORT_LIMIT = 100_000;
+const clampLimit = (limit: number) => Math.min(Math.max(Math.floor(limit) || 1, 1), EXPORT_LIMIT);
+
 /* ------------------------------------------------------------ سجلّ الأحداث */
 
 export interface BillingEvent {
@@ -367,7 +380,7 @@ export function recordBillingEvent(type: string, summary: string, actor = "syste
 }
 
 export function listBillingEvents(limit = 100): BillingEvent[] {
-  const rows = db().prepare("SELECT * FROM billing_events ORDER BY at DESC LIMIT ?").all(Math.min(Math.max(limit, 1), 500)) as Array<Record<string, unknown>>;
+  const rows = db().prepare("SELECT * FROM billing_events ORDER BY at DESC LIMIT ?").all(clampLimit(limit)) as Array<Record<string, unknown>>;
   return rows.map(row => ({
     id: String(row.id), at: String(row.at), type: String(row.type), actor: String(row.actor),
     summary: String(row.summary), detail: safeJson(String(row.detail), {}),
@@ -695,7 +708,7 @@ function invoiceFromRow(row: Record<string, unknown>): Invoice {
 
 export function listInvoices(limit = 60): Invoice[] {
   const rows = db().prepare("SELECT * FROM billing_invoices ORDER BY issued_at DESC, number DESC LIMIT ?")
-    .all(Math.min(Math.max(limit, 1), 500)) as Array<Record<string, unknown>>;
+    .all(clampLimit(limit)) as Array<Record<string, unknown>>;
   return rows.map(invoiceFromRow);
 }
 
@@ -788,6 +801,8 @@ export function issueInvoice(input: IssueInvoiceInput, actor = "system"): Invoic
   recordBillingEvent("invoice.issued", `فاتورة ${invoice.number} بقيمة ${formatMoney(invoice.total, currency)}`, actor, {
     invoiceId: invoice.id, number: invoice.number, total: invoice.total, currency,
   });
+  /* الإخبار تالٍ للإصدار ولا يُبطله — وفاتورةٌ لا يعلم بها أحد تُسدَّد متأخرة. */
+  try { void notifyInvoiceIssued(invoice.id); } catch { /* الطابور يحمل سببه */ }
   return invoice;
 }
 
@@ -866,12 +881,23 @@ export function recordPayment(input: RecordPaymentInput, actor = "system"): { pa
   recordBillingEvent("payment.recorded", `دفعة ${formatMoney(amount, currency)}${invoice ? ` على ${invoice.number}` : ""}`, actor, {
     paymentId: payment.id, invoiceId: payment.invoiceId, amount, method: payment.method, reference: payment.reference,
   });
+
+  /*
+   * الإشعار لا يُعطّل القيد ولا يُفشله.
+   *
+   * تسجيل المال نجح، وإخبار الناس به أمرٌ تالٍ له: لو رمى الطابور لسببٍ ما
+   * لَبَطلت دفعةٌ صحيحة. فيُحاط بحارسٍ صامت، وأثره مكتوبٌ في جدول الإشعارات.
+   */
+  try {
+    void notifyPaymentReceived(payment.id, payment.amount, payment.currency, invoice?.number ?? "—");
+  } catch { /* الطابور يحمل سببه */ }
+
   return { payment, invoice: updated };
 }
 
 export function listPayments(limit = 60): Payment[] {
   const rows = db().prepare("SELECT * FROM billing_payments ORDER BY paid_at DESC LIMIT ?")
-    .all(Math.min(Math.max(limit, 1), 500)) as Array<Record<string, unknown>>;
+    .all(clampLimit(limit)) as Array<Record<string, unknown>>;
   return rows.map(row => ({
     id: String(row.id),
     invoiceId: row.invoice_id ? String(row.invoice_id) : null,

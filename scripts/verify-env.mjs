@@ -140,6 +140,48 @@ if (!provider || provider === 'manual') {
   }
 }
 
+console.log(`\n${C.bold}  النسخ الاحتياطي${C.off}`);
+/*
+ * النسخة بجوار الأصل تضيع معه. ولا نستطيع الجزم بأن المجلد على قرصٍ آخر من
+ * داخل العملية، لكن كونَه داخل مجلد القاعدة نفسه مؤشّرٌ قاطع على أنه ليس كذلك.
+ */
+const backupHours = Number(val('NAHJ_BACKUP_HOURS') || 24);
+if (!(backupHours > 0)) {
+  warnings += 1;
+  line('◐', C.amber, 'النسخ الدوري معطّل', 'NAHJ_BACKUP_HOURS=0 — النسخ اليدوي وحده من لوحة المالك');
+} else {
+  line('✓', C.green, 'النسخ الدوري', `كل ${backupHours} ساعة، ويُستبقى آخر ${val('NAHJ_BACKUP_KEEP') || 14} نسخة`);
+}
+
+const backupDir = val('NAHJ_BACKUP_DIR') || path.join(path.dirname(dbPath), 'backups');
+const sameDisk = path.resolve(backupDir).startsWith(path.dirname(path.resolve(dbPath)) + path.sep);
+if (sameDisk) {
+  warnings += 1;
+  line('◐', C.amber, 'النسخ بجوار القاعدة', `${backupDir}\n       على القرص نفسه — يضيع معها. وجّهه إلى قرصٍ آخر أو خزّنه خارجياً.`);
+} else {
+  line('✓', C.green, 'مجلد النسخ', backupDir);
+}
+
+console.log(`\n${C.bold}  الإشعارات${C.off}`);
+const mailProvider = val('NAHJ_MAIL_PROVIDER').toLowerCase();
+if (!mailProvider) {
+  line('○', C.dim, 'بلا بريد', 'الأحداث تُسجَّل في لوحة المالك ولا تُرسل — التبليغ يدوي. وهذا وضعٌ صالح للبيع.');
+} else if (!['resend', 'sendgrid', 'webhook'].includes(mailProvider)) {
+  blocking += 1;
+  line('✗', C.red, 'مزوّد بريد غير معروف', `NAHJ_MAIL_PROVIDER=${mailProvider} — المدعوم: resend أو sendgrid أو webhook`);
+} else if (mailProvider === 'webhook') {
+  if (has('NAHJ_MAIL_WEBHOOK_URL')) line('✓', C.green, 'عنوان استقبال الإشعارات', val('NAHJ_MAIL_WEBHOOK_URL'));
+  else { blocking += 1; line('✗', C.red, 'عنوان الاستقبال مفقود', 'NAHJ_MAIL_WEBHOOK_URL مطلوب مع webhook'); }
+} else {
+  const missingMail = ['NAHJ_MAIL_API_KEY', 'NAHJ_MAIL_FROM'].filter(name => !has(name));
+  if (missingMail.length) {
+    blocking += 1;
+    line('✗', C.red, `${mailProvider} — إعداد ناقص`, `ينقص: ${missingMail.join('، ')}`);
+  } else {
+    line('✓', C.green, `${mailProvider} — مضبوط`, `المُرسِل: ${val('NAHJ_MAIL_FROM')}`);
+  }
+}
+
 console.log('\n  ─────────────────────────────────────────────');
 console.log(`  ${blocking ? C.red : C.green}${blocking} مانع${C.off} · ${C.amber}${warnings} تنبيه${C.off}`);
 if (blocking) console.log(`  ${C.red}لا تنشر قبل معالجة الموانع أعلاه.${C.off}`);

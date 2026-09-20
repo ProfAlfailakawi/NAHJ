@@ -103,3 +103,45 @@ test("زرّ الدفع لا يُعرض لمن يردّه الخادم، وال�
   assert.match(app, /useState<SectionId>\(\(\)=>/, "القسم الابتدائي ثابت لا يُشتق من العودة");
   assert.match(app, /has\("payment"\)/, "العودة من الدفع لا تفتح شاشة الاشتراك");
 });
+
+test("خوادم MCP تُعلن ما هي، ولا يُخترع لها قياس", async () => {
+  /*
+   * كانت خمسة خوادم تُعرض «connected» بعناوين تشير إلى التطبيق نفسه
+   * (`0.0.0.0:3000`)، وبأنواع مصادقة (mTLS، JWT) لا وجود لها، ووقت استجابةٍ
+   * يُولَّد بـ`Math.random()` عند كل فحص. فمن يقرأ الشاشة يظنّ المؤسسة موصولةً
+   * بخمسة أنظمة — ورقمٌ يبدو قياساً وليس منه شيء أسوأ من غياب الرقم.
+   *
+   * وواحدٌ منها حقيقي: نهج نفسه يستقبل JSON-RPC على مساره. فيبقى، ويُقاس فعلاً.
+   */
+  const { McpEngine } = await import("./engine/mcpEngine.ts");
+  const servers = McpEngine.getServers();
+
+  const self = servers.filter(server => server.mode === "self");
+  assert.equal(self.length, 1, "يجب أن يكون خادمٌ واحد حقيقياً: نهج نفسه");
+  assert.equal(self[0].endpointUrl, "/api/mcp/rpc", "الخادم الحقيقي لا يشير إلى مساره");
+
+  for (const server of servers.filter(server => server.mode !== "self")) {
+    assert.notEqual(server.status, "connected", `خادمٌ محاكى يُعلن وصلاً: ${server.name}`);
+    assert.equal(server.latencyMs, 0, `وقت استجابةٍ مخترع لخادمٍ لا وجود له: ${server.name}`);
+    assert.ok(!/0\.0\.0\.0|localhost/.test(server.endpointUrl), `عنوانٌ يشير إلى التطبيق نفسه: ${server.name}`);
+    assert.ok(!/mTLS|JWT|OAuth/i.test(server.authType), `نوع مصادقةٍ مُدَّعى: ${server.authType}`);
+  }
+
+  /* ولا يُولَّد قياس: الفحص يُنفَّذ فعلاً على الحقيقي، ويُمتنع عن غيره. */
+  const source = read("server/engine/mcpEngine.ts");
+  const ping = source.slice(source.indexOf("public static async pingServer"), source.indexOf("handleJsonRpc(payload"));
+  assert.ok(!/Math\.random/.test(ping), "وقت الاستجابة ما زال يُولَّد عشوائياً");
+
+  const simulated = await McpEngine.pingServer(servers.find(server => server.mode === "simulated")!.id);
+  assert.equal(simulated.latencyMs, null, "أُعطي قياسٌ لخادمٍ لم يُطرق");
+
+  const real = await McpEngine.pingServer(self[0].id);
+  assert.equal(real.status, "healthy", "الخادم الحقيقي لا يجيب على بروتوكوله");
+  assert.ok(typeof real.latencyMs === "number" && real.latencyMs > 0, "قياسٌ حقيقي مفقود");
+});
+
+test("تنفيذ أداة MCP يُسجَّل محاكاةً ما دام يمرّ بطبقة الموصلات", async () => {
+  const { McpEngine } = await import("./engine/mcpEngine.ts");
+  const execution = await McpEngine.executeTool("sis_check_seats", { grade: "KG2" });
+  assert.equal(execution.simulated, true, "سجلُّ تنفيذٍ لا يقول إنه محاكاة يُقرأ إثباتاً على فعلٍ خارجي");
+});

@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { db } from "./db.ts";
+import { db, DemoSandbox } from "./db.ts";
 import { PolicyEngine } from "./engine/policyEngine.ts";
 import { SkillEngine } from "./engine/skillEngine.ts";
 import { ConnectorLayer } from "./engine/connectors.ts";
@@ -14,6 +14,11 @@ import { gatewayStatus } from "./payments.ts";
 import { billingRouter, enforceSubscription } from "./billingRoutes.ts";
 import { confinePartners, partnerRouter } from "./partnerRoutes.ts";
 import { paymentRouter } from "./paymentRoutes.ts";
+import {
+  LEDGER_LABELS, OWNER_ONLY, backupStatus, buildFullExport, buildLedgerCsv, describeExport,
+  humanBytes, listBackups, runBackup, type LedgerName,
+} from "./archive.ts";
+import { flushNotifications, listNotifications, notifyStatus } from "./notify.ts";
 import { incrementUsage, maxAutonomyLevel } from "./billing.ts";
 import {
   AuthenticatedRequest,
@@ -28,6 +33,7 @@ import {
   logout,
   needsFirstRunSetup,
   requireAuth,
+  requireOwner,
   requireRole,
   revokeSessions,
   setSessionCookies,
@@ -250,6 +256,109 @@ apiRouter.use("/billing", billingRouter);
  * الحارس لردّ 402 على محاولة السداد نفسها — وهو قفلٌ لا مخرج منه.
  */
 apiRouter.use("/payments", paymentRouter);
+
+/*
+ * التصدير والنسخ — قبل حارس الاشتراك.
+ *
+ * «البيانات للمؤسسة والخدمة هي المُباعة» سطرٌ لا معنى له إن مُنعت المؤسسة من
+ * أخذ بياناتها لحظةَ تجميدها. ومنعُ التصدير عن متأخّرٍ عن السداد ابتزازٌ لا
+ * تحصيل. وهذه المسارات قراءةٌ خالصة، فالحارس يمرّرها أصلاً — والتركيب هنا
+ * يجعل ذلك صريحاً لا عرَضاً.
+ */
+const exportGuard = [requireAuth, requireRole("admin", "manager")] as const;
+
+apiRouter.get("/export/summary", ...exportGuard, (req: AuthenticatedRequest, res: Response) => {
+  const isOwner = req.account?.role === "owner";
+  res.json({
+    counts: describeExport(),
+    ledgers: (Object.keys(LEDGER_LABELS) as LedgerName[])
+      .filter(name => isOwner || !OWNER_ONLY.includes(name))
+      .map(name => ({ name, label: LEDGER_LABELS[name] })),
+    backup: isOwner ? backupStatus() : null,
+  });
+});
+
+/** نسخةٌ كاملة بصيغة JSON — كل ما جمعته المؤسسة في ملفٍ واحد. */
+apiRouter.get("/export/full.json", ...exportGuard, (req: AuthenticatedRequest, res: Response) => {
+  if (DemoSandbox.isDemoRequest()) {
+    return res.status(403).json({ error: "التصدير غير متاح في البيئة التجريبية.", code: "DEMO_READONLY" });
+  }
+  const payload = buildFullExport({ includeOwnerLedgers: req.account?.role === "owner" });
+
+  /*
+   * تصديرٌ كامل لبيانات مؤسسة حدثٌ أمني بقدر ما هو خدمة: يُسجَّل بمن فعله.
+   */
+  db.logAudit({
+    actorType: "human",
+    actorName: req.account!.email,
+    action: "EXPORT_FULL_STATE",
+    provenance: "تصدير البيانات",
+    risk: "medium",
+    latencyMs: 0,
+    details: `تصدير كامل للحالة التشغيلية (${payload.operations.skills.length} مهارة، ${payload.operations.auditEvents.length} حدث تدقيق).`,
+    status: "success",
+  });
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="nahj-export-${stamp}.json"`);
+  res.send(JSON.stringify(payload, null, 2));
+});
+
+/** دفترٌ واحد بصيغة CSV — يُفتح في أي جدول بلا وسيط. */
+apiRouter.get("/export/:ledger.csv", ...exportGuard, (req: AuthenticatedRequest, res: Response) => {
+  const ledger = String(req.params.ledger) as LedgerName;
+  if (!(ledger in LEDGER_LABELS)) return res.status(404).json({ error: "لا دفتر بهذا الاسم." });
+  if (OWNER_ONLY.includes(ledger) && req.account?.role !== "owner") {
+    return res.status(403).json({ error: "هذا الدفتر لمالك المنصة وحده.", code: "OWNER_ONLY" });
+  }
+  if (DemoSandbox.isDemoRequest()) {
+    return res.status(403).json({ error: "التصدير غير متاح في البيئة التجريبية.", code: "DEMO_READONLY" });
+  }
+
+  db.logAudit({
+    actorType: "human", actorName: req.account!.email, action: "EXPORT_LEDGER",
+    provenance: LEDGER_LABELS[ledger], risk: "low", latencyMs: 0,
+    details: `تصدير دفتر «${LEDGER_LABELS[ledger]}» بصيغة CSV.`, status: "success",
+  });
+
+  const stamp = new Date().toISOString().slice(0, 10);
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="nahj-${ledger}-${stamp}.csv"`);
+  res.send(buildLedgerCsv(ledger));
+});
+
+/* الإشعارات: حالتها وطابورها — لمن يملك النشر. */
+apiRouter.get("/notifications", requireAuth, requireOwner, (_req: AuthenticatedRequest, res: Response) => {
+  res.json({ status: notifyStatus(), recent: listNotifications(40) });
+});
+
+apiRouter.post("/notifications/flush", requireAuth, requireOwner, async (_req: AuthenticatedRequest, res: Response) => {
+  res.json(await flushNotifications());
+});
+
+/* النسخ الاحتياطي يخصّ من يملك النشر — لا من يستعمله. */
+apiRouter.get("/backup", requireAuth, requireOwner, (_req: AuthenticatedRequest, res: Response) => {
+  res.json({
+    status: backupStatus(),
+    files: listBackups().map(file => ({ ...file, size: humanBytes(file.sizeBytes), path: undefined })),
+  });
+});
+
+apiRouter.post("/backup/run", requireAuth, requireOwner, (req: AuthenticatedRequest, res: Response) => {
+  const result = runBackup();
+  db.logAudit({
+    actorType: "human", actorName: req.account!.email, action: "RUN_BACKUP",
+    provenance: "نسخة احتياطية", risk: "low", latencyMs: 0,
+    details: result.ok
+      ? `نسخة احتياطية: ${result.file!.name} (${humanBytes(result.file!.sizeBytes)})${result.pruned.length ? `، وحُذف ${result.pruned.length} أقدم` : ""}.`
+      : `تعذّرت النسخة الاحتياطية: ${result.reason}`,
+    status: result.ok ? "success" : "warning",
+  });
+  if (!result.ok) return res.status(500).json({ ok: false, error: result.reason });
+  res.json({ ok: true, file: { ...result.file, size: humanBytes(result.file!.sizeBytes), path: undefined }, pruned: result.pruned });
+});
+
 apiRouter.use(enforceSubscription);
 
 // 1. Context & User Switching
@@ -1156,18 +1265,24 @@ apiRouter.get("/mcp/servers", (req: Request, res: Response) => {
   });
 });
 
-apiRouter.post("/mcp/servers", (req: Request, res: Response) => {
+/*
+ * تسجيل خادم وإزالته فعلان إداريان.
+ *
+ * وكانا مفتوحين لكل من يملك جلسة: مُطَّلعٌ يستطيع حذف خوادم المؤسسة أو تسجيل
+ * عنوانٍ باسمها. وسجلُّ التدقيق يكتب اسمه — لكن بعد وقوع الفعل.
+ */
+apiRouter.post("/mcp/servers", requireAuth, requireRole("admin"), (req: AuthenticatedRequest, res: Response) => {
   const server = McpEngine.registerServer(req.body);
   res.json({ success: true, server });
 });
 
-apiRouter.delete("/mcp/servers/:id", (req: Request, res: Response) => {
+apiRouter.delete("/mcp/servers/:id", requireAuth, requireRole("admin"), (req: AuthenticatedRequest, res: Response) => {
   const success = McpEngine.removeServer(req.params.id);
   res.json({ success });
 });
 
-apiRouter.post("/mcp/servers/:id/ping", (req: Request, res: Response) => {
-  const result = McpEngine.pingServer(req.params.id);
+apiRouter.post("/mcp/servers/:id/ping", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  const result = await McpEngine.pingServer(req.params.id);
   res.json({ success: true, ...result });
 });
 

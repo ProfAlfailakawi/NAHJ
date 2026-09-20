@@ -12,21 +12,34 @@ import {
 export class McpEngine {
   private static protocolVersion = "2024-11-05";
 
+  /*
+   * سجلّ خوادم MCP.
+   *
+   * واحدٌ منها حقيقي: نهج نفسه. مسار `/api/mcp/rpc` يستقبل JSON-RPC 2.0
+   * ويجيب `initialize` و`tools/list` و`tools/call` فعلاً — فأي عميل MCP
+   * يستطيع أن يتكلّم معه. والأربعة الباقية كانت تُعرض «connected» بعناوين
+   * تشير إلى التطبيق نفسه (`0.0.0.0:3000`)، وبأنواع مصادقة (mTLS، JWT) لا
+   * وجود لها، ووقت استجابةٍ يُولَّد بـ`Math.random`. فمن يقرأ الشاشة يظنّ
+   * المؤسسة موصولةً بخمسة أنظمة، ولا خادم واحد منها قائم.
+   *
+   * فصارت تُعلن نفسها محاكاةً، وعناوينها لا تدّعي مساراً لا يستقبل شيئاً.
+   */
   private static servers: McpServerInfo[] = [
     {
       id: "sis-mcp-server",
       name: "Future SIS Core MCP Server",
       description: "يوفر أدوات الاستعلام عن مقاعد الطلاب، تسجيل الشعب، والرسوم الدراسية المعتمدة عبر بروتوكول MCP.",
       transport: "sse",
-      endpointUrl: "http://0.0.0.0:3000/api/mcp/sse/sis",
-      status: "connected",
+      endpointUrl: "",
+      status: "disconnected",
+      mode: "simulated",
       protocolVersion: "2024-11-05",
-      latencyMs: 18,
+      latencyMs: 0,
       toolsCount: 3,
       resourcesCount: 2,
       promptsCount: 1,
-      lastPing: "منذ 30 ثانية",
-      authType: "OAuth 2.0 Mutual TLS (mTLS)",
+      lastPing: "",
+      authType: "—",
       capabilities: {
         tools: true,
         resources: true,
@@ -39,15 +52,16 @@ export class McpEngine {
       name: "DocVault Vision & OCR MCP Server",
       description: "خادم MCP متخصص في قراءة وفحص البطاقات المدنية، استخراج تاريخ الميلاد، ومطابقة الهوية.",
       transport: "http",
-      endpointUrl: "http://0.0.0.0:3000/api/mcp/rpc/ocr",
-      status: "connected",
+      endpointUrl: "",
+      status: "disconnected",
+      mode: "simulated",
       protocolVersion: "2024-11-05",
-      latencyMs: 115,
+      latencyMs: 0,
       toolsCount: 2,
       resourcesCount: 1,
       promptsCount: 1,
-      lastPing: "منذ دقيقة",
-      authType: "Bearer Token (Signed JWT)",
+      lastPing: "",
+      authType: "—",
       capabilities: {
         tools: true,
         resources: true,
@@ -60,15 +74,16 @@ export class McpEngine {
       name: "K-Net Payment Gateway MCP Server",
       description: "بوابة الدفع الإلكتروني K-Net المربوطة بمحرك الحوكمة والسياسات المالية الصارمة لمنع المعاملات دون اعتماد.",
       transport: "http",
-      endpointUrl: "http://0.0.0.0:3000/api/mcp/rpc/knet",
-      status: "connected",
+      endpointUrl: "",
+      status: "disconnected",
+      mode: "simulated",
       protocolVersion: "2024-11-05",
-      latencyMs: 38,
+      latencyMs: 0,
       toolsCount: 2,
       resourcesCount: 1,
       promptsCount: 0,
-      lastPing: "منذ 45 ثانية",
-      authType: "HMAC Signed API Key",
+      lastPing: "",
+      authType: "—",
       capabilities: {
         tools: true,
         resources: true,
@@ -81,15 +96,16 @@ export class McpEngine {
       name: "Campus Tour Calendar MCP Server",
       description: "إدارة مواعيد المقابلات والجولات التعريفية مع مديري المراحل وموظفي القبول.",
       transport: "sse",
-      endpointUrl: "http://0.0.0.0:3000/api/mcp/sse/calendar",
-      status: "connected",
+      endpointUrl: "",
+      status: "disconnected",
+      mode: "simulated",
       protocolVersion: "2024-11-05",
-      latencyMs: 42,
+      latencyMs: 0,
       toolsCount: 2,
       resourcesCount: 1,
       promptsCount: 1,
-      lastPing: "منذ دقيقتين",
-      authType: "Google Service Account",
+      lastPing: "",
+      authType: "—",
       capabilities: {
         tools: true,
         resources: true,
@@ -99,18 +115,19 @@ export class McpEngine {
     },
     {
       id: "company-brain-mcp-server",
-      name: "NAHJ Company Brain Knowledge MCP Server",
+      name: "نهج — خادم MCP (يستقبل JSON-RPC فعلاً)",
       description: "خادم الذاكرة المؤسسية واللوائح الإدارية المعتمدة وتحديد تضارب السياسات وسجل الحوكمة.",
       transport: "in_memory",
-      endpointUrl: "mcp://internal/company-brain",
+      endpointUrl: "/api/mcp/rpc",
       status: "connected",
+      mode: "self",
       protocolVersion: "2024-11-05",
       latencyMs: 4,
       toolsCount: 3,
       resourcesCount: 3,
       promptsCount: 2,
-      lastPing: "لحظي (داخلي)",
-      authType: "Internal Kernel Sandbox",
+      lastPing: "",
+      authType: "جلسة نهج (نفس مصادقة الواجهة)",
       capabilities: {
         tools: true,
         resources: true,
@@ -441,50 +458,40 @@ export class McpEngine {
     return this.recentExecutions;
   }
 
-  // Register New External Server
+  /**
+   * يسجّل عنوان خادم MCP خارجي.
+   *
+   * تسجيلٌ لا وصل: نهج لا يفتح اتصالاً بعدُ بخوادم خارجية، فالعنوان يُحفظ
+   * ويُعلَن «مسجَّل لم يُتصل به». وكان التسجيل يُعلن الخادم «connected» بوقت
+   * استجابةٍ مكتوب، بل ويخترع له أداةً «مكتشفةً آلياً» لم تُكتشف من أحد —
+   * فيُبنى على وهم الاكتشاف سلوكٌ يُنفَّذ.
+   */
   public static registerServer(newServer: Partial<McpServerInfo>): McpServerInfo {
     const server: McpServerInfo = {
       id: newServer.id || `ext-mcp-${Date.now()}`,
       name: newServer.name || "External MCP Server",
       description: newServer.description || "External Model Context Protocol Server",
       transport: newServer.transport || "sse",
-      endpointUrl: newServer.endpointUrl || "http://localhost:8000/sse",
-      status: "connected",
+      endpointUrl: newServer.endpointUrl || "",
+      mode: "declared",
+      status: "disconnected",
       protocolVersion: "2024-11-05",
-      latencyMs: 35,
-      toolsCount: 2,
-      resourcesCount: 1,
+      latencyMs: 0,
+      toolsCount: 0,
+      resourcesCount: 0,
       promptsCount: 0,
       isExternal: true,
-      lastPing: "الآن",
-      authType: newServer.authType || "Bearer Token",
+      lastPing: "",
+      authType: newServer.authType || "—",
       capabilities: {
-        tools: true,
-        resources: true,
+        tools: false,
+        resources: false,
         prompts: false,
-        logging: true,
+        logging: false,
       },
     };
 
     this.servers.push(server);
-
-    // Auto add a discovered tool from this external server
-    this.tools.push({
-      name: `${server.id.replace(/-/g, "_")}_custom_tool`,
-      serverId: server.id,
-      serverName: server.name,
-      description: `Discovered MCP Tool from ${server.name}`,
-      descriptionAr: `أداة مكتشفة آلياً عبر بروتوكول MCP من خادم ${server.name}`,
-      category: "external",
-      idempotent: true,
-      inputSchema: {
-        type: "object",
-        properties: {
-          query: { type: "string", description: "Search or action payload" },
-        },
-        required: ["query"],
-      },
-    });
 
     db.logAudit({
       actorType: "human",
@@ -494,7 +501,7 @@ export class McpEngine {
       provenance: server.endpointUrl,
       risk: "medium",
       latencyMs: 25,
-      details: `تسجيل خادم MCP خارجي جديد: ${server.name} بنمط نقل ${server.transport}`,
+      details: `تسجيل عنوان خادم MCP خارجي: ${server.name}. لم يُفتح اتصال ولم تُكتشف أدوات — التسجيل حفظُ عنوان.`,
       status: "success",
     });
 
@@ -514,16 +521,38 @@ export class McpEngine {
     return false;
   }
 
-  // Ping Server
-  public static pingServer(serverId: string): { status: string; latencyMs: number } {
+  /**
+   * يفحص خادماً.
+   *
+   * وما يُفحص فعلاً واحد: نهج نفسه — يُنفَّذ عليه `initialize` ويُقاس زمنه
+   * حقيقةً. وما عداه لا يُطرق: لا اتصال يُفتح، فلا يُخترع له وقت استجابة.
+   *
+   * وكان الفحص يكتب «connected» ووقتاً من `Math.random()` لأي خادم مهما كان —
+   * رقمٌ يبدو قياساً وليس منه شيء.
+   */
+  public static async pingServer(serverId: string): Promise<{ status: string; latencyMs: number | null; mode: string }> {
     const server = this.servers.find((s) => s.id === serverId);
-    if (server) {
-      server.lastPing = "الآن";
-      server.status = "connected";
-      server.latencyMs = Math.floor(15 + Math.random() * 30);
-      return { status: "healthy", latencyMs: server.latencyMs };
+    if (!server) return { status: "not_found", latencyMs: null, mode: "" };
+
+    if (server.mode !== "self") {
+      server.lastPing = "";
+      server.status = "disconnected";
+      server.latencyMs = 0;
+      return {
+        status: server.mode === "declared" ? "declared_not_contacted" : "simulated",
+        latencyMs: null,
+        mode: server.mode,
+      };
     }
-    return { status: "not_found", latencyMs: 0 };
+
+    const start = Date.now();
+    const response = await this.handleJsonRpc({ jsonrpc: "2.0", id: `ping_${start}`, method: "initialize", params: {} });
+    const latencyMs = Math.max(1, Date.now() - start);
+    const healthy = Boolean(response?.result?.protocolVersion);
+    server.lastPing = new Date().toISOString();
+    server.status = healthy ? "healthy" : "degraded";
+    server.latencyMs = latencyMs;
+    return { status: healthy ? "healthy" : "degraded", latencyMs, mode: "self" };
   }
 
   // Standard JSON-RPC 2.0 Dispatcher (The Heart of Model Context Protocol)
@@ -797,6 +826,12 @@ export class McpEngine {
       idempotencyKey,
       policyCode,
       requiresApproval,
+      /*
+       * التنفيذ يمرّ بطبقة الموصلات، وهي محاكاة لا تُخرج طلب شبكة. والسجلّ
+       * يقولها: سطرٌ لا يذكرها يُقرأ بعد شهر إثباتاً أن النظام فعل شيئاً في
+       * الخارج — وهو أخطر ما يُترك في سجلٍّ يُراجَع.
+       */
+      simulated: true,
     };
 
     // Keep last 30 executions

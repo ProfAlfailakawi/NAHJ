@@ -3,9 +3,12 @@ import path from "path";
 import fs from "fs";
 import { apiRouter, authRouter } from "./server/routes.ts";
 import { paymentPublicRouter } from "./server/paymentRoutes.ts";
+import { publicRouter } from "./server/publicPages.ts";
 import { bootstrapFirstAccount, ensureOwnerAccount, purgeExpiredSessions } from "./server/auth.ts";
 import { ensureSubscription, startBillingWorker, stopBillingWorker } from "./server/billing.ts";
 import { DemoSandbox, DEMO_SESSION_TTL_MS, persistence } from "./server/db.ts";
+import { startBackupWorker, stopBackupWorker } from "./server/archive.ts";
+import { startNotifyWorker, stopNotifyWorker } from "./server/notify.ts";
 import { randomBytes } from "node:crypto";
 
 const DEMO_COOKIE = "nahj_demo";
@@ -72,6 +75,14 @@ async function startServer() {
 
   // Cap JSON body size to mitigate trivial memory-exhaustion payloads
   app.use(express.json({ limit: "1mb" }));
+
+  /*
+   * الصفحة العامة — قبل المصادقة وبعد قارئ JSON.
+   *
+   * لا جلسة لها ولا تقرأ بيانات مؤسسة: باقاتٌ علنية وحدها. وموضعها هنا يجعل
+   * رابط الأسعار يُفتح لمن لا حساب له — وهو الغرض منه.
+   */
+  app.use(publicRouter);
 
   // Health check endpoints for cloud deployment and probes
   app.get("/api/health", (req, res) => {
@@ -151,6 +162,10 @@ async function startServer() {
   ensureSubscription();
   ensureOwnerAccount();
   startBillingWorker();
+  /* النسخ الدوري — لا يكتب نسخةً عند الإقلاع، فالنشر المتكرر يُزيح نسخة الأمس. */
+  startBackupWorker();
+  /* الإشعارات: تُحسب التذكيرات ويُفرَغ الطابور خارج مسار الطلب. */
+  startNotifyWorker();
 
   const sessionCleanup = setInterval(() => purgeExpiredSessions(), 30 * 60_000);
   sessionCleanup.unref();
@@ -162,7 +177,7 @@ async function startServer() {
   // إيقاف نظيف: آخر لقطة تُكتب قبل الخروج فلا تضيع ثوانٍ من العمل.
   const shutdown = (signal: string) => {
     console.log(`[NAHJ] ${signal} received — flushing state.`);
-    try { persistence.flush(); stopBillingWorker(); } finally { process.exit(0); }
+    try { persistence.flush(); stopBillingWorker(); stopBackupWorker(); stopNotifyWorker(); } finally { process.exit(0); }
   };
   process.once("SIGINT", () => shutdown("SIGINT"));
   process.once("SIGTERM", () => shutdown("SIGTERM"));
