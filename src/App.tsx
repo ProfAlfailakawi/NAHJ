@@ -17,6 +17,8 @@ import { BillingView } from "./components/views/BillingView";
 import { OwnerView } from "./components/views/OwnerView";
 import { SubscriptionBanner } from "./components/SubscriptionBanner";
 import { SectorsView } from "./components/views/SectorsView";
+import { HelpPanel } from "./components/Explain";
+import { CommandPalette, type CommandTarget } from "./components/CommandPalette";
 import { ApprovalModal } from "./components/ApprovalModal";
 import { apiOrNull, authApi, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
 import { LoginScreen } from "./components/LoginScreen";
@@ -83,6 +85,7 @@ export default function App(){
   const [plans,setPlans]=useState<Plan[]>([]);
   const [billingLoading,setBillingLoading]=useState(true);
   const [governance,setGovernance]=useState<GovernanceData|null>(null);
+  const [todayData,setTodayData]=useState<{metrics:any;institutionalMemoryCoverage:any}|null>(null);
 
   const notify=useCallback((text:string,error=false)=>{setToast({text,error});window.setTimeout(()=>setToast(null),2800)},[]);
   const refreshAudit=useCallback(async()=>{const d=await apiOrNull<{auditEvents:AuditEvent[]}>("/audit");if(d?.auditEvents)setAudit(d.auditEvents)},[]);
@@ -102,6 +105,17 @@ export default function App(){
   },[]);
 
   useEffect(()=>{document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.documentElement.lang=lang},[lang]);
+  /*
+   * الاختصار المكتوب على الحقل منذ البداية ولم يكن مربوطاً بشيء. ويُلتقط على
+   * مستوى النافذة ليعمل من أي شاشة، ويُمنع السلوك الافتراضي للمتصفح.
+   */
+  useEffect(()=>{
+    const onKey=(event:KeyboardEvent)=>{
+      if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==="k"){event.preventDefault();setPaletteOpen(v=>!v)}
+    };
+    window.addEventListener("keydown",onKey);
+    return()=>window.removeEventListener("keydown",onKey);
+  },[]);
   /*
    * فحص الهوية. قابل لإعادة النداء لأن الدخول إلى البيئة التجريبية يغيّر الجواب:
    * الزائر التجريبي يمرّ من الحارس بلا حساب، فيصير "authenticated" داخل صندوقه.
@@ -123,7 +137,7 @@ export default function App(){
     try{
       const health=await apiOrNull<{status:string}>("/health"); setServerLive(health?.status==="ok");
       void refreshBilling();
-      const [context,learn,sk,wo,ap,co,au,an,gv,si]=await Promise.all([
+      const [context,learn,sk,wo,ap,co,au,an,gv,td,si]=await Promise.all([
         apiOrNull<ContextResponse>("/context"),
         apiOrNull<{proposals:LearningProposal[]}>("/learn"),
         apiOrNull<{skills:Skill[]}>("/skills"),
@@ -133,12 +147,13 @@ export default function App(){
         apiOrNull<{auditEvents:AuditEvent[]}>("/audit"),
         apiOrNull<AnalyticsData>("/analytics"),
         apiOrNull<{governance:GovernanceData}>("/governance"),
+        apiOrNull<{metrics:any;institutionalMemoryCoverage:any}>("/today"),
         apiOrNull<{state:SimulatorState}>("/simulator/state"),
       ]);
       if(context){setOrganization(context.organization);setUser(context.currentUser)}
       if(learn?.proposals)setProposals(learn.proposals); if(sk?.skills)setSkills(sk.skills); if(wo?.workItems)setWork(wo.workItems);
       if(ap?.approvalRequests)setApprovals(ap.approvalRequests); if(co?.connectors)setConnectors(co.connectors); if(au?.auditEvents)setAudit(au.auditEvents);
-      if(an)setAnalytics(an); if(gv?.governance)setGovernance(gv.governance); if(si?.state)setSim(si.state);
+      if(an)setAnalytics(an); if(gv?.governance)setGovernance(gv.governance); if(td)setTodayData(td); if(si?.state)setSim(si.state);
     }catch(error){
       // انتهاء الجلسة أثناء التحميل يعيدنا للبوابة بدل عرض بيانات بذرة كأنها سجلّ المؤسسة.
       if(error instanceof UnauthorizedError)setAuthState("anonymous");
@@ -182,6 +197,8 @@ export default function App(){
    * وفشلُ الطلب لا يُدّعى نجاحًا: الكوكي لم تُمسح، والجلسة قائمة — فيُقال ذلك
    * ولا يُعاد التحميل، لأن إعادته تُظهر شاشة دخولٍ بينما الحساب ما زال مفتوحًا.
    */
+  const [helpOpen,setHelpOpen]=useState(false);
+  const [paletteOpen,setPaletteOpen]=useState(false);
   const [signingOut,setSigningOut]=useState(false);
   const signOut=async()=>{
     setSigningOut(true);
@@ -240,7 +257,7 @@ export default function App(){
 
   let view:React.ReactNode;
   switch(section){
-    case "today":view=<TodayView lang={lang} organization={organization} onNavigate={setSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval}/>;break;
+    case "today":view=<TodayView lang={lang} organization={organization} onNavigate={setSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval} todayMetrics={todayData?.metrics||null} memory={todayData?.institutionalMemoryCoverage||null}/>;break;
     case "learn":view=<LearnView lang={lang} proposals={proposals} onResolve={resolve}/>;break;
     case "teach":view=<TeachView lang={lang} onSkillCodified={()=>void codified()} onNotify={notify}/>;break;
     case "skills":view=<SkillsView lang={lang} skills={skills} onPromote={(id,l)=>void promote(id,l)} onRollback={(id,v)=>void rollback(id,v)} onToggleKill={id=>void toggleSkill(id)}/>;break;
@@ -259,8 +276,12 @@ export default function App(){
   }
 
   return <>
-    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut} isOwner={isOwner} licenceBanner={<SubscriptionBanner snapshot={billing} lang={lang} onOpen={()=>setSection("billing")}/>}>{paused&&<div className="pause-banner"><TriangleAlert/>{lang==="ar"?"التنفيذ الآلي متوقف. التعلم والمراجعة يعملان.":"Autonomous execution is paused. Learning and review remain active."}</div>}{view}</Shell>
+    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut} onHelp={()=>setHelpOpen(true)} onSearch={()=>setPaletteOpen(true)} isOwner={isOwner} licenceBanner={<SubscriptionBanner snapshot={billing} lang={lang} onOpen={()=>setSection("billing")}/>}>{paused&&<div className="pause-banner"><TriangleAlert/>{lang==="ar"?"التنفيذ الآلي متوقف. التعلم والمراجعة يعملان.":"Autonomous execution is paused. Learning and review remain active."}</div>}{view}</Shell>
     <ApprovalModal lang={lang} approval={activeApprovalObj} busy={approvalBusy} onClose={()=>setActiveApproval(null)} onApprove={id=>void decideApproval(id,"approved")} onReject={(id,r)=>void decideApproval(id,"rejected",r)} onTakeOver={id=>void takeOver(id)}/>
+    <HelpPanel open={helpOpen} onClose={()=>setHelpOpen(false)}/>
+    <CommandPalette open={paletteOpen} onClose={()=>setPaletteOpen(false)} lang={lang} skills={skills} workItems={work}
+      approvals={approvals} audit={audit} isOwner={isOwner}
+      onGo={(target:CommandTarget)=>{setSection(target.section);if(target.approvalId)setActiveApproval(target.approvalId)}}/>
     {toast&&<div className={`toast ${toast.error?"error":""}`}>{toast.error?<TriangleAlert/>:<CheckCircle2/>}<span>{toast.text}</span></div>}
   </>;
 }

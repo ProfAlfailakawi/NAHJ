@@ -138,3 +138,61 @@ test("المبالغ تُخزَّن بالوحدة الصغرى كأعداد ص�
   assert.match(billing, /Number\.isInteger\(amount\)/, "قبول الكسور في المال يُنتج فواتير لا تُسوّى");
   assert.match(billing, /KWD: 3/, "الدينار الكويتي ثلاث منازل لا اثنتان");
 });
+
+/*
+ * ضوابط ميتة.
+ *
+ * ثلاثة عناصر كانت تُرى على الشاشة ولا تفعل شيئاً. ولا يكشفها فحص أنواع ولا
+ * بناء، لأن زرّاً بلا مُعالج نقر شيفرةٌ صحيحة تماماً:
+ *
+ *   ١. حقل البحث يحمل «⌘K» ولا يبحث ولا يستجيب للاختصار المكتوب عليه. وهو أسوأ
+ *      من غيابه: يَعِد بقدرة غير موجودة فيجرّبها من يُعرض عليه المنتج أمامه.
+ *   ٢. زرّ المساعدة في الشريط الجانبي بلا `onClick` إطلاقاً.
+ *   ٣. `Sidebar.tsx` ملفٌ كامل لا يستورده أحد — يحمل «143 Process» و«76%»
+ *      مكتوبةً، فيُعدَّل ظنّاً أنه المعروض.
+ */
+
+test("حقل البحث يبحث فعلاً، والاختصار المكتوب عليه مربوط", () => {
+  const shell = read("src/components/Shell.tsx");
+  const app = read("src/App.tsx");
+
+  assert.match(shell, /onSearch/, "شريط الأدوات لا يعرف البحث");
+  assert.doesNotMatch(
+    shell,
+    /<input placeholder=\{ar \? "ابحث في عقل المؤسسة"/,
+    "عاد حقل البحث إدخالاً لا يبحث",
+  );
+  assert.match(app, /setPaletteOpen/, "لا أحد يفتح لوحة الأوامر");
+  /* الاختصار المكتوب على الحقل منذ البداية: ⌘K / Ctrl+K. */
+  assert.match(app, /metaKey\|\|event\.ctrlKey\)&&event\.key\.toLowerCase\(\)==="k"/, "الاختصار غير مربوط");
+});
+
+test("زرّ المساعدة يفتح الدليل", () => {
+  const shell = read("src/components/Shell.tsx");
+  assert.match(shell, /className="nav-icon rail-help" onClick=\{onHelp\}/, "زرّ المساعدة بلا مُعالج نقر");
+  assert.match(read("src/App.tsx"), /<HelpPanel open=\{helpOpen\}/, "الدليل غير مركَّب");
+});
+
+test("لا شيفرة واجهة ميتة لا يستوردها أحد", () => {
+  assert.ok(!fs.existsSync("src/components/Sidebar.tsx"), "عاد الملف الميت — يُعدَّل ظنّاً أنه المعروض");
+});
+
+test("لا أرقام مكتوبة عادت إلى شاشة اليوم", () => {
+  const today = read("src/components/views/TodayView.tsx");
+  /* كانت 143 فوق أطلس العقل، و137 مُنجزاً، وشريط ذاكرة عند 61 و37 و11 و29. */
+  assert.doesNotMatch(today, /value="137"/, "عاد عدّاد اليوم رقماً مكتوباً");
+  assert.doesNotMatch(today, /value="61"|value="37"|value="11"|value="29"/, "عاد شريط الذاكرة أرقاماً مكتوبة");
+  assert.doesNotMatch(today, /<span>143<\/span>/, "عاد عدّاد العمليات رقماً مكتوباً");
+  assert.match(today, /memory\?\.documentedSkills/, "الشاشة لا تقرأ الأرقام المشتقّة");
+  /* وحقلٌ تعليمي كان يتسرّب إلى شاشة عامّة. */
+  assert.doesNotMatch(today, /details\?\.studentName/, "حقل تعليمي في شاشة عامّة");
+});
+
+test("المعجم يغطّي سُلّم الاستقلالية كاملاً بلغة الموظف", () => {
+  const glossary = read("src/lib/glossary.ts");
+  for (let level = 0; level <= 6; level++) {
+    assert.match(glossary, new RegExp(`level: ${level},`), `المستوى L${level} بلا وصف`);
+  }
+  /* الوصف بصيغة الفعل: ما يفعله النظام وما يبقى على الإنسان. */
+  assert.match(glossary, /yourPart/, "السُلّم لا يقول ماذا يبقى على الموظف");
+});
