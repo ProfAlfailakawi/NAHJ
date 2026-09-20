@@ -196,3 +196,22 @@ test("المعجم يغطّي سُلّم الاستقلالية كاملاً ب�
   /* الوصف بصيغة الفعل: ما يفعله النظام وما يبقى على الإنسان. */
   assert.match(glossary, /yourPart/, "السُلّم لا يقول ماذا يبقى على الموظف");
 });
+
+test("لا شاشة تكتب رقم عرضٍ بيدها", () => {
+  /*
+   * مسحٌ شاملٌ بعد تنظيف أربع شاشات: الأثر والحوكمة واليوم والتعلّم. كلها كانت
+   * تحمل ثوابت تبدو قياساً. والحارس هنا يمنع عودة النمط لا رقماً بعينه.
+   */
+  const views = [
+    "src/components/views/TodayView.tsx",
+    "src/components/views/LearnView.tsx",
+    "src/components/views/AnalyticsView.tsx",
+    "src/components/views/ControlView.tsx",
+  ];
+  for (const view of views) {
+    const source = read(view);
+    /* `value="123"` و`progress={76}` هما الشكلان اللذان تسلّل بهما الاختراع. */
+    assert.doesNotMatch(source, /value="\d+"/, `${view}: رقم عرضٍ مكتوب بيد`);
+    assert.doesNotMatch(source, /progress=\{\d+\}/, `${view}: نسبة مكتوبة بيد`);
+  }
+});
