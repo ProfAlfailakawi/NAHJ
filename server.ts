@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import { apiRouter, authRouter } from "./server/routes.ts";
 import { paymentPublicRouter } from "./server/paymentRoutes.ts";
+import { publicRouter } from "./server/publicPages.ts";
 import { bootstrapFirstAccount, ensureOwnerAccount, purgeExpiredSessions } from "./server/auth.ts";
 import { ensureSubscription, startBillingWorker, stopBillingWorker } from "./server/billing.ts";
 import { DemoSandbox, DEMO_SESSION_TTL_MS, persistence } from "./server/db.ts";
@@ -74,6 +75,14 @@ async function startServer() {
 
   // Cap JSON body size to mitigate trivial memory-exhaustion payloads
   app.use(express.json({ limit: "1mb" }));
+
+  /*
+   * الصفحة العامة — قبل المصادقة وبعد قارئ JSON.
+   *
+   * لا جلسة لها ولا تقرأ بيانات مؤسسة: باقاتٌ علنية وحدها. وموضعها هنا يجعل
+   * رابط الأسعار يُفتح لمن لا حساب له — وهو الغرض منه.
+   */
+  app.use(publicRouter);
 
   // Health check endpoints for cloud deployment and probes
   app.get("/api/health", (req, res) => {
