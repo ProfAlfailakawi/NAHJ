@@ -1,4 +1,5 @@
 import { db } from "../db.ts";
+import { actionsMatch, decide, extractFacts, runSuite, smoothReliability } from "./evaluationEngine.ts";
 import { Skill, AutonomyLevel, TestCase, ShadowComparison } from "../../src/types/index.ts";
 
 export class SkillEngine {
@@ -103,64 +104,125 @@ export class SkillEngine {
     return { success: true, active: skill.killSwitchActive, skill };
   }
 
+  /**
+   * يشغّل حزمة الاختبارات — تقييماً حقيقياً.
+   *
+   * كانت هذه الحلقة تكتب `pass` على كل حالة وتُعيد `passRate: 100` مكتوبةً. ولم
+   * يكن ذلك رقماً مجمَّلاً على شاشة — بل تعطيلاً لآلة السلامة: الترقية إلى L5/L6
+   * مشروطة بموثوقية ≥ 85٪، والموثوقية من التدرّب، والتدرّب يُنجح الكل. فالشرط
+   * الذي يحرس الطيار الآلي كان يُمرّر كل مهارة مهما كانت.
+   *
+   * والآن يمرّ كل سيناريو بمحرّك التقييم، وهو بدوره يمرّ بمحرّك السياسات نفسه
+   * الذي يحكم الإنتاج. والحالة التي يتعذّر تقييمها ترسب ولا تنجح.
+   */
   public static async runPracticeTests(): Promise<{
     passedCount: number;
     totalCount: number;
-    passRate: number;
+    passRate: number | null;
     testCases: TestCase[];
   }> {
-    const cases = db.testCases;
-    let passed = 0;
-    for (const tc of cases) {
-      await new Promise((r) => setTimeout(r, 40));
-      tc.resultStatus = "pass";
-      tc.executionTimeMs = Math.floor(180 + Math.random() * 200);
-      passed++;
+    const suite = runSuite(db.testCases, db.policies);
+
+    for (const result of suite.results) {
+      result.testCase.resultStatus = result.passed ? "pass" : "fail";
+      result.testCase.executionTimeMs = result.durationMs;
+      result.testCase.discrepancy = result.discrepancy;
     }
 
+    /*
+     * الموثوقية تتحرّك بما لوحظ.
+     *
+     * تتحرّك للمهارات تحت التقييم وحدها (تتدرّب أو في الظل): المهارة الحيّة
+     * موثوقيتها من تشغيلها الفعلي لا من مقعد الاختبار، والمسوّدة لم تبدأ بعد.
+     */
+    if (suite.passRate !== null) {
+      for (const skill of db.skills) {
+        if (skill.status !== "practicing" && skill.status !== "shadow") continue;
+        skill.reliabilityScore = smoothReliability(Number(skill.reliabilityScore) || 0, suite.passRate);
+        skill.reliabilityTier =
+          skill.reliabilityScore >= 95 ? "verified"
+          : skill.reliabilityScore >= 85 ? "high"
+          : skill.reliabilityScore >= 70 ? "medium" : "low";
+      }
+    }
+
+    const failed = suite.totalCount - suite.passedCount;
     db.logAudit({
       actorType: "system",
       actorName: "Practice Test Suite",
       action: "EXECUTE_PRACTICE_EVALS",
-      provenance: "Synthetic & Historical Test Bench",
-      risk: "low",
-      latencyMs: 380,
-      details: `تشغيل حزمة الاختبارات القياسية (Practice Suite): اجتازت ${passed} من أصل ${cases.length} حالات بنسبة نجاح 100%.`,
-      status: "success",
+      provenance: "محرّك التقييم + محرّك السياسات",
+      risk: failed > 0 ? "medium" : "low",
+      latencyMs: suite.results.reduce((sum, result) => sum + result.durationMs, 0),
+      details: suite.totalCount === 0
+        ? "لا حالات اختبار معرَّفة — لم يجرِ تقييم، ولم تتحرّك موثوقية."
+        : `تقييم ${suite.totalCount} حالة: اجتازت ${suite.passedCount}، ورسبت ${failed}. النسبة ${suite.passRate}%.`,
+      status: failed > 0 ? "warning" : "success",
     });
 
     return {
-      passedCount: passed,
-      totalCount: cases.length,
-      passRate: 100,
-      testCases: cases,
+      passedCount: suite.passedCount,
+      totalCount: suite.totalCount,
+      passRate: suite.passRate,
+      testCases: db.testCases,
     };
   }
 
+  /**
+   * يشغّل المقارنة في الظل — قراراً مقابل قرار.
+   *
+   * كانت هذه الدالة تقرأ سجلات مبذورة وتُعيد حساب نسبة التطابق المكتوبة فيها.
+   * أي أنها لم تكن تُقارن شيئاً: لا تُشكّل قرار نهج، ولا تضعه أمام قرار الموظف.
+   * فالنسبة كانت وصفاً للبذرة لا للنظام.
+   *
+   * والآن يُشتق قرار نهج من وقائع الحالة عبر محرّك التقييم — وهو بدوره يمرّ
+   * بمحرّك السياسات نفسه الذي يحكم الإنتاج — ثم يُقارَن بما فعله الموظف. فما
+   * يُقاس هو المسافة بين النظام والإنسان، وهو المقصود من الظل أصلاً.
+   */
   public static async runShadowComparison(): Promise<{
     comparisons: ShadowComparison[];
-    matchRate: number;
+    matchRate: number | null;
     driftCount: number;
   }> {
     const comps = db.shadowComparisons;
-    const matches = comps.filter((c) => c.matched).length;
-    const drifts = comps.filter((c) => c.driftDetected).length;
+
+    for (const comparison of comps) {
+      const humanAction = String(comparison.humanAction || comparison.humanDecision || "");
+      const scenario = `${comparison.caseTitle || comparison.title || ""} ${comparison.humanReason || ""}`;
+
+      /*
+       * حالةٌ بلا قرار بشري لا تُقارَن: لا يوجد ما يُقاس عليه. وتُترك كما هي بدل
+       * أن تُحتسب تطابقاً — وهو ما كان يفعله العدّ السابق ضمناً.
+       */
+      if (!humanAction.trim()) continue;
+
+      const decision = decide(extractFacts(scenario), db.policies);
+      comparison.aiAction = decision.action;
+      comparison.aiDecision = decision.action;
+      comparison.divergenceReason = decision.rationale;
+      comparison.matched = actionsMatch(humanAction, decision.action);
+      /* الانحراف: اختلافٌ في قرارٍ ليس مجرّد صياغة. */
+      comparison.driftDetected = !comparison.matched;
+    }
+
+    const decided = comps.filter(comparison => String(comparison.humanAction || comparison.humanDecision || "").trim());
+    const matches = decided.filter(comparison => comparison.matched).length;
+    const drifts = decided.filter(comparison => comparison.driftDetected).length;
+    const matchRate = decided.length ? Math.round((matches / decided.length) * 100) : null;
 
     db.logAudit({
       actorType: "ai",
       actorName: "Shadow Evaluation Engine",
       action: "RUN_SHADOW_COMPARISON",
-      provenance: "Live Shadow Observer",
-      risk: "low",
+      provenance: "محرّك التقييم + قرارات الموظفين المسجَّلة",
+      risk: drifts > 0 ? "medium" : "low",
       latencyMs: 160,
-      details: `مقارنة قرارات الظل (Shadow Decisions): نسبة التطابق مع الموظفين ${Math.round((matches / comps.length) * 100)}% مع رصد ${drifts} حالات انحراف تشغيلي.`,
-      status: "success",
+      details: decided.length === 0
+        ? "لا حالات ظلّ تحمل قراراً بشرياً — لم تجرِ مقارنة."
+        : `قورن ${decided.length} قراراً: تطابق ${matches}، وانحرف ${drifts}. نسبة التطابق ${matchRate}%.`,
+      status: drifts > 0 ? "warning" : "success",
     });
 
-    return {
-      comparisons: comps,
-      matchRate: Math.round((matches / comps.length) * 100),
-      driftCount: drifts,
-    };
+    return { comparisons: comps, matchRate, driftCount: drifts };
   }
 }
