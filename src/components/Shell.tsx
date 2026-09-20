@@ -1,9 +1,9 @@
 import React from "react";
-import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, CreditCard, Crown, FlaskConical, GraduationCap, History, Languages, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
+import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, Building2, CreditCard, Crown, FlaskConical, GraduationCap, History, Languages, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
 import { BrandLockup, NahjMark } from "./Brand";
 import type { Organization, User } from "../types";
 
-export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts" | "billing" | "owner";
+export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts" | "billing" | "owner" | "sectors";
 
 type ShellProps = {
   section: SectionId;
@@ -44,6 +44,7 @@ const nav: { id: SectionId; ar: string; en: string; icon: React.ElementType; gro
   { id: "audit", ar: "السجل", en: "Audit", icon: History, group:"govern" },
   { id: "accounts", ar: "الحسابات", en: "Accounts", icon: Users, group:"govern" },
   { id: "billing", ar: "الاشتراك", en: "Subscription", icon: CreditCard, group:"govern" },
+  { id: "sectors", ar: "النشاط", en: "Sector", icon: Building2, group:"govern" },
   { id: "owner", ar: "لوحة المالك", en: "Owner console", icon: Crown, group:"owner" },
 ];
 

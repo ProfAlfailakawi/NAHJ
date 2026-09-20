@@ -5,6 +5,7 @@ import { SkillEngine } from "./engine/skillEngine.ts";
 import { ConnectorLayer } from "./engine/connectors.ts";
 import { McpEngine } from "./engine/mcpEngine.ts";
 import { deriveMetrics, type MetricsInput } from "./engine/metricsEngine.ts";
+import { listSectors, EDUCATION_CODE } from "./packs/index.ts";
 import { generateAiResponse } from "./gemini.ts";
 import { AutonomyLevel, SkillStep, LearningSession, Skill } from "../src/types/index.ts";
 import { getFirebaseStatus } from "./firebase.ts";
@@ -984,6 +985,50 @@ apiRouter.get("/analytics", (req: Request, res: Response) => {
  * إثباتاً لم يجرِ. صار يُشتق بمطابقة الإجراءات عالية الخطورة بطلبات الموافقة،
  * فصفرُه يعني أننا بحثنا فلم نجد.
  */
+/*
+ * حزم الأنشطة.
+ *
+ * نهج عامٌّ في قلبه وكان تعليمياً في كل بيانة فيه. الحزمة تبدّل العقل التشغيلي
+ * كاملاً — مهاراته وسياساته وأنظمته والشخصية التي تحادثه — لا الألوان والأسماء.
+ */
+apiRouter.get("/sectors", (req: Request, res: Response) => {
+  res.json({ sectors: listSectors(), current: db.sectorCode || EDUCATION_CODE, channel: db.channel });
+});
+
+/*
+ * التطبيق هادمٌ: يمحو مهارات المؤسسة وسياساتها وحالات عملها. فلا يمرّ بضغطة —
+ * يحتاج تأكيداً صريحاً في جسم الطلب، ودور مشرف فأعلى. وسجلّ التدقيق لا يُمسّ:
+ * أثرُ ما جرى ملكُ المؤسسة لا ملكُ الحزمة.
+ *
+ * والبيئة التجريبية مسموحة عمداً: صندوق الزائر في الذاكرة، وتبديل القطاع فيه هو
+ * أوضح ما يُري أن المنتج ليس نظام مدارس.
+ */
+apiRouter.post("/sectors/apply", requireRole("admin"), (req: AuthenticatedRequest, res: Response) => {
+  if (req.body?.confirm !== "REPLACE") {
+    return void res.status(400).json({
+      error: 'تبديل القطاع يمحو المهارات والسياسات وحالات العمل. أرسل confirm="REPLACE" للتأكيد.',
+      code: "CONFIRMATION_REQUIRED",
+    });
+  }
+  const code = String(req.body?.code || "");
+  if (code === EDUCATION_CODE) {
+    return void res.status(400).json({
+      error: "حزمة التعليم هي الحزمة المبذورة أصلاً — لإعادتها أعد تهيئة النشر.",
+      code: "SEEDED_PACK",
+    });
+  }
+  const result = db.applySector(code, req.account?.email || "مشرف");
+  if (!result.ok) return void res.status(404).json({ error: result.reason });
+
+  res.json({
+    ok: true,
+    sector: db.sectorCode,
+    organization: db.organization,
+    channel: db.channel,
+    counts: { skills: db.skills.length, policies: db.policies.length, connectors: db.connectors.length },
+  });
+});
+
 apiRouter.get("/governance", (req: Request, res: Response) => {
   const metrics = deriveMetrics(metricsInput());
   res.json({
