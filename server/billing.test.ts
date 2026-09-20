@@ -15,10 +15,10 @@ import path from "node:path";
  */
 
 import {
-  addDays, addMonths, amendSubscription, archivePlan, billingSnapshot, cancelSubscription, changePlan,
+  addAccountCredit, addDays, addMonths, amendSubscription, archivePlan, billingSnapshot, cancelSubscription, changePlan,
   daysBetween, ensureBillingSchema, ensureSubscription, evaluateSubscription, extendSubscription,
   formatMoney, getAccountCredit, getPlan, getSubscription, issueInvoice, listInvoices, listPlans,
-  outstandingBalance, recordPayment, renewSubscription, resetBillingSchemaCache, revenueSummary,
+  listPayments, outstandingBalance, recordPayment, renewSubscription, resetBillingSchemaCache, revenueSummary,
   runBillingCycle, seedDefaultPlans, startSubscription, terminateSubscription, upsertPlan,
   type UsageSnapshot,
 } from "./billing.ts";
@@ -379,4 +379,80 @@ test("زرع الباقات لا يدهس تسعيراً عدّله المالك
   assert.equal(seedDefaultPlans(), 0, "لا باقة جديدة تُزرع فوق القائم");
   assert.equal(getPlan("starter")!.priceMonthly, 999_000, "سعر المالك يبقى");
   assert.ok(listPlans().length >= 5);
+});
+
+/* ------------------------------------------- الرصيد والتناسب عبر الدورات */
+
+/*
+ * عيبان كشفتهما مراجعة آلية على الفرع بعد دمجه، وكلاهما يُكلّف المؤسسة مالاً.
+ */
+
+test("رصيد التخفيض يُستهلك في التجديد التالي — لا يبقى وعداً على الشاشة", () => {
+  freshDatabase();
+  /* المقاعد تُثبَّت على حدّ الباقة الأدنى حتى لا تُشوّش رسومُ المقاعد الإضافية القياس. */
+  startSubscription({ planCode: "growth", cycle: "monthly", startedAt: addDays(new Date().toISOString(), -2), seats: 10, issueInvoice: false });
+  changePlan({ planCode: "starter", timing: "immediate" }, "owner@nahj.test");
+
+  const credit = getAccountCredit();
+  assert.ok(credit > 0, "التخفيض لم يقيّد رصيداً");
+
+  const { invoice } = renewSubscription("owner@nahj.test");
+  assert.ok(invoice, "التجديد بلا فاتورة");
+
+  /* الفاتورة تبقى بقيمتها الحقيقية، والرصيد يظهر دفعةً بوسيلة «رصيد». */
+  assert.equal(invoice!.total, 149_000, "قيمة الفاتورة تغيّرت بدل أن يُسدَّد منها");
+  assert.equal(invoice!.amountPaid, Math.min(credit, invoice!.total), "الرصيد لم يُستهلك");
+  assert.ok(listPayments(10).some(payment => payment.method === "credit"), "لا أثر للسداد من الرصيد");
+
+  /* وما استُهلك يُخصم، فلا يُصرف الرصيد مرتين. */
+  assert.equal(getAccountCredit(), Math.max(0, credit - invoice!.total));
+});
+
+test("الرصيد لا يتجاوز قيمة الفاتورة ولا يُصرف مرتين", () => {
+  freshDatabase();
+  upsertPlan({ code: "cheap", nameAr: "زهيدة", priceMonthly: 1_000 }, "tester");
+  startSubscription({ planCode: "cheap", cycle: "monthly", startedAt: addDays(new Date().toISOString(), -31), issueInvoice: false });
+  addAccountCredit(50_000, "KWD", "رصيد اختبار", "tester");
+
+  const first = renewSubscription("owner@nahj.test").invoice!;
+  assert.equal(first.amountPaid, 1_000, "سُدِّد أكثر من قيمة الفاتورة");
+  assert.equal(getAccountCredit(), 49_000);
+
+  const second = renewSubscription("owner@nahj.test").invoice!;
+  assert.equal(second.amountPaid, 1_000);
+  assert.equal(getAccountCredit(), 48_000, "الرصيد لا ينقص بالقدر الصحيح");
+});
+
+test("تغيير الدورة يبدأ مدّة جديدة متّسقة مع وسمها", () => {
+  freshDatabase();
+  /*
+   * الفخّ: اشتراك سنوي يُحوَّل إلى شهري في أوّله. الحساب بنسبةٍ واحدة على سعرَي
+   * دورتين مختلفتين كان يقيّد رصيداً يقارب سعر السنة كاملة، ويُحاسب على جزء من
+   * شهر، ويترك النهاية بعد أحد عشر شهراً وهو موسوم «شهري» — سنةُ خدمةٍ مجاناً.
+   */
+  startSubscription({ planCode: "growth", cycle: "annual", startedAt: addDays(new Date().toISOString(), -3), issueInvoice: false });
+  const { subscription, invoice } = changePlan({ planCode: "growth", cycle: "monthly", timing: "immediate" }, "owner@nahj.test");
+
+  assert.equal(subscription.cycle, "monthly");
+  const days = daysBetween(subscription.currentPeriodStart, subscription.currentPeriodEnd);
+  assert.ok(days >= 28 && days <= 31, `دورة شهرية طولها ${days} يوماً`);
+  assert.ok(
+    subscription.currentPeriodEnd <= addDays(new Date().toISOString(), 32),
+    "بقيت نهاية المدّة السنوية على اشتراك موسوم شهري",
+  );
+
+  /* والفرق لا يُنتج فاتورةً تفوق سعر الشهر، ولا رصيداً بحجم سنة. */
+  if (invoice) assert.ok(invoice.total <= 395_000, `فاتورة ${invoice.total} تتجاوز سعر الدورة الجديدة`);
+  assert.ok(getAccountCredit() < 3_950_000, "قُيِّد رصيدٌ بحجم اشتراك سنة كاملة");
+});
+
+test("الترقية داخل الدورة نفسها لا تحرّك حدودها", () => {
+  freshDatabase();
+  const started = addDays(new Date().toISOString(), -5);
+  startSubscription({ planCode: "starter", cycle: "monthly", startedAt: started, issueInvoice: false });
+  const before = getSubscription()!;
+
+  const { subscription } = changePlan({ planCode: "growth", timing: "immediate" }, "owner@nahj.test");
+  assert.equal(subscription.currentPeriodStart, before.currentPeriodStart, "تحرّكت بداية الدورة بلا سبب");
+  assert.equal(subscription.currentPeriodEnd, before.currentPeriodEnd, "تحرّكت نهاية الدورة بلا سبب");
 });

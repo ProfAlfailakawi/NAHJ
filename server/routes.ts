@@ -142,7 +142,18 @@ const realAdminOnly = (req: AuthenticatedRequest, res: Response, next: NextFunct
   next();
 };
 
-const accountsGuard = [requireAuth, realAdminOnly, requireRole("admin")] as const;
+/*
+ * إدارة الحسابات تمرّ بحارس الاشتراك أيضاً.
+ *
+ * `authRouter` مركَّب في `server.ts` على `/api/auth` قبل `apiRouter` وبمعزل عنه،
+ * فلا يبلغه `enforceSubscription` المركَّب داخل الثاني إطلاقاً. أي أن اشتراكاً
+ * موقوفاً كان يُجمّد كل شيء إلا ما يُنشئ الحسابات ويغيّر الأدوار ويُصدر كلمات
+ * المرور — وهي من أثقل الكتابات لا أخفّها، وفيها حدّ المقاعد المدفوع.
+ *
+ * ويُركَّب هنا لا على الموجّه كلّه: الدخول والخروج وتغيير المرء كلمة مروره تبقى
+ * مفتوحة، وإلا صار التجميد قفلاً بلا مفتاح.
+ */
+const accountsGuard = [requireAuth, realAdminOnly, requireRole("admin"), enforceSubscription] as const;
 
 authRouter.get("/accounts", ...accountsGuard, (_req: AuthenticatedRequest, res: Response) => {
   res.json({ accounts: listAccounts() });
@@ -179,7 +190,7 @@ authRouter.patch("/accounts/:id", ...accountsGuard, (req: AuthenticatedRequest, 
 /* إصدار كلمة مرور مؤقتة. سلّمها بقناة تثق بها — لا يوجد بريد يرسلها. */
 authRouter.post("/accounts/:id/password", ...accountsGuard, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    await adminSetPassword(req.params.id, req.body?.newPassword);
+    await adminSetPassword(req.params.id, req.body?.newPassword, req.account?.id);
     res.json({ ok: true, sessionsRevoked: true });
   } catch (error) {
     const status = Number((error as { status?: number })?.status) || 400;
@@ -188,7 +199,12 @@ authRouter.post("/accounts/:id/password", ...accountsGuard, async (req: Authenti
 });
 
 authRouter.post("/accounts/:id/revoke-sessions", ...accountsGuard, (req: AuthenticatedRequest, res: Response) => {
-  res.json({ ok: true, revoked: revokeSessions(req.params.id) });
+  try {
+    res.json({ ok: true, revoked: revokeSessions(req.params.id, req.account?.id) });
+  } catch (error) {
+    const status = Number((error as { status?: number })?.status) || 400;
+    res.status(status).json({ error: (error as Error)?.message || "تعذّر إنهاء الجلسات." });
+  }
 });
 
 /*

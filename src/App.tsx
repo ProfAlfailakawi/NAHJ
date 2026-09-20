@@ -20,7 +20,7 @@ import { SectorsView } from "./components/views/SectorsView";
 import { HelpPanel } from "./components/Explain";
 import { CommandPalette, type CommandTarget } from "./components/CommandPalette";
 import { ApprovalModal } from "./components/ApprovalModal";
-import { apiOrNull, authApi, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
+import { apiOrNull, authApi, SubscriptionBlockedError, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
 import { LoginScreen } from "./components/LoginScreen";
 import {
   demoUsers,initialOrganization,initialSkills,initialWorkItems,initialLearningProposals,
@@ -88,6 +88,32 @@ export default function App(){
   const [todayData,setTodayData]=useState<{metrics:any;institutionalMemoryCoverage:any}|null>(null);
 
   const notify=useCallback((text:string,error=false)=>{setToast({text,error});window.setTimeout(()=>setToast(null),2800)},[]);
+  /*
+   * غلافٌ واحد لكل كتابة.
+   *
+   * المسارات كانت تُنادى بـ`void`، فرفضُها يضيع بلا مُلتقط بينما يكمل النداء إلى
+   * إشعار النجاح. والغلاف يُمسك الرفض ويقول سببه الحقيقي: الاشتراك موقوف، أو
+   * الجلسة انتهت، أو تعذّرت العملية.
+   */
+  const guarded=useCallback(<A extends unknown[]>(fn:(...args:A)=>Promise<unknown>)=>async(...args:A)=>{
+    try{ await fn(...args) }
+    catch(error){
+      /*
+       * أعلام الانشغال تُطفأ هنا لا في المسارات.
+       *
+       * كل مسار يُشعل علمه ثم يطفئه بعد النداء. ورميُ الرفض يقفز فوق الإطفاء،
+       * فيبقى الزرّ دوّاراً إلى الأبد ويظنّ المستخدم أن العملية ما تزال جارية —
+       * وهو انطباعٌ أسوأ من رسالة الرفض نفسها.
+       */
+      setPracticeBusy(false); setShadowBusy(false); setSimBusy(false);
+      setApprovalBusy(false); setTestingConnector(null);
+      if(error instanceof SubscriptionBlockedError){ setToast({text:error.message,error:true}); window.setTimeout(()=>setToast(null),5200); void refreshBilling(); return }
+      if(error instanceof UnauthorizedError){ setAuthState("anonymous"); return }
+      setToast({text:lang==="ar"?"تعذّرت العملية. حاول مرة أخرى.":"Action failed. Try again.",error:true});
+      window.setTimeout(()=>setToast(null),3200);
+    }
+  },[lang]);
+
   const refreshAudit=useCallback(async()=>{const d=await apiOrNull<{auditEvents:AuditEvent[]}>("/audit");if(d?.auditEvents)setAudit(d.auditEvents)},[]);
   const refreshWork=useCallback(async()=>{const d=await apiOrNull<{workItems:WorkItem[]}>("/work");if(d?.workItems)setWork(d.workItems)},[]);
   const refreshApprovals=useCallback(async()=>{const d=await apiOrNull<{approvalRequests:ApprovalRequest[]}>("/approvals");if(d?.approvalRequests)setApprovals(d.approvalRequests)},[]);
@@ -228,30 +254,30 @@ export default function App(){
     notify(lang==="ar"?"تم الخروج من البيئة التجريبية":"Left the demo environment");
   };
 
-  const resolve=async(proposalId:string,clarificationId:string,answer:string)=>{
+  const resolve=guarded(async(proposalId:string,clarificationId:string,answer:string)=>{
     const d=await apiOrNull<{proposal:LearningProposal}>("/learn/clarify",{method:"POST",body:JSON.stringify({proposalId,clarificationId,selectedAnswer:answer})});
     if(d?.proposal)setProposals(v=>v.map(p=>p.id===proposalId?d.proposal:p));
     else setProposals(v=>v.map(p=>p.id===proposalId?{...p,status:"resolved",clarifications:p.clarifications?.map(c=>c.id===clarificationId?{...c,selectedAnswer:answer}:c)}:p));
     notify(lang==="ar"?"تم اعتماد القرار في عقل المؤسسة":"Decision verified in Company Brain");void refreshAudit();
-  };
-  const promote=async(id:string,l:AutonomyLevel)=>{
+  });
+  const promote=guarded(async(id:string,l:AutonomyLevel)=>{
     const d=await apiOrNull<{success:boolean;message:string;skill?:Skill}>(`/skills/${id}/promote`,{method:"POST",body:JSON.stringify({targetLevel:l})});
     if(d?.success&&d.skill)setSkills(v=>v.map(s=>s.id===id?d.skill!:s));
     else if(d && !d.success){notify(d.message,true);return}else setSkills(v=>v.map(s=>s.id===id?{...s,autonomyLevel:l}:s));
     notify(lang==="ar"?"تم تحديث مستوى الاستقلالية":"Autonomy updated");void refreshAudit();
-  };
-  const rollback=async(id:string,v:number)=>{const d=await apiOrNull<{success:boolean;message:string;skill?:Skill}>(`/skills/${id}/rollback`,{method:"POST",body:JSON.stringify({targetVersion:v})});if(d?.skill)setSkills(x=>x.map(s=>s.id===id?d.skill!:s));else setSkills(x=>x.map(s=>s.id===id?{...s,activeVersion:v}:s));notify(d?.message|| (lang==="ar"?`تم الرجوع إلى v${v}`:`Rolled back to v${v}`));void refreshAudit()};
-  const toggleSkill=async(id:string)=>{const d=await apiOrNull<{skill?:Skill;active?:boolean}>(`/skills/${id}/killswitch`,{method:"POST",body:"{}"});if(d?.skill)setSkills(x=>x.map(s=>s.id===id?d.skill!:s));else setSkills(x=>x.map(s=>s.id===id?{...s,killSwitchActive:!s.killSwitchActive}:s));notify(lang==="ar"?"تم تحديث حالة المهارة":"Skill state updated");void refreshAudit()};
-  const runPractice=async()=>{setPracticeBusy(true);const d=await apiOrNull<{testCases:TestCase[];passRate:number}>("/practice/run",{method:"POST",body:"{}"});if(d?.testCases)setPractice(d.testCases);setPracticeBusy(false);notify(lang==="ar"?`اكتملت الاختبارات${d?` — ${d.passRate}%`:""}`:"Practice complete");void refreshAudit()};
-  const runShadow=async()=>{setShadowBusy(true);const d=await apiOrNull<{comparisons:ShadowComparison[];matchRate:number}>("/shadow/run",{method:"POST",body:"{}"});if(d?.comparisons)setShadow(d.comparisons);setShadowBusy(false);notify(lang==="ar"?`اكتمل الظل${d?` — ${d.matchRate}%`:""}`:"Shadow comparison complete");void refreshAudit()};
-  const takeOver=async(id:string)=>{const d=await apiOrNull<{item:WorkItem}>(`/work/${id}/takeover`,{method:"POST",body:"{}"});if(d?.item)setWork(v=>v.map(w=>w.id===id?d.item:w));else setWork(v=>v.map(w=>w.id===id?{...w,assignedMode:"human_takeover"}:w));setActiveApproval(null);notify(lang==="ar"?"استلم الموظف الحالة":"Human takeover active");void refreshAudit()};
-  const resume=async(id:string)=>{const d=await apiOrNull<{item:WorkItem}>(`/work/${id}/resume-ai`,{method:"POST",body:"{}"});if(d?.item)setWork(v=>v.map(w=>w.id===id?d.item:w));else setWork(v=>v.map(w=>w.id===id?{...w,assignedMode:"ai"}:w));notify(lang==="ar"?"عاد التنفيذ إلى نهج":"NAHJ resumed");void refreshAudit()};
-  const decideApproval=async(id:string,decision:"approved"|"rejected",comments="")=>{setApprovalBusy(true);const d=await apiOrNull<{success:boolean}>(`/approvals/${id}/decide`,{method:"POST",body:JSON.stringify({decision,comments})});setApprovalBusy(false);if(!d){setApprovals(v=>v.map(a=>a.id===id?{...a,status:decision}:a))}await Promise.all([refreshApprovals(),refreshWork(),refreshSimulator(),refreshAudit()]);setActiveApproval(null);notify(decision==="approved"?(lang==="ar"?"تم الاعتماد والتنفيذ":"Approved & executed"):(lang==="ar"?"تم الرفض":"Rejected"))};
-  const testConnector=async(id:string)=>{setTestingConnector(id);const d=await apiOrNull<{connector:Connector}>(`/connections/${id}/test`,{method:"POST",body:"{}"});if(d?.connector)setConnectors(v=>v.map(c=>c.id===id?d.connector:c));setTestingConnector(null);notify(lang==="ar"?"الاتصال سليم":"Connection healthy");void refreshAudit()};
-  const simSend=async(text:string)=>{setSimBusy(true);const d=await apiOrNull<{state:SimulatorState}>("/simulator/message",{method:"POST",body:JSON.stringify({text})});if(d?.state)setSim(d.state);else setSim(v=>({...v,messages:[...v.messages,{id:`c_${Date.now()}`,sender:"customer",text,timestamp:"الآن"},{id:`a_${Date.now()}`,sender:"ai",text:lang==="ar"?"وصلت رسالتك. أتابعها وفق الإجراء المعتمد.":"Got it. I’m following the verified process.",timestamp:"الآن"}]}));setSimBusy(false)};
-  const simReset=async()=>{const d=await apiOrNull<{state:SimulatorState}>("/simulator/reset",{method:"POST",body:"{}"});setSim(d?.state||fallbackSimulator)};
-  const simUpload=async()=>{setSimBusy(true);const d=await apiOrNull<{state:SimulatorState}>("/simulator/upload-doc",{method:"POST",body:"{}"});if(d?.state)setSim(d.state);await Promise.all([refreshApprovals(),refreshWork()]);setSimBusy(false);notify(lang==="ar"?"تم التحقق من المستند":"Document verified")};
-  const codified=async()=>{await refreshSkills();const context=await apiOrNull<ContextResponse>("/context");if(context)setOrganization(context.organization);setSection("skills")};
+  });
+  const rollback=guarded(async(id:string,v:number)=>{const d=await apiOrNull<{success:boolean;message:string;skill?:Skill}>(`/skills/${id}/rollback`,{method:"POST",body:JSON.stringify({targetVersion:v})});if(d?.skill)setSkills(x=>x.map(s=>s.id===id?d.skill!:s));else setSkills(x=>x.map(s=>s.id===id?{...s,activeVersion:v}:s));notify(d?.message|| (lang==="ar"?`تم الرجوع إلى v${v}`:`Rolled back to v${v}`));void refreshAudit()});
+  const toggleSkill=guarded(async(id:string)=>{const d=await apiOrNull<{skill?:Skill;active?:boolean}>(`/skills/${id}/killswitch`,{method:"POST",body:"{}"});if(d?.skill)setSkills(x=>x.map(s=>s.id===id?d.skill!:s));else setSkills(x=>x.map(s=>s.id===id?{...s,killSwitchActive:!s.killSwitchActive}:s));notify(lang==="ar"?"تم تحديث حالة المهارة":"Skill state updated");void refreshAudit()});
+  const runPractice=guarded(async()=>{setPracticeBusy(true);const d=await apiOrNull<{testCases:TestCase[];passRate:number}>("/practice/run",{method:"POST",body:"{}"});if(d?.testCases)setPractice(d.testCases);setPracticeBusy(false);notify(lang==="ar"?`اكتملت الاختبارات${d?` — ${d.passRate}%`:""}`:"Practice complete");void refreshAudit()});
+  const runShadow=guarded(async()=>{setShadowBusy(true);const d=await apiOrNull<{comparisons:ShadowComparison[];matchRate:number}>("/shadow/run",{method:"POST",body:"{}"});if(d?.comparisons)setShadow(d.comparisons);setShadowBusy(false);notify(lang==="ar"?`اكتمل الظل${d?` — ${d.matchRate}%`:""}`:"Shadow comparison complete");void refreshAudit()});
+  const takeOver=guarded(async(id:string)=>{const d=await apiOrNull<{item:WorkItem}>(`/work/${id}/takeover`,{method:"POST",body:"{}"});if(d?.item)setWork(v=>v.map(w=>w.id===id?d.item:w));else setWork(v=>v.map(w=>w.id===id?{...w,assignedMode:"human_takeover"}:w));setActiveApproval(null);notify(lang==="ar"?"استلم الموظف الحالة":"Human takeover active");void refreshAudit()});
+  const resume=guarded(async(id:string)=>{const d=await apiOrNull<{item:WorkItem}>(`/work/${id}/resume-ai`,{method:"POST",body:"{}"});if(d?.item)setWork(v=>v.map(w=>w.id===id?d.item:w));else setWork(v=>v.map(w=>w.id===id?{...w,assignedMode:"ai"}:w));notify(lang==="ar"?"عاد التنفيذ إلى نهج":"NAHJ resumed");void refreshAudit()});
+  const decideApproval=guarded(async(id:string,decision:"approved"|"rejected",comments="")=>{setApprovalBusy(true);const d=await apiOrNull<{success:boolean}>(`/approvals/${id}/decide`,{method:"POST",body:JSON.stringify({decision,comments})});setApprovalBusy(false);if(!d){setApprovals(v=>v.map(a=>a.id===id?{...a,status:decision}:a))}await Promise.all([refreshApprovals(),refreshWork(),refreshSimulator(),refreshAudit()]);setActiveApproval(null);notify(decision==="approved"?(lang==="ar"?"تم الاعتماد والتنفيذ":"Approved & executed"):(lang==="ar"?"تم الرفض":"Rejected"))});
+  const testConnector=guarded(async(id:string)=>{setTestingConnector(id);const d=await apiOrNull<{connector:Connector}>(`/connections/${id}/test`,{method:"POST",body:"{}"});if(d?.connector)setConnectors(v=>v.map(c=>c.id===id?d.connector:c));setTestingConnector(null);notify(lang==="ar"?"الاتصال سليم":"Connection healthy");void refreshAudit()});
+  const simSend=guarded(async(text:string)=>{setSimBusy(true);const d=await apiOrNull<{state:SimulatorState}>("/simulator/message",{method:"POST",body:JSON.stringify({text})});if(d?.state)setSim(d.state);else setSim(v=>({...v,messages:[...v.messages,{id:`c_${Date.now()}`,sender:"customer",text,timestamp:"الآن"},{id:`a_${Date.now()}`,sender:"ai",text:lang==="ar"?"وصلت رسالتك. أتابعها وفق الإجراء المعتمد.":"Got it. I’m following the verified process.",timestamp:"الآن"}]}));setSimBusy(false)});
+  const simReset=guarded(async()=>{const d=await apiOrNull<{state:SimulatorState}>("/simulator/reset",{method:"POST",body:"{}"});setSim(d?.state||fallbackSimulator)});
+  const simUpload=guarded(async()=>{setSimBusy(true);const d=await apiOrNull<{state:SimulatorState}>("/simulator/upload-doc",{method:"POST",body:"{}"});if(d?.state)setSim(d.state);await Promise.all([refreshApprovals(),refreshWork()]);setSimBusy(false);notify(lang==="ar"?"تم التحقق من المستند":"Document verified")});
+  const codified=guarded(async()=>{await refreshSkills();const context=await apiOrNull<ContextResponse>("/context");if(context)setOrganization(context.organization);setSection("skills")});
 
   const approvalByWork=useMemo(()=>Object.fromEntries(approvals.filter(a=>a.status==="pending").map(a=>[a.workItemId,a.id])),[approvals]);
   const activeApprovalObj=approvals.find(a=>a.id===activeApproval&&a.status==="pending")||null;

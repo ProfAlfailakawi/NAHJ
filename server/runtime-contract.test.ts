@@ -235,3 +235,56 @@ test("الدخول يملأ الدور، لا حالة الجلسة وحدها",
   /* و`checkAuth` هي التي تملأ الحساب. */
   assert.match(app, /setAccount\(\{id:me\.account\.id,role:me\.account\.role\}\)/, "لا أحد يملأ الدور");
 });
+
+/*
+ * التجميد — ثغرتان كشفتهما مراجعة آلية بعد الدمج.
+ */
+
+test("إدارة الحسابات تمرّ بحارس الاشتراك", () => {
+  /*
+   * `authRouter` مركَّب على `/api/auth` بمعزل عن `apiRouter`، فلا يبلغه
+   * `enforceSubscription` المركَّب داخل الثاني. أي أن اشتراكاً موقوفاً كان
+   * يُجمّد كل شيء إلا ما يُنشئ الحسابات ويغيّر الأدوار ويُصدر كلمات المرور —
+   * وفيها حدّ المقاعد المدفوع.
+   */
+  const routes = read("server/routes.ts");
+  assert.match(
+    routes,
+    /const accountsGuard = \[requireAuth, realAdminOnly, requireRole\("admin"\), enforceSubscription\]/,
+    "إدارة الحسابات خارج حارس الاشتراك",
+  );
+});
+
+test("استثناء التجميد محصور بالخروج وتغيير كلمة المرور", () => {
+  const guard = read("server/billingRoutes.ts");
+  assert.doesNotMatch(guard, /ALWAYS_OPEN = \[[^\]]*\/\^\\\/auth\\\/\//, "عاد الاستثناء شاملاً لكل مسارات المصادقة");
+  assert.match(guard, /logout/, "الخروج يجب أن يبقى مفتوحاً");
+  assert.match(guard, /change-password/, "تغيير المرء كلمة مروره يجب أن يبقى مفتوحاً");
+});
+
+test("رفض الاشتراك يصل إلى المستخدم ولا يُبتلع", () => {
+  /*
+   * كان `apiOrNull` يبتلع كل ما عدا 401/403 ويعيد null، والمسارات تقرأ null على
+   * أنه «الخادم بعيد، طبّق محلياً» — فيرى المستخدم إشعار نجاح على كتابة رفضها
+   * الخادم. وهو أسوأ ما يفعله تجميد: أن يبدو كأنه لم يقع.
+   */
+  const api = read("src/lib/api.ts");
+  assert.match(api, /SubscriptionBlockedError/, "لا نوع خاصّ لرفض الاشتراك");
+  assert.match(api, /error\.status === 402\) throw new SubscriptionBlockedError/, "402 ما زالت تُبتلع");
+
+  const app = read("src/App.tsx");
+  assert.match(app, /const guarded=useCallback/, "لا غلاف يلتقط رفض الكتابة");
+  assert.match(app, /error instanceof SubscriptionBlockedError/, "الغلاف لا يميّز رفض الاشتراك");
+  /* وكل مسار كتابة يمرّ بالغلاف، وإلا ضاع رفضه بلا مُلتقط. */
+  for (const handler of ["promote", "rollback", "toggleSkill", "takeOver", "resume", "decideApproval", "testConnector"]) {
+    assert.match(app, new RegExp(`const ${handler}=guarded\\(`), `${handler} خارج الغلاف`);
+  }
+});
+
+test("الرفض يُطفئ أعلام الانشغال فلا يبقى الزرّ دوّاراً", () => {
+  const app = read("src/App.tsx");
+  const wrapper = /const guarded=useCallback[\s\S]*?\n  \},\[lang\]\);/.exec(app)?.[0] || "";
+  assert.ok(wrapper, "تعذّر العثور على الغلاف");
+  assert.match(wrapper, /setPracticeBusy\(false\)/, "علم التدرّب يبقى مشتعلاً بعد الرفض");
+  assert.match(wrapper, /setSimBusy\(false\)/, "علم المحادثة يبقى مشتعلاً بعد الرفض");
+});

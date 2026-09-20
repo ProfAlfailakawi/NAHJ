@@ -489,10 +489,30 @@ export function updateAccount(accountId: string, changes: { role?: AccountRole; 
   return listAccounts().find(account => account.id === accountId)!;
 }
 
+/**
+ * يمنع مشرف المؤسسة من الاستيلاء على حساب المالك.
+ *
+ * كان حارس الحسابات يمنع خفض دور المالك وتعطيله — ونسي أخطر طريق: إصدار كلمة
+ * مرور مؤقتة له. مشرفُ المؤسسة المشترية يمرّ من نفس الحارس، فيستطيع أن يضبط
+ * كلمة مرور المالك بنفسه، ويطرد جلساته، ثم يدخل باسمه ويملك الترخيص كاملاً:
+ * الباقات والاشتراك والفواتير وإنهاء الخدمة.
+ *
+ * أي أن كل حماية وُضعت على دور المالك كانت تُلتَف بمسارٍ واحد غير محروس. والمالك
+ * وحده يملك إعادة ضبط حسابه — ولديه «كلمة مروري» التي تشترط الحالية.
+ */
+function assertNotSeizingOwner(targetId: string, requesterId: string | undefined, action: string) {
+  const target = openDatabase().prepare('SELECT role FROM accounts WHERE id = ? LIMIT 1').get(targetId) as
+    | { role: string } | undefined;
+  if (!target || target.role !== 'owner') return;
+  if (requesterId && requesterId === targetId) return;
+  throw Object.assign(new Error(`حساب مالك المنصة لا ${action} من هنا.`), { status: 403 });
+}
+
 /** يضبط كلمة مرور جديدة لحساب ويطرد جلساته. يستعمله المشرف لإصدار كلمة مؤقتة. */
-export async function adminSetPassword(accountId: string, newPassword: unknown): Promise<void> {
+export async function adminSetPassword(accountId: string, newPassword: unknown, requesterId?: string): Promise<void> {
   const passwordError = validatePassword(newPassword);
   if (passwordError) throw Object.assign(new Error(passwordError), { status: 400 });
+  assertNotSeizingOwner(accountId, requesterId, 'تُضبط كلمة مروره');
   const db = openDatabase();
   const exists = db.prepare('SELECT id FROM accounts WHERE id = ? LIMIT 1').get(accountId);
   if (!exists) throw Object.assign(new Error('الحساب غير موجود.'), { status: 404 });
@@ -524,8 +544,14 @@ export async function changeOwnPassword(accountId: string, currentPassword: unkn
     .run(hash, salt, now(), accountId);
 }
 
-/** يُنهي كل جلسات حساب — للطرد الفوري عند فقدان جهاز. */
-export function revokeSessions(accountId: string): number {
+/**
+ * يُنهي كل جلسات حساب — للطرد الفوري عند فقدان جهاز.
+ *
+ * ومحروسٌ بنفس الحارس: طردُ المالك من جلساته لا يمنح صلاحيته، لكنه يقفله خارج
+ * ترخيصه متى شاء مشرفُ المؤسسة — وهو ما لا يملكه عليه.
+ */
+export function revokeSessions(accountId: string, requesterId?: string): number {
+  assertNotSeizingOwner(accountId, requesterId, 'تُنهى جلساته');
   const result = openDatabase().prepare('DELETE FROM sessions WHERE account_id = ?').run(accountId);
   return Number(result.changes ?? 0);
 }

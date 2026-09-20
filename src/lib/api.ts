@@ -54,11 +54,25 @@ export class UnauthorizedError extends Error {
   constructor() { super("SESSION_EXPIRED"); this.name = "UnauthorizedError"; }
 }
 
+/**
+ * رفضٌ لأن الاشتراك موقوف — لا خطأ عابر.
+ *
+ * كان `apiOrNull` يبتلع كل ما عدا 401/403 ويعيد `null`، والمسارات تقرأ `null`
+ * على أنه «الخادم بعيد، طبّق محلياً». فكان الخادم يرفض الكتابة بـ402 ويرى
+ * المستخدم إشعار نجاح والحالة تتغيّر أمامه — ثم تعود عند أول تحديث. وهو أسوأ
+ * ما يمكن أن يفعله تجميدٌ: أن يبدو كأنه لم يقع.
+ */
+export class SubscriptionBlockedError extends Error {
+  constructor(message: string) { super(message); this.name = "SubscriptionBlockedError"; }
+}
+
 export async function apiOrNull<T>(path: string, init?: RequestInit): Promise<T | null> {
   try {
     return await api<T>(path, init);
   } catch (error) {
     if (error instanceof ApiError && (error.status === 401 || error.status === 403)) throw new UnauthorizedError();
+    // 402 تعني «ادفع»، وهي رفضٌ نهائي لا تعذّرٌ مؤقت — تُرفع ولا تُبتلع.
+    if (error instanceof ApiError && error.status === 402) throw new SubscriptionBlockedError(error.message);
     console.warn(`[NAHJ] API fallback for ${path}`, error);
     return null;
   }

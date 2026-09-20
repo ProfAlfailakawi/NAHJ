@@ -1093,6 +1093,31 @@ export function renewSubscription(actor = "system", options: { issueInvoice?: bo
       kind: "subscription", planCode: plan.code, currency: current.currency,
       periodStart, periodEnd, lines, discountBps: current.discountBps, taxBps: current.taxBps,
     }, actor);
+
+    /*
+     * الرصيد يُستهلك هنا.
+     *
+     * كان التخفيض يقيّد الفرق رصيداً للمؤسسة ثم لا يقرؤه أحد: `renewSubscription`
+     * يُصدر فاتورة السعر الكامل، و`getAccountCredit` لا تُستعمل إلا في العرض. أي
+     * أن الرصيد وعدٌ مكتوبٌ على الشاشة لا يُوفى أبداً، والمؤسسة تُحاسَب كاملاً في
+     * كل تجديد تالٍ.
+     *
+     * ويُسدَّد كدفعة بوسيلة «رصيد» لا كخصم صامت على الفاتورة: الفاتورة تبقى
+     * بقيمتها الحقيقية، ويظهر في سجلّ الدفعات من أين جاء السداد.
+     */
+    const credit = getAccountCredit();
+    if (credit > 0 && invoice.total > invoice.amountPaid) {
+      const applied = Math.min(credit, invoice.total - invoice.amountPaid);
+      recordPayment({
+        invoiceId: invoice.id, amount: applied, currency: invoice.currency,
+        method: "credit", reference: "CREDIT",
+        note: "استهلاك رصيد المؤسسة من تخفيض سابق.",
+      }, actor);
+      writeMeta("credit", credit - applied);
+      recordBillingEvent("credit.consumed", `استُهلك ${formatMoney(applied, invoice.currency)} من الرصيد على ${invoice.number}`, actor,
+        { invoiceId: invoice.id, applied, remaining: credit - applied });
+      invoice = getInvoice(invoice.id)!;
+    }
   }
 
   recordBillingEvent("subscription.renewed", `جُدِّد الاشتراك حتى ${periodEnd.slice(0, 10)}`, actor,
@@ -1139,15 +1164,38 @@ export function changePlan(input: ChangePlanInput, actor = "system"): { subscrip
   const totalMs = new Date(current.currentPeriodEnd).getTime() - new Date(current.currentPeriodStart).getTime();
   const remainingMs = Math.max(0, new Date(current.currentPeriodEnd).getTime() - new Date(now).getTime());
   const remainingRatio = totalMs > 0 ? remainingMs / totalMs : 0;
+  const cycleChanged = cycle !== current.cycle;
 
+  /*
+   * التناسب الزمني — والفخّ فيه تغيير الدورة.
+   *
+   * حساب نسبةٍ واحدة على سعرَي دورتين مختلفتين يُنتج عبثاً: اشتراك سنوي يُحوَّل
+   * إلى شهري في أول الشهر يُقيَّد له رصيدٌ يقارب سعر السنة كاملة، ويُحاسَب على
+   * جزءٍ من شهر واحد، وتبقى نهاية مدّته بعد أحد عشر شهراً وهو موسومٌ «شهري» —
+   * أي سنةُ خدمةٍ مجاناً ورصيدٌ ضخم فوقها.
+   *
+   * فحين تتغيّر الدورة يُقوَّم المتبقّي بسعر اليوم من الدورة القديمة، وتبدأ دورة
+   * جديدة كاملة من الآن بحدودٍ متّسقة مع وسمها. وحين لا تتغيّر الدورة يبقى
+   * الحساب داخل الدورة نفسها وحدودها كما هي — وهي الحالة الشائعة.
+   */
+  const oldPeriodDays = Math.max(1, totalMs / 86_400_000);
+  const remainingDays = Math.max(0, remainingMs / 86_400_000);
   const oldPrice = oldPlan ? priceFor(oldPlan, current.cycle) : 0;
-  const newPrice = priceFor(plan, cycle);
-  const proratedCredit = Math.round(oldPrice * remainingRatio);
-  const proratedCharge = Math.round(newPrice * remainingRatio);
+
+  const proratedCredit = cycleChanged
+    ? Math.round((oldPrice / oldPeriodDays) * remainingDays)
+    : Math.round(oldPrice * remainingRatio);
+  const proratedCharge = cycleChanged
+    ? priceFor(plan, cycle)                      // دورة جديدة كاملة تبدأ الآن
+    : Math.round(priceFor(plan, cycle) * remainingRatio);
   const difference = proratedCharge - proratedCredit;
+
+  const periodStart = cycleChanged ? now : current.currentPeriodStart;
+  const periodEnd = cycleChanged ? advancePeriod(now, cycle) : current.currentPeriodEnd;
 
   const saved = writeSubscription({
     ...current, planCode: plan.code, cycle, currency: plan.currency, trialEndsAt: null, terminated: false,
+    currentPeriodStart: periodStart, currentPeriodEnd: periodEnd,
   });
   clearScheduledPlanChange();
 
@@ -1155,10 +1203,17 @@ export function changePlan(input: ChangePlanInput, actor = "system"): { subscrip
   if (difference > 0) {
     invoice = issueInvoice({
       kind: "adjustment", planCode: plan.code, currency: plan.currency,
-      periodStart: now, periodEnd: current.currentPeriodEnd,
-      lines: [{ description: `فرق ترقية إلى ${plan.nameAr} للمتبقّي من الدورة`, quantity: 1, unitAmount: difference, amount: difference }],
+      periodStart, periodEnd,
+      lines: [{
+        description: cycleChanged
+          ? `الانتقال إلى ${plan.nameAr} (${cycleLabel(cycle)}) بعد خصم المتبقّي من الدورة السابقة`
+          : `فرق ترقية إلى ${plan.nameAr} للمتبقّي من الدورة`,
+        quantity: 1, unitAmount: difference, amount: difference,
+      }],
       discountBps: current.discountBps, taxBps: current.taxBps,
-      notes: `تناسب زمني: ${Math.round(remainingRatio * 100)}% من الدورة متبقٍّ.`,
+      notes: cycleChanged
+        ? `دورة جديدة من ${periodStart.slice(0, 10)}. خُصم ${formatMoney(proratedCredit, plan.currency)} عن ${Math.round(remainingDays)} يوماً متبقّياً من الدورة السابقة.`
+        : `تناسب زمني: ${Math.round(remainingRatio * 100)}% من الدورة متبقٍّ.`,
     }, actor);
   } else if (difference < 0) {
     // التخفيض لا يُعيد نقداً: يُسجَّل رصيداً يُخصم من التجديد القادم.
