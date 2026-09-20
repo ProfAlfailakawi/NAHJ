@@ -215,3 +215,23 @@ test("لا شاشة تكتب رقم عرضٍ بيدها", () => {
     assert.doesNotMatch(source, /progress=\{\d+\}/, `${view}: نسبة مكتوبة بيد`);
   }
 });
+
+test("الدخول يملأ الدور، لا حالة الجلسة وحدها", () => {
+  /*
+   * كان الدخول والتهيئة يضبطان `authState` مباشرةً ولا يملآن `account` إطلاقاً،
+   * فيبقى null حتى إعادة تحميل الصفحة. والدور مجهولٌ يعني: لا مدخل للوحة المالك
+   * لمالك النظام، ولا زرّ تركيب حزمة نشاط لمن يملك تركيبها. يدخل صاحب المنصة
+   * فلا يجد شاشته، ولا شيء يفسّر له لماذا.
+   *
+   * ولا يكشفه فحص أنواع: `setAuthState("authenticated")` استدعاءٌ صحيح تماماً.
+   */
+  const app = read("src/App.tsx");
+  assert.doesNotMatch(
+    app,
+    /onAuthenticated=\{\(\)=>setAuthState\("authenticated"\)\}/,
+    "عاد الدخول يضبط الحالة بلا قراءة الدور",
+  );
+  assert.match(app, /onAuthenticated=\{\(\)=>void checkAuth\(\)\}/, "الدخول لا يقرأ هوية صاحبه");
+  /* و`checkAuth` هي التي تملأ الحساب. */
+  assert.match(app, /setAccount\(\{id:me\.account\.id,role:me\.account\.role\}\)/, "لا أحد يملأ الدور");
+});

@@ -120,6 +120,14 @@ export default function App(){
    * فحص الهوية. قابل لإعادة النداء لأن الدخول إلى البيئة التجريبية يغيّر الجواب:
    * الزائر التجريبي يمرّ من الحارس بلا حساب، فيصير "authenticated" داخل صندوقه.
    */
+  /*
+   * ويُنادى بعد الدخول والتهيئة أيضاً، لا عند الإقلاع وحده.
+   *
+   * كان الدخول يضبط `authState` مباشرةً ولا يملأ `account` إطلاقاً — فيبقى null
+   * حتى إعادة تحميل الصفحة. والنتيجة أن الدور مجهول في أول جلسة: لا يظهر مدخل
+   * لوحة المالك لمالك النظام، ولا يُعرض زرّ تركيب حزمة النشاط لمن يملك تركيبها.
+   * يدخل صاحب المنصة فلا يجد شاشته، ولا شيء يفسّر له لماذا.
+   */
   const checkAuth=useCallback(async()=>{
     try{ const me=await authApi.me(); setAccount({id:me.account.id,role:me.account.role}); setAuthState("authenticated"); return true; }
     catch{ /* لا جلسة — نفحص هل النظام مُهيَّأ أصلاً قبل عرض شاشة دخول لا تنفع. */ }
@@ -253,7 +261,7 @@ export default function App(){
   if(authState==="checking")return <div className="boot-gate"/>;
   if(authState==="anonymous"||authState==="setup")
     return <LoginScreen lang={lang} needsSetup={authState==="setup"} demoEnabled={demoEnabled} demoBusy={demoBusy}
-      onEnterDemo={()=>void enterDemo()} onAuthenticated={()=>setAuthState("authenticated")}/>;
+      onEnterDemo={()=>void enterDemo()} onAuthenticated={()=>void checkAuth()}/>;
 
   let view:React.ReactNode;
   switch(section){
