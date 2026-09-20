@@ -235,6 +235,8 @@ export function expandPack(pack: SectorPack): ExpandedPack {
     status: definition.status || "healthy",
     lastSync: "—",
     permissions: definition.permissions,
+    /* موصلات الحزمة مواضعُ ربطٍ موصوفة، لا وصلاتٌ مبنيّة — فتُعلَن محاكاةً. */
+    mode: "simulated",
     stats: { callsToday: 0, successRate: 0, avgLatency: "—" },
   }));
 

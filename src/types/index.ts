@@ -236,6 +236,14 @@ export interface Connector {
   lastSync: string;
   permissions: string[];
   stats: { callsToday: number; successRate: number; avgLatency: string };
+  /*
+   * أهي وصلةٌ قائمة أم محاكاة؟
+   *
+   * موصلات نهج اليوم لا تُخرج طلباً واحداً إلى أي نظام خارجي: تنتظر مهلةً ثم
+   * تُعيد جواباً مكتوباً في الشيفرة. وعرضُها «متصلة» يَعِد المشتري بتكاملٍ لم
+   * يُبنَ بعد — وهذا أسوأ ما يُكتشف بعد التوقيع. فالحقل يُذكر على الشاشة صراحةً.
+   */
+  mode: 'simulated' | 'live';
 }
 
 export interface TestCase {

@@ -674,11 +674,12 @@ export const initialAuditEvents: AuditEvent[] = [
 export const initialConnectors: Connector[] = [
   {
     id: 'conn_firebase',
-    name: 'سحابة فايربيس المركزية (Firebase Firestore - nahj-a27a4)',
+    name: 'المرآة السحابية (Firebase Firestore)',
     type: 'database',
     status: 'healthy',
-    lastSync: 'الآن (متصل ومباشر)',
+    lastSync: 'لم تُنشأ وصلة بعد',
     permissions: ['read:all_collections', 'write:skills', 'write:approvals', 'write:audit_log', 'sync:realtime'],
+    mode: 'simulated',
     stats: { callsToday: 520, successRate: 100, avgLatency: '35ms' }
   },
   {
@@ -688,6 +689,7 @@ export const initialConnectors: Connector[] = [
     status: 'healthy',
     lastSync: 'قبل دقيقتين',
     permissions: ['read:students', 'write:applications', 'read:tuition_rates', 'read:seat_capacity'],
+    mode: 'simulated',
     stats: { callsToday: 412, successRate: 99.8, avgLatency: '68ms' }
   },
   {
@@ -697,6 +699,7 @@ export const initialConnectors: Connector[] = [
     status: 'healthy',
     lastSync: 'قبل 5 دقائق',
     permissions: ['read:tour_slots', 'write:calendar_events'],
+    mode: 'simulated',
     stats: { callsToday: 184, successRate: 100, avgLatency: '92ms' }
   },
   {
@@ -706,6 +709,7 @@ export const initialConnectors: Connector[] = [
     status: 'healthy',
     lastSync: 'قبل 8 دقائق',
     permissions: ['create:payment_link', 'verify:transaction_status'],
+    mode: 'simulated',
     stats: { callsToday: 96, successRate: 98.9, avgLatency: '180ms' }
   },
   {
@@ -715,6 +719,7 @@ export const initialConnectors: Connector[] = [
     status: 'healthy',
     lastSync: 'قبل 15 دقيقة',
     permissions: ['read:guardian_profile', 'write:interaction_log'],
+    mode: 'simulated',
     stats: { callsToday: 290, successRate: 100, avgLatency: '55ms' }
   },
   {
@@ -724,6 +729,7 @@ export const initialConnectors: Connector[] = [
     status: 'healthy',
     lastSync: 'قبل دقيقة',
     permissions: ['read:documents', 'write:verified_assets', 'execute:ocr_verification'],
+    mode: 'simulated',
     stats: { callsToday: 130, successRate: 99.2, avgLatency: '240ms' }
   }
 ];

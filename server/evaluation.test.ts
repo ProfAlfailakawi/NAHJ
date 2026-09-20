@@ -178,6 +178,12 @@ test("تشغيل الحزمة يحرّك موثوقية المهارات تحت 
   const live = db.skills.find(skill => skill.status === "active");
   assert.ok(practicing && live, "لا مهارات كافية في البذرة لهذا الفحص");
 
+  /*
+   * الموثوقية تُخزَّن وتبقى بين التشغيلات، فقد تكون قد هبطت إلى الصفر في تشغيلٍ
+   * سابق — وعندها لا يبقى ما يهبط ويرسب الفحص بلا عيبٍ في المحرّك. فتُثبَّت
+   * نقطة البداية هنا: الفحص يقيس أثر الحزمة، لا ما ورثه المخزن.
+   */
+  practicing!.reliabilityScore = 80;
   const before = { practicing: practicing!.reliabilityScore, live: live!.reliabilityScore };
   const result = await SkillEngine.runPracticeTests();
 
