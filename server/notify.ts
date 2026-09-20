@@ -318,11 +318,21 @@ export async function flushNotifications(limit = 25): Promise<{ sent: number; fa
 
 /* ---------------------------------------------------------- القوالب */
 
+/**
+ * من يُبلَّغ في المؤسسة: المشرفون والمديرون.
+ *
+ * وإن لم يوجد أيٌّ منهم بعدُ — وهي حال النشر الجديد قبل أن يُنشئ المالك
+ * الحسابات — فالمالك هو الإدارة، ويُبلَّغ هو. وإسقاطُ إشعارٍ لأنه لم يجد
+ * مستقبِلاً يجعل أول فاتورةٍ في كل نشرٍ جديد صامتةً بلا سبب ظاهر.
+ */
 const institutionRecipients = (): string[] => {
   try {
-    return listAccounts()
-      .filter(account => account.status === "ACTIVE" && ["admin", "manager"].includes(account.role))
+    const accounts = listAccounts().filter(account => account.status === "ACTIVE");
+    const operators = accounts
+      .filter(account => ["admin", "manager"].includes(account.role))
       .map(account => account.email);
+    if (operators.length) return operators;
+    return accounts.filter(account => account.role === "owner").map(account => account.email);
   } catch {
     return [];
   }
