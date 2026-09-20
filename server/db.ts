@@ -150,6 +150,8 @@ export class Store {
     const newEvent: AuditEvent = {
       id: `aud_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       timestamp: `اليوم، ${timeStr}`,
+      // الطابع الحقيقي إلى جانب نصّ العرض: القياس يحتاج الأول، والقارئ الثاني.
+      at: now.toISOString(),
       ...event,
     };
     this.auditEvents.unshift(newEvent);

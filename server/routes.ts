@@ -4,6 +4,7 @@ import { PolicyEngine } from "./engine/policyEngine.ts";
 import { SkillEngine } from "./engine/skillEngine.ts";
 import { ConnectorLayer } from "./engine/connectors.ts";
 import { McpEngine } from "./engine/mcpEngine.ts";
+import { deriveMetrics, type MetricsInput } from "./engine/metricsEngine.ts";
 import { generateAiResponse } from "./gemini.ts";
 import { AutonomyLevel, SkillStep, LearningSession, Skill } from "../src/types/index.ts";
 import { getFirebaseStatus } from "./firebase.ts";
@@ -30,6 +31,22 @@ import {
 } from "./auth.ts";
 
 export const apiRouter = Router();
+
+/*
+ * مدخل محرّك القياس.
+ *
+ * موضعٌ واحد يجمع المخزن الحيّ، فلا يقرأ مسارٌ من مجموعة ومسارٌ آخر من غيرها
+ * فتتناقض شاشتان على الرقم نفسه.
+ */
+const metricsInput = (): MetricsInput => ({
+  skills: db.skills,
+  workItems: db.workItems,
+  auditEvents: db.auditEvents,
+  approvalRequests: db.approvalRequests,
+  shadowComparisons: db.shadowComparisons,
+  testCases: db.testCases,
+  policies: db.policies,
+});
 
 /*
  * مسارات المصادقة — الوحيدة المتاحة بلا جلسة. كل ما بعدها محروس.
@@ -217,16 +234,23 @@ apiRouter.get("/today", (req: Request, res: Response) => {
   const pendingApprovals = db.approvalRequests.filter((a) => a.status === "pending");
   const pendingProposals = db.learningProposals.filter((p) => p.status === "pending");
   const activeWork = db.workItems.filter((w) => w.state !== "completed");
+  const metrics = deriveMetrics(metricsInput());
 
   res.json({
     date: new Date().toLocaleDateString("ar-KW", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
     metrics: {
-      tasksCompletedToday: 137,
+      /*
+       * كان هذا الرقم 137 مكتوباً في الشيفرة — ثابتاً لا يتحرّك مهما عملت
+       * المؤسسة. صار مشتقّاً من سجلّ التدقيق بتاريخ اليوم، وصفرُه صادق: لم
+       * يحدث شيء بعد.
+       */
+      tasksCompletedToday: metrics.todayActivity.value ?? 0,
+      tasksCompletedTodayBasis: metrics.todayActivity.basis,
       needsAttentionCount: pendingApprovals.length + pendingProposals.length,
       newLearnedItemsCount: pendingProposals.length,
       conflictsDetected: pendingProposals.filter((p) => p.type === "conflict").length,
-      skillsReadyToGraduate: db.skills.filter((s) => s.reliabilityScore >= 90 && s.autonomyLevel < 6).length,
-      hoursSavedThisMonth: db.organization.hoursSavedMonth,
+      skillsReadyToGraduate: metrics.memory.candidatesForPromotion.value ?? 0,
+      hoursSavedThisMonth: metrics.impact.hoursSavedLifetime.value ?? 0,
       driftCount: pendingProposals.filter((p) => p.type === "process_drift").length,
     },
     needsAttention: [
@@ -251,12 +275,19 @@ apiRouter.get("/today", (req: Request, res: Response) => {
         actionId: prop.id,
       })),
     ],
+    /*
+     * كانت هنا خمسة أرقام مكتوبة بخطّ اليد: 143 عملية معروفة، و37 غير موثّقة،
+     * و11 اعتماداً على شخص واحد، و29 مرشّحاً للأتمتة. كلها تُشتق الآن — إلا
+     * «غير الموثّقة»، فهي بطبيعتها غير قابلة للمعرفة: النظام لا يعلم ما لم
+     * يُعرض عليه قطّ. تبقى null ويقول لها العرض «غير مقيس».
+     */
     institutionalMemoryCoverage: {
-      knownProcesses: 143,
-      documentedSkills: db.skills.length,
-      undocumentedProcesses: 37,
-      singlePersonDependencies: 11,
-      candidatesForAutomation: 29,
+      documentedSkills: metrics.memory.documentedSkills.value ?? 0,
+      activeSkills: metrics.memory.activeSkills.value ?? 0,
+      singlePersonDependencies: metrics.memory.singlePersonDependencies.value ?? 0,
+      candidatesForAutomation: metrics.memory.candidatesForPromotion.value ?? 0,
+      undocumentedProcesses: metrics.memory.undocumentedProcesses.value,
+      undocumentedBasis: metrics.memory.undocumentedProcesses.basis,
     },
     activeWorkItems: activeWork.slice(0, 4),
   });
@@ -911,41 +942,58 @@ apiRouter.post("/connections/:id/test", async (req: Request, res: Response) => {
 });
 
 // 11. Analytics & Executive ROI
+/*
+ * الأثر.
+ *
+ * كان هذا المسار يردّ ثمانية مؤشرات ومنحنى أسبوع وتوزيع مخاطر — كلها ثوابت
+ * مكتوبة في الشيفرة، لا يحرّكها عمل المؤسسة ولا يُنقصها تعطّلها. صار كل رقم
+ * مشتقّاً، وكل مقياس يحمل معه أساسه وحجم عيّنته ليُراجَع لا ليُصدَّق.
+ */
 apiRouter.get("/analytics", (req: Request, res: Response) => {
+  const metrics = deriveMetrics(metricsInput());
+  const { impact, governance } = metrics;
+
   res.json({
     kpis: {
-      totalTasksCompleted: 412,
-      totalHoursSaved: 84.5,
-      automationRatePercent: 78.4,
-      shadowMatchRatePercent: 94.2,
-      errorRatePercent: 0.8,
-      humanTakeoverPercent: 3.9,
-      avgProcessDurationMin: 5.4,
-      institutionalCoverageScore: 88,
+      totalTasksCompleted: impact.executionsLifetime.value ?? 0,
+      totalHoursSaved: impact.hoursSavedLifetime.value ?? 0,
+      automationRatePercent: impact.automationRatePercent.value,
+      shadowMatchRatePercent: impact.shadowMatchRatePercent.value,
+      errorRatePercent: impact.errorRatePercent.value,
+      humanTakeoverPercent: impact.humanTakeoverPercent.value,
+      avgProcessDurationMin: impact.avgProcessDurationMin.value,
+      institutionalCoverageScore: impact.activationRatePercent.value,
     },
-    weeklyTrend: [
-      { day: "الأحد", tasks: 48, savedHours: 12.5 },
-      { day: "الإثنين", tasks: 62, savedHours: 15.0 },
-      { day: "الثلاثاء", tasks: 54, savedHours: 13.2 },
-      { day: "الأربعاء", tasks: 71, savedHours: 18.4 },
-      { day: "الخميس", tasks: 68, savedHours: 17.1 },
-    ],
-    riskDistribution: {
-      low: 65,
-      medium: 25,
-      high: 10,
-    },
-    topSkillsByUsage: db.skills.map((s) => ({
-      name: s.name,
-      usageCount: s.usageCount,
-      hoursSaved: s.hoursSavedTotal,
-      successRate: s.successRate,
-      reliabilityTier: s.reliabilityTier,
-    })),
+    /* الأساس وحجم العيّنة لكل مؤشر — الواجهة تعرضهما عند الطلب. */
+    evidence: impact,
+    trend: metrics.trend,
+    governance,
+    memory: metrics.memory,
+    riskDistribution: governance.riskDistribution,
+    topSkillsByUsage: metrics.topSkills,
+    generatedAt: metrics.generatedAt,
   });
 });
 
 // 12. Audit Log
+/*
+ * الحوكمة.
+ *
+ * كانت شاشة الحوكمة تعرض «100% عزل» و«5 بوابات بشرية» و«0 تجاوزات» وثلاث حلقات
+ * عند 92% و84% و100% — كلها مكتوبة في الواجهة. وأخطرها «0 تجاوزات»: رقمٌ يدّعي
+ * إثباتاً لم يجرِ. صار يُشتق بمطابقة الإجراءات عالية الخطورة بطلبات الموافقة،
+ * فصفرُه يعني أننا بحثنا فلم نجد.
+ */
+apiRouter.get("/governance", (req: Request, res: Response) => {
+  const metrics = deriveMetrics(metricsInput());
+  res.json({
+    governance: metrics.governance,
+    memory: metrics.memory,
+    policies: db.policies,
+    generatedAt: metrics.generatedAt,
+  });
+});
+
 apiRouter.get("/audit", (req: Request, res: Response) => {
   res.json({ auditEvents: db.auditEvents });
 });

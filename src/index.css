@@ -430,3 +430,47 @@
   .sub-headline{flex-direction:column}
   .ledger-line{grid-template-columns:1fr}
 }
+
+/* ---- القياس: الأساس، والفراغ الصادق ------------------------------------- */
+
+/* الرقم غير المتاح يُعرض باهتاً لا مُلوَّناً: غيابه معلومة، لا إنجاز ولا خطر. */
+.impact-metric,.guard-tile{position:relative}
+.impact-metric.is-empty strong,.guard-tile.is-empty strong{color:var(--muted-2);font-weight:800}
+.metric-basis-toggle{position:absolute;inset-block-start:7px;inset-inline-end:7px;width:20px;height:20px;
+  border:0;border-radius:7px;background:transparent;color:var(--muted-2);display:grid;place-items:center;
+  cursor:pointer;opacity:.5;transition:.18s var(--ease)}
+.metric-basis-toggle:hover{opacity:1;background:rgba(16,37,31,.06);color:var(--ink)}
+.metric-basis-toggle svg{width:12px;height:12px}
+.metric-basis{position:absolute;z-index:20;inset-block-start:30px;inset-inline-end:6px;width:min(250px,78vw);
+  padding:10px 12px;border-radius:13px;background:var(--ink);color:#fff;box-shadow:var(--shadow-2);text-align:start}
+.metric-basis p{margin:0 0 5px;font-size:10px;line-height:1.7;font-weight:650}
+.metric-basis small{font-size:9px;opacity:.65;font-weight:800}
+.metric-unavailable{display:flex;align-items:flex-start;gap:9px;padding:14px 15px;border-radius:15px;
+  background:rgba(16,37,31,.028);border:1px dashed var(--line-strong)}
+.metric-unavailable svg{width:15px;height:15px;flex:none;color:var(--muted-2);margin-top:1px}
+.metric-unavailable p{margin:0;font-size:10.5px;line-height:1.75;color:var(--muted);font-weight:700}
+
+/* التجاوزات — سطرٌ خاصّ لأن هذا هو الرقم الذي يُسأل عنه المسؤول. */
+.bypass-line{display:flex;align-items:flex-start;gap:11px;margin-top:13px;padding:13px 15px;border-radius:16px;
+  border:1px solid rgba(47,125,101,.2);background:var(--mint)}
+.bypass-line.is-alarming{background:var(--rose-soft);border-color:rgba(228,111,97,.3)}
+.bypass-line svg{width:17px;height:17px;flex:none;margin-top:1px;color:var(--moss-dark)}
+.bypass-line.is-alarming svg{color:var(--rose)}
+.bypass-line strong{display:block;font-size:12px;font-weight:1000;color:var(--moss-dark)}
+.bypass-line.is-alarming strong{color:#8c2f26}
+.bypass-line p{margin:3px 0 0;font-size:9.5px;line-height:1.7;color:var(--muted);font-weight:650}
+.guard-tile.is-alarming{background:var(--rose-soft);border-color:rgba(228,111,97,.28)}
+
+/* توزيع المخاطر وسُلّم الاستقلالية */
+.risk-bar{display:flex;height:30px;border-radius:11px;overflow:hidden;border:1px solid var(--line)}
+.risk-seg{display:grid;place-items:center;font-size:10px;font-weight:950;color:#fff;min-width:22px}
+.risk-seg.risk-low{background:var(--moss)}.risk-seg.risk-medium{background:var(--amber)}
+.risk-seg.risk-high{background:var(--rose)}.risk-seg.risk-critical{background:#8c2f26}
+.risk-visual{padding:18px 20px;border-radius:20px}
+.autonomy-spread{margin-top:16px;padding:20px 22px;border-radius:22px}
+.ladder-spread{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;align-items:end;height:132px}
+.ladder-spread>div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:100%}
+.ladder-spread i{width:100%;border-radius:8px 8px 3px 3px;background:rgba(16,37,31,.09);display:block}
+.ladder-spread .has i{background:var(--moss)}
+.ladder-spread b{font-size:11px;font-weight:1000}
+.ladder-spread small{font-size:9px;color:var(--muted);font-weight:850}

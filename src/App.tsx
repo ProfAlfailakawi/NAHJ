@@ -10,7 +10,7 @@ import { WorkView } from "./components/views/WorkView";
 import { SimulatorView,type SimulatorState } from "./components/views/SimulatorView";
 import { ConnectionsView } from "./components/views/ConnectionsView";
 import { AnalyticsView,type AnalyticsData } from "./components/views/AnalyticsView";
-import { ControlView } from "./components/views/ControlView";
+import { ControlView, type GovernanceData } from "./components/views/ControlView";
 import { AuditView } from "./components/views/AuditView";
 import { AccountsView } from "./components/views/AccountsView";
 import { BillingView } from "./components/views/BillingView";
@@ -25,11 +25,19 @@ import {
 } from "./data/seedData";
 import type { ApprovalRequest,AuditEvent,AutonomyLevel,Connector,LearningProposal,Organization,ShadowComparison,Skill,TestCase,User,WorkItem } from "./types";
 
+/*
+ * الارتداد عند تعذّر الخادم.
+ *
+ * كان هذا الكائن نسخةً ثانية من الأرقام المخترعة: 412 مهمة و84.5 ساعة و78.4%
+ * أتمتة. أي أن فشل الطلب كان يُظهر أرقاماً جميلة بدل أن يقول إنه فشل. صار فارغاً
+ * صراحةً — والشاشة تعرض «—» و«لا قياس بعد».
+ */
 const fallbackAnalytics:AnalyticsData={
-  kpis:{totalTasksCompleted:412,totalHoursSaved:84.5,automationRatePercent:78.4,shadowMatchRatePercent:94.2,errorRatePercent:.8,humanTakeoverPercent:3.9,avgProcessDurationMin:5.4,institutionalCoverageScore:88},
-  weeklyTrend:[{day:"الأحد",tasks:48,savedHours:12.5},{day:"الإثنين",tasks:62,savedHours:15},{day:"الثلاثاء",tasks:54,savedHours:13.2},{day:"الأربعاء",tasks:71,savedHours:18.4},{day:"الخميس",tasks:68,savedHours:17.1}],
-  riskDistribution:{low:65,medium:25,high:10},
-  topSkillsByUsage:initialSkills.map(s=>({name:s.name,usageCount:s.usageCount,hoursSaved:s.hoursSavedTotal,successRate:s.successRate,reliabilityTier:s.reliabilityTier}))
+  kpis:{totalTasksCompleted:0,totalHoursSaved:0,automationRatePercent:null,shadowMatchRatePercent:null,
+    errorRatePercent:null,humanTakeoverPercent:null,avgProcessDurationMin:null,institutionalCoverageScore:null},
+  trend:{available:false,reason:"لم تصل بيانات من الخادم بعد.",points:[]},
+  riskDistribution:{low:0,medium:0,high:0,critical:0,total:0},
+  topSkillsByUsage:[]
 };
 const fallbackSimulator:SimulatorState={step:"initial",messages:[{id:"welcome",sender:"ai",text:"أهلاً بك في أكاديمية المستقبل. يسعدنا مساعدتك في التسجيل.",timestamp:"الآن"}]};
 
@@ -73,6 +81,7 @@ export default function App(){
   const [billing,setBilling]=useState<BillingSnapshot|null>(null);
   const [plans,setPlans]=useState<Plan[]>([]);
   const [billingLoading,setBillingLoading]=useState(true);
+  const [governance,setGovernance]=useState<GovernanceData|null>(null);
 
   const notify=useCallback((text:string,error=false)=>{setToast({text,error});window.setTimeout(()=>setToast(null),2800)},[]);
   const refreshAudit=useCallback(async()=>{const d=await apiOrNull<{auditEvents:AuditEvent[]}>("/audit");if(d?.auditEvents)setAudit(d.auditEvents)},[]);
@@ -113,7 +122,7 @@ export default function App(){
     try{
       const health=await apiOrNull<{status:string}>("/health"); setServerLive(health?.status==="ok");
       void refreshBilling();
-      const [context,learn,sk,wo,ap,co,au,an,si]=await Promise.all([
+      const [context,learn,sk,wo,ap,co,au,an,gv,si]=await Promise.all([
         apiOrNull<ContextResponse>("/context"),
         apiOrNull<{proposals:LearningProposal[]}>("/learn"),
         apiOrNull<{skills:Skill[]}>("/skills"),
@@ -122,12 +131,13 @@ export default function App(){
         apiOrNull<{connectors:Connector[]}>("/connections"),
         apiOrNull<{auditEvents:AuditEvent[]}>("/audit"),
         apiOrNull<AnalyticsData>("/analytics"),
+        apiOrNull<{governance:GovernanceData}>("/governance"),
         apiOrNull<{state:SimulatorState}>("/simulator/state"),
       ]);
       if(context){setOrganization(context.organization);setUser(context.currentUser)}
       if(learn?.proposals)setProposals(learn.proposals); if(sk?.skills)setSkills(sk.skills); if(wo?.workItems)setWork(wo.workItems);
       if(ap?.approvalRequests)setApprovals(ap.approvalRequests); if(co?.connectors)setConnectors(co.connectors); if(au?.auditEvents)setAudit(au.auditEvents);
-      if(an)setAnalytics(an); if(si?.state)setSim(si.state);
+      if(an)setAnalytics(an); if(gv?.governance)setGovernance(gv.governance); if(si?.state)setSim(si.state);
     }catch(error){
       // انتهاء الجلسة أثناء التحميل يعيدنا للبوابة بدل عرض بيانات بذرة كأنها سجلّ المؤسسة.
       if(error instanceof UnauthorizedError)setAuthState("anonymous");
@@ -238,7 +248,7 @@ export default function App(){
     case "simulator":view=<SimulatorView lang={lang} state={sim} busy={simBusy} onSend={t=>void simSend(t)} onReset={()=>void simReset()} onUpload={()=>void simUpload()} onOpenApproval={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id)}}/>;break;
     case "connections":view=<ConnectionsView lang={lang} connectors={connectors} testingId={testingConnector} onTest={id=>void testConnector(id)}/>;break;
     case "analytics":view=<AnalyticsView lang={lang} data={analytics}/>;break;
-    case "control":view=<ControlView lang={lang} paused={paused} onPause={()=>{setPaused(v=>!v);notify(!paused?(lang==="ar"?"تم إيقاف التنفيذ الآلي":"Execution paused"):(lang==="ar"?"تم الاستئناف":"Execution resumed"))}}/>;break;
+    case "control":view=<ControlView lang={lang} governance={governance} paused={paused} onPause={()=>{setPaused(v=>!v);notify(!paused?(lang==="ar"?"تم إيقاف التنفيذ الآلي":"Execution paused"):(lang==="ar"?"تم الاستئناف":"Execution resumed"))}}/>;break;
     case "audit":view=<AuditView lang={lang} events={audit}/>;break;
     case "accounts":view=<AccountsView lang={lang} currentAccountId={account?.id||""} isAdmin={account?.role==="admin"||account?.role==="owner"} notify={notify}/>;break;
     case "billing":view=<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={account?.role==="admin"||account?.role==="manager"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
