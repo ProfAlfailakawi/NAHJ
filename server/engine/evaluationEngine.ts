@@ -86,7 +86,8 @@ export function extractFacts(scenario: string): ScenarioFacts {
   if (amount) facts.amountKwd = Number(amount[1]);
 
   /* المدّة المنقضية: «بعد مضي شهر كامل» أو «بعد 30 يوماً». */
-  const days = /بعد\s+(?:مضي\s+)?(\d+)\s*يوم/.exec(text);
+  /* «بعد 12 يوماً» و«بعد 3 أيام» معاً — الجمع كان يُسقط المدّة فيرسب ما يُقرَّر. */
+  const days = /بعد\s+(?:مضي\s+)?(\d+)\s*(?:يوم|أيام)/.exec(text);
   if (days) facts.daysElapsed = Number(days[1]);
   else if (/بعد\s+(?:مضي\s+)?شهر/.test(text)) facts.daysElapsed = 30;
   else if (/بعد\s+(?:مضي\s+)?شهرين/.test(text)) facts.daysElapsed = 60;
@@ -198,6 +199,18 @@ export function deriveMinAge(
  * يكون الاختبار منطقاً ثانياً يُصدّق نفسه: تغييرُ سياسةٍ يغيّر نتيجة الاختبار،
  * وهذا هو المقصود من وجوده.
  */
+/** سقف الاسترجاع الآلي بالدينار كما تكتبه لائحة المؤسسة: «≤ 20 د.ك» أو «حتى 20 د.ك». */
+export function refundCeiling(policies: Policy[]): number | undefined {
+  const policy = policies.find(candidate => /استرجاع|استرداد|refund/i.test(candidate.title));
+  if (!policy) return undefined;
+  const texts = [...(policy.rules || []).map(rule => rule.condition), policy.summary || ""];
+  for (const text of texts) {
+    const match = /(?:≤|<=|حتى)\s*(\d+(?:\.\d+)?)\s*(?:د\.ك|دينار|KWD)/i.exec(toWesternDigits(String(text)));
+    if (match) return Number(match[1]);
+  }
+  return undefined;
+}
+
 export function decide(facts: ScenarioFacts, policies: Policy[] = [], context: DecisionContext = {}): Decision {
   /*
    * الحقن يُحسم قبل كل شيء: نصّ العميل بيانات لا تعليمات، مهما بدا آمراً.
@@ -227,7 +240,21 @@ export function decide(facts: ScenarioFacts, policies: Policy[] = [], context: D
         policyCode: "POL-FIN-02_REFUND_ESCALATION",
       };
     }
-    /* داخل النافذة: القرار من محرّك السياسات لا من هنا. */
+    /*
+     * داخل النافذة: سقف الاسترجاع الآلي من لائحة المؤسسة إن نطقت به.
+     *
+     * متجرٌ لائحته «حتى 20 د.ك يُنفَّذ آلياً» كان يُقال له إن كل استرجاع يحتاج
+     * اعتماد المدير العام — فيرسب في التدرّب على ما تسمح به لائحته صراحةً.
+     */
+    const ceiling = refundCeiling(policies);
+    if (ceiling !== undefined && facts.amountKwd !== undefined && facts.amountKwd <= ceiling) {
+      return {
+        action: "ISSUE_REFUND",
+        rationale: `المبلغ ${facts.amountKwd} د.ك ضمن سقف الاسترجاع الآلي ${ceiling} د.ك في لائحة المؤسسة، وضمن النافذة.`,
+        policyCode: "REFUND_UNDER_CEILING",
+      };
+    }
+    /* خارج السقف أو بلا سقفٍ معلن: القرار من محرّك السياسات لا من هنا. */
     const policy = PolicyEngine.evaluateAction("issueRefund", { amount: facts.amountKwd ?? 0 }, "employee");
     return {
       action: policy.requiresApproval ? "REQUEST_APPROVAL_REFUND" : "ISSUE_REFUND",

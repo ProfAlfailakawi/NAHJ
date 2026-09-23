@@ -64,6 +64,14 @@ export function openDatabase(): DatabaseSync {
   const filename = resolveDatabasePath();
   if (filename !== ":memory:") fs.mkdirSync(path.dirname(filename), { recursive: true });
   const db = new DatabaseSync(filename);
+  /*
+   * انتظارٌ قصير عند القفل بدل الفشل الفوري.
+   *
+   * بدونه تفشل أي كتابةٍ تصادف لحظة قفلٍ — نسخةٌ احتياطية بـVACUUM INTO، أو
+   * عمليةٌ ثانية على الملف — بـ«database is locked» فوراً. وهو ما كان يُسقط
+   * الاختبارات أحياناً حين تتشارك ملفاً واحداً.
+   */
+  db.exec("PRAGMA busy_timeout = 5000");
   applyJournalMode(db, filename);
   db.exec("PRAGMA foreign_keys = ON");
   db.exec(`

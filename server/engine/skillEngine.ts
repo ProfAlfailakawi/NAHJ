@@ -252,6 +252,8 @@ export class SkillEngine {
     const unevaluated: string[] = [];
     for (const comparison of comps) {
       const humanAction = String(comparison.humanAction || comparison.humanDecision || "");
+      /* ما يُقارَن هو رمز القرار إن سُجّل، وإلا كلام الموظف كما هو. */
+      const humanCode = String(comparison.humanActionCode || humanAction);
 
       /*
        * حالةٌ بلا قرار بشري لا تُقارَن: لا يوجد ما يُقاس عليه. وتُترك كما هي بدل
@@ -284,7 +286,7 @@ export class SkillEngine {
       comparison.aiAction = decision.action;
       comparison.aiDecision = decision.action;
       comparison.divergenceReason = decision.rationale;
-      comparison.matched = actionsMatch(humanAction, decision.action);
+      comparison.matched = actionsMatch(humanCode, decision.action);
       /* الانحراف: اختلافٌ في قرارٍ ليس مجرّد صياغة. */
       comparison.driftDetected = !comparison.matched;
     }

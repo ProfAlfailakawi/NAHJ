@@ -6,7 +6,7 @@ import { paymentPublicRouter } from "./server/paymentRoutes.ts";
 import { publicRouter } from "./server/publicPages.ts";
 import { bootstrapFirstAccount, ensureOwnerAccount, purgeExpiredSessions } from "./server/auth.ts";
 import { ensureSubscription, startBillingWorker, stopBillingWorker } from "./server/billing.ts";
-import { DemoSandbox, DEMO_SESSION_TTL_MS, persistence } from "./server/db.ts";
+import { DemoSandbox, DEMO_SESSION_TTL_MS, normalizeDemoSector, persistence } from "./server/db.ts";
 import { startBackupWorker, stopBackupWorker } from "./server/archive.ts";
 import { startNotifyWorker, stopNotifyWorker } from "./server/notify.ts";
 import { randomBytes } from "node:crypto";
@@ -159,9 +159,24 @@ async function startServer() {
   app.post("/api/demo/enter", (req, res) => {
     if (!demoEnabled()) { res.status(404).json({ error: "البيئة التجريبية غير مفعّلة في هذا النشر" }); return; }
     const sessionId = `demo_${randomBytes(32).toString("hex")}`;
-    DemoSandbox.create(sessionId, DEMO_SESSION_TTL_MS);
+    const sector = normalizeDemoSector(req.body?.sector);
+    DemoSandbox.create(sessionId, DEMO_SESSION_TTL_MS, sector);
     setDemoCookie(res, sessionId);
-    res.json({ ok: true, demo: true, ttlMs: DEMO_SESSION_TTL_MS });
+    res.json({ ok: true, demo: true, sector, ttlMs: DEMO_SESSION_TTL_MS });
+  });
+
+  /*
+   * رابطٌ يُرسل: /try/clinic يفتح العرض على عيادةٍ مباشرةً.
+   *
+   * هو ما تضعه في رسالة لعميلٍ محتمل من قطاعه، وما تشير إليه بطاقات صفحة
+   * الهبوط. ولا يُنشئ إلا صندوقاً معزولاً في الذاكرة؛ رمزٌ مجهول يعود إلى التعليم.
+   */
+  app.get("/try/:sector?", (req, res) => {
+    if (!demoEnabled()) { res.redirect(302, "/"); return; }
+    const sessionId = `demo_${randomBytes(32).toString("hex")}`;
+    DemoSandbox.create(sessionId, DEMO_SESSION_TTL_MS, normalizeDemoSector(req.params.sector));
+    setDemoCookie(res, sessionId);
+    res.redirect(302, "/app");
   });
 
   app.post("/api/demo/reset", (req, res) => {

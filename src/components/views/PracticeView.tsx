@@ -35,8 +35,11 @@ export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPract
         <div className="eval-list">{cases.map(c=><div key={c.id} className={`eval-row ${c.resultStatus||"pending"}`}><span>{c.resultStatus==="pass"?<CheckCircle2/>:c.resultStatus==="fail"?<XCircle/>:<FlaskConical/>}</span><div><strong>{c.name}</strong><small>{c.scenario}</small></div><b>{c.executionTimeMs?`${c.executionTimeMs}ms`:"—"}</b></div>)}</div>
       </section>
       <section className="shadow-deck surface-strong">
-        <div className="shadow-head"><div><em>SHADOW</em><strong>{matched}/{compared.length}</strong>{skipped>0&&<small className="shadow-skipped">{ar?`${skipped} بلا وقائع مسجَّلة — لم تُقارَن`:`${skipped} not compared`}</small>}</div><button className="round-action" disabled={shadowRunning} onClick={onRunShadow}><Play/></button></div>
-        <div className="shadow-pairs">{shadow.map(s=><div key={s.id} className={s.evaluated===false?"unmeasured":s.matched?"match":"drift"} title={s.evaluated===false?(ar?"لا وقائع مسجَّلة لهذه الحالة — لم يُشتق لها قرار":"No recorded facts"):s.divergenceReason||""}><span><i>H</i><small>{s.humanAction||s.humanDecision}</small></span><b>{s.evaluated===false?"?":s.matched?"=":"≠"}</b><span><i>AI</i><small>{s.aiAction||s.aiDecision}</small></span></div>)}</div>
+        <div className="shadow-head"><div><em>SHADOW</em><strong>{matched}/{compared.length}</strong>{skipped>0&&<small className="shadow-skipped">{ar?`${skipped} بلا وقائع مسجَّلة — لم تُقارَن`:`${skipped} not compared`}</small>}</div><button className="btn-primary shadow-run" disabled={shadowRunning} onClick={onRunShadow} title={ar?"قارن قرارات الموظفين بما كان نهج سيقرّره":"Compare staff decisions with NAHJ's"}><Play/>{shadowRunning?(ar?"يقارن...":"Comparing..."):(ar?"شغّل مقارنة الظل":"Run shadow")}</button></div>
+        <div className="shadow-pairs">{shadow.map(s=>{
+          /* حالةٌ لم تُقارَن بعد ليست انحرافاً: تُعرض «بانتظار المقارنة» حتى يُشغَّل الظل. */
+          const pending=s.evaluated===undefined&&!(s.aiAction||s.aiDecision);
+          return <div key={s.id} className={pending||s.evaluated===false?"unmeasured":s.matched?"match":"drift"} title={pending?(ar?"لم تُقارَن بعد — اضغط تشغيل الظل":"Not compared yet"):s.evaluated===false?(ar?"لا وقائع مسجَّلة لهذه الحالة — لم يُشتق لها قرار":"No recorded facts"):s.divergenceReason||""}><span><i>H</i><small>{s.humanAction||s.humanDecision}</small></span><b>{pending?"…":s.evaluated===false?"?":s.matched?"=":"≠"}</b><span><i>AI</i><small>{pending?(ar?"بانتظار المقارنة":"pending"):(s.aiAction||s.aiDecision)}</small></span></div>})}</div>
       </section>
     </div>
   </div>

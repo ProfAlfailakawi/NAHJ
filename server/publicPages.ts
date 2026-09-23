@@ -1,5 +1,8 @@
 import { Router, Request, Response } from "express";
 import { DEFAULT_CURRENCY, formatMoney, listPlans, type Plan, type PlanFeatures } from "./billing.ts";
+import { contactEmail, renderLandingPage, renderPrivacyPage, renderTermsPage } from "./marketingPages.ts";
+import { authCookieNames } from "./auth.ts";
+import { listSectors } from "./packs/index.ts";
 
 /*
  * الصفحة العامة — ما يراه من لم يشترِ بعد.
@@ -98,12 +101,6 @@ export const CUSTOM_PRICE = "سعرٌ مخصّص";
 
 function priceLabel(amount: number, currency: string): string {
   return amount > 0 ? formatMoney(amount, currency) : CUSTOM_PRICE;
-}
-
-/** بريد التواصل التجاري إن ضُبط — وإلا فلا رابط تواصلٍ يقود إلى لا شيء. */
-function contactEmail(): string {
-  const value = (process.env.NAHJ_CONTACT_EMAIL || "").trim();
-  return /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(value) ? value : "";
 }
 
 /** الباقات العلنية وحدها — والخاصة والمؤرشفة لا تخرج من هنا أبداً. */
@@ -246,11 +243,11 @@ export function renderPricingPage(): string {
   </section>
 
   <section class="cta">
-    <a class="primary" href="/">جرّب نهج الآن — بيئة تجريبية بلا حساب</a>
+    <a class="primary" href="/#sectors">جرّب نهج على قطاعك — بلا حساب</a>
     ${contact ? `<a href="mailto:${escapeHtml(contact)}?subject=${encodeURIComponent("طلب عرض — نهج")}">تواصل معنا: ${escapeHtml(contact)}</a>` : ""}
   </section>
 
-  <footer>الأسعار بالدينار الكويتي وتشمل ما هو مذكور أعلاه. ${contact ? `للتعاقد أو لعرضٍ مخصّص راسلنا على ${escapeHtml(contact)}.` : "للتعاقد أو لعرضٍ مخصّص تواصل معنا."}</footer>
+  <footer><a href="/">الرئيسية</a> · <a href="/terms">شروط الاستخدام</a> · <a href="/privacy">سياسة الخصوصية</a><br>الأسعار بالدينار الكويتي وتشمل ما هو مذكور أعلاه. ${contact ? `للتعاقد أو لعرضٍ مخصّص راسلنا على ${escapeHtml(contact)}.` : "للتعاقد أو لعرضٍ مخصّص تواصل معنا."}</footer>
 </div>
 <script>
   /* تبديل الدورة يقرأ الأسعار المرسومة في الصفحة — لا طلب شبكة بعد التحميل. */
@@ -288,6 +285,16 @@ publicRouter.get("/pricing", (_req: Request, res: Response) => {
   res.send(renderPricingPage());
 });
 
+/* القطاعات المتاحة للعرض — لشاشة الدخول قبل أي جلسة. عامّةٌ بطبيعتها. */
+publicRouter.get("/api/public/sectors", (_req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "public, max-age=300");
+  res.json({
+    sectors: listSectors().map(sector => ({
+      code: sector.code, nameAr: sector.nameAr, nameEn: sector.nameEn, logo: sector.logo, descriptionAr: sector.descriptionAr,
+    })),
+  });
+});
+
 publicRouter.get("/api/public/pricing", (_req: Request, res: Response) => {
   res.setHeader("Cache-Control", "public, max-age=120");
   res.json({ plans: publicPlans(), featureStates: FEATURE_BUILD_STATE });
@@ -298,5 +305,45 @@ publicRouter.get("/api/public/pricing", (_req: Request, res: Response) => {
  * التشغيلية والواجهة البرمجية خلف دخول ولا معنى لزحفها.
  */
 publicRouter.get("/robots.txt", (_req: Request, res: Response) => {
-  res.type("text/plain").send("User-agent: *\nDisallow: /api/\nAllow: /pricing\n");
+  const base = (process.env.NAHJ_PUBLIC_URL || "").replace(/\/+$/, "");
+  res.type("text/plain").send(
+    "User-agent: *\nDisallow: /api/\nDisallow: /app\nDisallow: /try/\nAllow: /\n" + (base ? `Sitemap: ${base}/sitemap.xml\n` : ""),
+  );
 });
+
+publicRouter.get("/sitemap.xml", (_req: Request, res: Response) => {
+  const base = (process.env.NAHJ_PUBLIC_URL || "").replace(/\/+$/, "");
+  if (!base) return void res.status(404).type("text/plain").send("NAHJ_PUBLIC_URL غير مضبوط.");
+  const urls = ["/", "/pricing", "/terms", "/privacy"]
+    .map(path => `<url><loc>${escapeHtml(base + path)}</loc></url>`).join("");
+  res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);
+});
+
+/*
+ * الصفحة الرئيسية: الهبوط لمن لا جلسة له، والتطبيق لمن له جلسة أو عرض.
+ *
+ * من سجّل دخوله أمس ويفتح الرابط الرئيسي اليوم يريد عمله لا إعلاناً. فالكوكي
+ * وحده يُقرأ هنا — لا تُفحص صلاحيته: جلسةٌ منتهية تصل إلى التطبيق فيطلب الدخول.
+ */
+function hasAppCookie(req: Request): boolean {
+  const cookies = String(req.headers.cookie || "");
+  return cookies.split(";").some(part => {
+    const name = part.trim().split("=")[0];
+    return name === authCookieNames.session || name === "nahj_demo";
+  });
+}
+
+const sendHtml = (res: Response, html: string, cache = "public, max-age=300") => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Cache-Control", cache);
+  res.send(html);
+};
+
+publicRouter.get("/", (req: Request, res: Response, next) => {
+  if (hasAppCookie(req)) return next();
+  /* الكوكي يغيّر الجواب: لا يُخزَّن ما يُعاد لزائرٍ ليُعاد لمستخدمٍ مسجّل. */
+  res.setHeader("Vary", "Cookie");
+  sendHtml(res, renderLandingPage(), "private, max-age=0");
+});
+publicRouter.get("/terms", (_req: Request, res: Response) => sendHtml(res, renderTermsPage()));
+publicRouter.get("/privacy", (_req: Request, res: Response) => sendHtml(res, renderPrivacyPage()));

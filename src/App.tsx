@@ -27,7 +27,7 @@ import { apiOrNull, authApi, SubscriptionBlockedError, UnauthorizedError, type B
 import { LoginScreen } from "./components/LoginScreen";
 import {
   demoUsers,initialOrganization,initialSkills,initialWorkItems,initialLearningProposals,
-  initialApprovalRequests,initialAuditEvents,initialConnectors,initialTestCases,initialShadowComparisons
+  initialApprovalRequests,initialAuditEvents,initialConnectors
 } from "./data/seedData";
 import type { ApprovalRequest,AuditEvent,AutonomyLevel,Connector,LearningProposal,Organization,ShadowComparison,Skill,TestCase,User,WorkItem } from "./types";
 
@@ -45,7 +45,7 @@ const fallbackAnalytics:AnalyticsData={
   riskDistribution:{low:0,medium:0,high:0,critical:0,total:0},
   topSkillsByUsage:[]
 };
-const fallbackSimulator:SimulatorState={step:"initial",messages:[{id:"welcome",sender:"ai",text:"أهلاً بك في أكاديمية المستقبل. يسعدنا مساعدتك في التسجيل.",timestamp:"الآن"}]};
+const fallbackSimulator:SimulatorState={step:"initial",messages:[{id:"welcome",sender:"ai",text:"أهلاً بك. كيف نقدر نساعدك اليوم؟",timestamp:"الآن"}]};
 
 type ContextResponse={organization:Organization;users:User[];currentUser:User};
 
@@ -68,8 +68,8 @@ export default function App(){
   const [proposals,setProposals]=useState<LearningProposal[]>(initialLearningProposals);
   const [approvals,setApprovals]=useState<ApprovalRequest[]>(initialApprovalRequests);
   const [connectors,setConnectors]=useState<Connector[]>(initialConnectors);
-  const [practice,setPractice]=useState<TestCase[]>(initialTestCases);
-  const [shadow,setShadow]=useState<ShadowComparison[]>(initialShadowComparisons);
+  const [practice,setPractice]=useState<TestCase[]>([]);
+  const [shadow,setShadow]=useState<ShadowComparison[]>([]);
   const [audit,setAudit]=useState<AuditEvent[]>(initialAuditEvents);
   const [analytics,setAnalytics]=useState<AnalyticsData>(fallbackAnalytics);
   const [sim,setSim]=useState<SimulatorState>(fallbackSimulator);
@@ -183,7 +183,7 @@ export default function App(){
     try{
       const health=await apiOrNull<{status:string}>("/health"); setServerLive(health?.status==="ok");
       void refreshBilling();
-      const [context,learn,sk,wo,ap,co,au,an,gv,td,si]=await Promise.all([
+      const [context,learn,sk,wo,ap,co,au,an,gv,td,si,pr]=await Promise.all([
         apiOrNull<ContextResponse>("/context"),
         apiOrNull<{proposals:LearningProposal[]}>("/learn"),
         apiOrNull<{skills:Skill[]}>("/skills"),
@@ -195,11 +195,13 @@ export default function App(){
         apiOrNull<{governance:GovernanceData}>("/governance"),
         apiOrNull<{metrics:any;institutionalMemoryCoverage:any}>("/today"),
         apiOrNull<{state:SimulatorState}>("/simulator/state"),
+        apiOrNull<{testCases:TestCase[];shadowComparisons:ShadowComparison[]}>("/practice"),
       ]);
       if(context){setOrganization(context.organization);setUser(context.currentUser)}
       if(learn?.proposals)setProposals(learn.proposals); if(sk?.skills)setSkills(sk.skills); if(wo?.workItems)setWork(wo.workItems);
       if(ap?.approvalRequests)setApprovals(ap.approvalRequests); if(co?.connectors)setConnectors(co.connectors); if(au?.auditEvents)setAudit(au.auditEvents);
       if(an)setAnalytics(an); if(gv?.governance)setGovernance(gv.governance); if(td)setTodayData(td); if(si?.state)setSim(si.state);
+      if(pr){setPractice(pr.testCases||[]);setShadow(pr.shadowComparisons||[])}
     }catch(error){
       // انتهاء الجلسة أثناء التحميل يعيدنا للبوابة بدل عرض بيانات بذرة كأنها سجلّ المؤسسة.
       if(error instanceof UnauthorizedError)setAuthState("anonymous");
@@ -215,9 +217,9 @@ export default function App(){
   useEffect(()=>{void refreshDemoConfig();void checkAuth()},[refreshDemoConfig,checkAuth]);
   useEffect(()=>{if(authState==="authenticated")void loadAll()},[authState,loadAll]);
 
-  const enterDemo=async()=>{
+  const enterDemo=async(sector?:string)=>{
     setDemoBusy(true);
-    const d=await apiOrNull<{ok:boolean}>("/demo/enter",{method:"POST",body:"{}"});
+    const d=await apiOrNull<{ok:boolean}>("/demo/enter",{method:"POST",body:JSON.stringify(sector?{sector}:{})});
     if(d?.ok){await refreshDemoConfig();await checkAuth();await loadAll();notify(lang==="ar"?"أنت الآن في بيئة تجريبية معزولة — لا تتأثر بيانات المؤسسة":"You are in an isolated demo environment")}
     else notify(lang==="ar"?"تعذّر فتح البيئة التجريبية":"Could not start the demo",true);
     setDemoBusy(false);
@@ -293,9 +295,12 @@ export default function App(){
     notify(lang==="ar"?(d?.matchRate==null?"لا حالات ظلّ تحمل قراراً بشرياً — لم تجرِ مقارنة":`اكتمل الظل — تطابق ${d.matchRate}%`):"Shadow comparison complete");void refreshAudit()});
   const takeOver=guarded(async(id:string)=>{const d=await apiOrNull<{item:WorkItem}>(`/work/${id}/takeover`,{method:"POST",body:"{}"});if(d?.item)setWork(v=>v.map(w=>w.id===id?d.item:w));else setWork(v=>v.map(w=>w.id===id?{...w,assignedMode:"human_takeover"}:w));setActiveApproval(null);notify(lang==="ar"?"استلم الموظف الحالة":"Human takeover active");void refreshAudit()});
   const resume=guarded(async(id:string)=>{const d=await apiOrNull<{item:WorkItem}>(`/work/${id}/resume-ai`,{method:"POST",body:"{}"});if(d?.item)setWork(v=>v.map(w=>w.id===id?d.item:w));else setWork(v=>v.map(w=>w.id===id?{...w,assignedMode:"ai"}:w));notify(lang==="ar"?"عاد التنفيذ إلى نهج":"NAHJ resumed");void refreshAudit()});
-  const decideApproval=guarded(async(id:string,decision:"approved"|"rejected",comments="")=>{setApprovalBusy(true);const d=await apiOrNull<{success:boolean}>(`/approvals/${id}/decide`,{method:"POST",body:JSON.stringify({decision,comments})});setApprovalBusy(false);if(!d){setApprovals(v=>v.map(a=>a.id===id?{...a,status:decision}:a))}await Promise.all([refreshApprovals(),refreshWork(),refreshSimulator(),refreshAudit()]);setActiveApproval(null);notify(decision==="approved"?(lang==="ar"?"تم الاعتماد والتنفيذ":"Approved & executed"):(lang==="ar"?"تم الرفض":"Rejected"))});
+  const decideApproval=guarded(async(id:string,decision:"approved"|"rejected",comments="")=>{setApprovalBusy(true);const d=await apiOrNull<{success:boolean}>(`/approvals/${id}/decide`,{method:"POST",body:JSON.stringify({decision,comments})});setApprovalBusy(false);
+    /* رفض الخادم (صلاحية، أو حُسم من قبل) لا يُعرض نجاحاً ولا يُعلَّم محلياً معتمداً. */
+    if(!d?.success){await refreshApprovals();notify(lang==="ar"?"لم يُنفَّذ القرار — تحقّق من صلاحيتك أو أن الطلب لم يُحسم من قبل":"Decision not applied — check your permission or whether it was already decided",true);return;}
+    await Promise.all([refreshApprovals(),refreshWork(),refreshSimulator(),refreshAudit()]);setActiveApproval(null);notify(decision==="approved"?(lang==="ar"?"تم الاعتماد والتنفيذ":"Approved & executed"):(lang==="ar"?"تم الرفض":"Rejected"))});
   const testConnector=guarded(async(id:string)=>{setTestingConnector(id);const d=await apiOrNull<{connector:Connector}>(`/connections/${id}/test`,{method:"POST",body:"{}"});if(d?.connector)setConnectors(v=>v.map(c=>c.id===id?d.connector:c));setTestingConnector(null);notify(lang==="ar"?"الاتصال سليم":"Connection healthy");void refreshAudit()});
-  const simSend=guarded(async(text:string)=>{setSimBusy(true);const d=await apiOrNull<{state:SimulatorState}>("/simulator/message",{method:"POST",body:JSON.stringify({text})});if(d?.state)setSim(d.state);else setSim(v=>({...v,messages:[...v.messages,{id:`c_${Date.now()}`,sender:"customer",text,timestamp:"الآن"},{id:`a_${Date.now()}`,sender:"ai",text:lang==="ar"?"وصلت رسالتك. أتابعها وفق الإجراء المعتمد.":"Got it. I’m following the verified process.",timestamp:"الآن"}]}));setSimBusy(false)});
+  const simSend=guarded(async(text:string)=>{setSimBusy(true);const d=await apiOrNull<{state:SimulatorState}>("/simulator/message",{method:"POST",body:JSON.stringify({text})});if(d?.state){setSim(d.state);/* طلب الموافقة الذي فتحته المحادثة يُحمَّل ليظهر في البوابة والتنبيهات. */if(d.state.approvalStatus==="pending")await loadAll();}else setSim(v=>({...v,messages:[...v.messages,{id:`c_${Date.now()}`,sender:"customer",text,timestamp:"الآن"},{id:`a_${Date.now()}`,sender:"ai",text:lang==="ar"?"وصلت رسالتك. أتابعها وفق الإجراء المعتمد.":"Got it. I’m following the verified process.",timestamp:"الآن"}]}));setSimBusy(false)});
   const simReset=guarded(async()=>{const d=await apiOrNull<{state:SimulatorState}>("/simulator/reset",{method:"POST",body:"{}"});setSim(d?.state||fallbackSimulator)});
   const simUpload=guarded(async()=>{setSimBusy(true);const d=await apiOrNull<{state:SimulatorState}>("/simulator/upload-doc",{method:"POST",body:"{}"});if(d?.state)setSim(d.state);await Promise.all([refreshApprovals(),refreshWork()]);setSimBusy(false);notify(lang==="ar"?"تم التحقق من المستند":"Document verified")});
   const codified=guarded(async()=>{await refreshSkills();const context=await apiOrNull<ContextResponse>("/context");if(context)setOrganization(context.organization);setSection("skills")});
@@ -308,7 +313,7 @@ export default function App(){
   if(authState==="checking")return <div className="boot-gate"/>;
   if(authState==="anonymous"||authState==="setup")
     return <LoginScreen lang={lang} needsSetup={authState==="setup"} demoEnabled={demoEnabled} demoBusy={demoBusy}
-      onEnterDemo={()=>void enterDemo()} onAuthenticated={()=>void checkAuth()}/>;
+      onEnterDemo={sector=>void enterDemo(sector)} onAuthenticated={()=>void checkAuth()}/>;
 
   /*
    * حساب المسوّق سطحٌ واحد.
@@ -337,7 +342,7 @@ export default function App(){
     case "skills":view=<SkillsView lang={lang} skills={skills} onPromote={(id,l)=>void promote(id,l)} onRollback={(id,v)=>void rollback(id,v)} onToggleKill={id=>void toggleSkill(id)}/>;break;
     case "practice":view=<PracticeView lang={lang} cases={practice} shadow={shadow} running={practiceBusy} shadowRunning={shadowBusy} onRunPractice={()=>void runPractice()} onRunShadow={()=>void runShadow()}/>;break;
     case "work":view=<WorkView lang={lang} items={work} approvalByWork={approvalByWork} onTakeOver={id=>void takeOver(id)} onResume={id=>void resume(id)} onApproval={setActiveApproval}/>;break;
-    case "simulator":view=<SimulatorView lang={lang} state={sim} busy={simBusy} onSend={t=>void simSend(t)} onReset={()=>void simReset()} onUpload={()=>void simUpload()} onOpenApproval={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id)}}/>;break;
+    case "simulator":view=<SimulatorView lang={lang} state={sim} busy={simBusy} onSend={t=>void simSend(t)} onReset={()=>void simReset()} onUpload={()=>void simUpload()} onOpenApproval={()=>{/* الطلب الذي فتحته هذه المحادثة بعينه — لا أول طلبٍ معلّق في المؤسسة. */const a=approvals.find(x=>x.id===sim.approvalId&&x.status==="pending")||approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id)}}/>;break;
     case "connections":view=<ConnectionsView lang={lang} connectors={connectors} testingId={testingConnector} onTest={id=>void testConnector(id)}/>;break;
     case "analytics":view=<AnalyticsView lang={lang} data={analytics}/>;break;
     case "control":view=<ControlView lang={lang} governance={governance} paused={paused} onPause={()=>{setPaused(v=>!v);notify(!paused?(lang==="ar"?"تم إيقاف التنفيذ الآلي":"Execution paused"):(lang==="ar"?"تم الاستئناف":"Execution resumed"))}}/>;break;
