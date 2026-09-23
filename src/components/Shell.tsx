@@ -80,7 +80,7 @@ export function Shell({
     <div className="app-shell" dir={ar ? "rtl" : "ltr"}>
       <div className="ambient-canvas" aria-hidden="true"/>
       <aside className="desktop-rail">
-        <div className="rail-brand"><NahjMark size={48}/></div>
+        <div className="rail-brand"><NahjMark size={48}/><span className="rail-brand-name">{ar ? "نهج" : "NAHJ"}</span></div>
         <nav className="rail-nav">
           {visibleNav.map(({ id, ar: a, en, icon: Icon, group }) => {
             const divider = lastGroup && group !== lastGroup;
@@ -91,6 +91,9 @@ export function Shell({
                 <div className="nav-item-wrap">
                   <button className={`nav-icon ${section === id ? "active" : ""}`} onClick={() => onSection(id)} aria-label={ar ? a : en}>
                     <Icon/>
+                    {/* الاسم ظاهرٌ بجوار الأيقونة: كان في تلميحٍ لا يظهر إلا بمرور الفأرة،
+                        فمن لا يعرف الأيقونات لا يعرف أين يذهب. */}
+                    <span className="nav-label">{ar ? a : en}</span>
                     {id === "learn" && alerts > 0 && <i className="nav-signal"/>}
                   </button>
                   <span className="nav-tooltip">{ar ? a : en}</span>
@@ -100,7 +103,7 @@ export function Shell({
           })}
         </nav>
         {/* كان هذا الزرّ بلا مُعالج نقر — أيقونةٌ تُرى ولا تفعل. */}
-        <button className="nav-icon rail-help" onClick={onHelp} aria-label={ar?"دليل سريع":"Quick guide"} title={ar?"دليل سريع":"Quick guide"}><CircleHelp/></button>
+        <button className="nav-icon rail-help" onClick={onHelp} aria-label={ar?"دليل سريع":"Quick guide"} title={ar?"دليل سريع":"Quick guide"}><CircleHelp/><span className="nav-label">{ar?"دليل سريع":"Quick guide"}</span></button>
       </aside>
 
       <div className="shell-body">

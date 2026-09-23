@@ -117,10 +117,38 @@ jobs:
           PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
           ZONE: ${{ vars.GCP_ZONE }}
           NAHJ_DOMAIN: ${{ vars.NAHJ_DOMAIN }}
+          # خوادم العملاء — سطرٌ لكل عميل: «اسم_الخادم النطاق [المنطقة]»، مثل:
+          #   nahj-shifa  app.shifa-clinic.com
+          #   nahj-mizan  nahj.almizan-law.com  europe-west1-b
+          # كلٌّ على خادمه وقرصه، ويُحدَّث بالصورة نفسها بعد نشرك. فارغٌ = نشرك وحده.
+          NAHJ_CUSTOMERS: ${{ vars.NAHJ_CUSTOMERS }}
         run: |
           set -euo pipefail
           # اختياريان: للسكربت افتراضٌ لكلٍّ منهما، وتمرير متغيّرٍ فارغ يدهسه.
           # فيسقط اشتقاق الاسم عبر sslip.io، وتفشل شهادة Let's Encrypt.
           [[ -n "${ZONE:-}" ]] || unset ZONE
           [[ -n "${NAHJ_DOMAIN:-}" ]] || unset NAHJ_DOMAIN
+          DEFAULT_ZONE="${ZONE:-europe-west1-b}"
+          # صورةٌ واحدة لكل الخوادم: تُبنى مرة في نشرك، ويُعاد استعمالها للعملاء.
+          export IMAGE="${DEFAULT_ZONE%-*}-docker.pkg.dev/${PROJECT_ID}/nahj/nahj:${GITHUB_SHA::12}-${GITHUB_RUN_NUMBER}"
+
+          echo "::group::نشرك — الموقع الرئيسي"
           bash scripts/deploy-vm.sh
+          echo "::endgroup::"
+
+          # عميلٌ يفشل نشره لا يوقف الباقين — ويُعلن فشله في النهاية فلا يُخفى.
+          FAILED=""
+          while read -r CUSTOMER_INSTANCE CUSTOMER_DOMAIN CUSTOMER_ZONE _; do
+            [[ -z "${CUSTOMER_INSTANCE:-}" || "$CUSTOMER_INSTANCE" == \#* ]] && continue
+            echo "::group::عميل — $CUSTOMER_INSTANCE (${CUSTOMER_DOMAIN:-بلا نطاق})"
+            if ! INSTANCE="$CUSTOMER_INSTANCE" DATA_DISK="${CUSTOMER_INSTANCE}-data" \
+                 ZONE="${CUSTOMER_ZONE:-$DEFAULT_ZONE}" NAHJ_DOMAIN="${CUSTOMER_DOMAIN:-}" \
+                 NAHJ_MARKETING=off SKIP_BUILD=1 bash scripts/deploy-vm.sh; then
+              FAILED="$FAILED $CUSTOMER_INSTANCE"
+            fi
+            echo "::endgroup::"
+          done <<< "${NAHJ_CUSTOMERS:-}"
+          if [[ -n "$FAILED" ]]; then
+            echo "::error title=تعذّر نشر عملاء::$FAILED"
+            exit 1
+          fi

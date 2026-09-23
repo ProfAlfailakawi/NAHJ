@@ -305,6 +305,7 @@ const LEAD_MAX_PER_WINDOW = 5;
 const leadHits = new Map<string, { count: number; resetAt: number }>();
 
 publicRouter.post("/api/public/leads", (req: Request, res: Response) => {
+  if (!marketingEnabled()) return void res.status(404).json({ error: "غير متاح." });
   const ip = req.ip || req.socket.remoteAddress || "unknown";
   const nowMs = Date.now();
   const hit = leadHits.get(ip);
@@ -333,7 +334,22 @@ publicRouter.get("/api/public/pricing", (_req: Request, res: Response) => {
  * robots.txt — كان يقع على مسار الواجهة فيُعاد HTML التطبيق بدله. الأسطح
  * التشغيلية والواجهة البرمجية خلف دخول ولا معنى لزحفها.
  */
+/*
+ * الموقع التسويقي — مفعّلٌ في نشر المالك، ومطفأٌ في نشر كل عميل.
+ *
+ * كل مؤسسةٍ مشترية على خادمها. وموظفوها حين يفتحون عنوانها يريدون الدخول إلى
+ * عملهم، لا صفحةً تبيعهم نهج وتدعوهم إلى «اطلب عرضاً». فـ NAHJ_MARKETING=off
+ * يجعل الجذر هو التطبيق، ويغلق نموذج الطلبات، ويمنع الفهرسة.
+ */
+export const marketingEnabled = () => (process.env.NAHJ_MARKETING || "").trim().toLowerCase() !== "off";
+
+publicRouter.get("/api/public/site", (_req: Request, res: Response) => {
+  res.setHeader("Cache-Control", "public, max-age=300");
+  res.json({ marketing: marketingEnabled() });
+});
+
 publicRouter.get("/robots.txt", (_req: Request, res: Response) => {
+  if (!marketingEnabled()) return void res.type("text/plain").send("User-agent: *\nDisallow: /\n");
   const base = (process.env.NAHJ_PUBLIC_URL || "").replace(/\/+$/, "");
   res.type("text/plain").send(
     "User-agent: *\nDisallow: /api/\nDisallow: /app\nDisallow: /try/\nAllow: /\n" + (base ? `Sitemap: ${base}/sitemap.xml\n` : ""),
@@ -341,6 +357,7 @@ publicRouter.get("/robots.txt", (_req: Request, res: Response) => {
 });
 
 publicRouter.get("/sitemap.xml", (_req: Request, res: Response) => {
+  if (!marketingEnabled()) return void res.status(404).type("text/plain").send("");
   const base = (process.env.NAHJ_PUBLIC_URL || "").replace(/\/+$/, "");
   if (!base) return void res.status(404).type("text/plain").send("NAHJ_PUBLIC_URL غير مضبوط.");
   const urls = ["/", "/pricing", "/terms", "/privacy"]
@@ -369,7 +386,7 @@ const sendHtml = (res: Response, html: string, cache = "public, max-age=300") =>
 };
 
 publicRouter.get("/", (req: Request, res: Response, next) => {
-  if (hasAppCookie(req)) return next();
+  if (hasAppCookie(req) || !marketingEnabled()) return next();
   /* الكوكي يغيّر الجواب: لا يُخزَّن ما يُعاد لزائرٍ ليُعاد لمستخدمٍ مسجّل. */
   res.setHeader("Vary", "Cookie");
   sendHtml(res, renderLandingPage(), "private, max-age=0");

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Building2, CheckCircle2, LogOut, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Building2, CheckCircle2, Crown, LogOut, ShieldCheck, TriangleAlert } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import { BrandLockup } from "./Brand";
 
@@ -25,9 +25,11 @@ interface Props {
   canSetup: boolean;
   onDone: () => void;
   onSignOut: () => void;
+  /* مالك المنصة يبلغ لوحته قبل الإعداد: نشرُه التسويقي قد لا يحتاج مؤسسةً أصلاً. */
+  onOpenOwner?: () => void;
 }
 
-export function OrgSetupView({ lang, canSetup, onDone, onSignOut }: Props) {
+export function OrgSetupView({ lang, canSetup, onDone, onSignOut, onOpenOwner }: Props) {
   const ar = lang === "ar";
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [name, setName] = useState("");
@@ -115,6 +117,11 @@ export function OrgSetupView({ lang, canSetup, onDone, onSignOut }: Props) {
           <button type="submit" className="btn-primary" disabled={busy || name.trim().length < 2 || !sector}>
             {busy ? (ar ? "جارٍ الإعداد..." : "Setting up...") : (ar ? "ابدأ التشغيل" : "Start")}
           </button>
+          {onOpenOwner && (
+            <button type="button" className="btn-secondary org-setup-owner" onClick={onOpenOwner} disabled={busy}>
+              <Crown /> {ar ? "افتح لوحة المالك أولاً — الطلبات وروابط العرض والباقات" : "Open the owner console first"}
+            </button>
+          )}
         </form>
       )}
     </div>

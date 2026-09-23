@@ -77,6 +77,8 @@ export default function App(){
   const [audit,setAudit]=useState<AuditEvent[]>([]);
   /* هل أعدّت المؤسسة نفسها؟ null حتى يصل جواب الخادم. */
   const [orgConfigured,setOrgConfigured]=useState<boolean|null>(null);
+  /* المالك فتح لوحته قبل إعداد المؤسسة. */
+  const [ownerOnly,setOwnerOnly]=useState(false);
   const [analytics,setAnalytics]=useState<AnalyticsData>(fallbackAnalytics);
   const [sim,setSim]=useState<SimulatorState>(fallbackSimulator);
   const [activeApproval,setActiveApproval]=useState<string|null>(null);
@@ -331,9 +333,29 @@ export default function App(){
    * نشرٌ لم تُعِدّه مؤسسته بعد: شاشة الإعداد بدل شاشات العمل. فبذرة العرض لا
    * تُعرض أبداً على أنها سجلّ المؤسسة. والمسوّق خارج هذا — لوحته لا تمسّ المؤسسة.
    */
+  /*
+   * مالك المنصة قبل الإعداد: لوحته وحدها في إطارٍ بسيط — لا شاشات تشغيلٍ تعرض
+   * بذرة العرض. وزرٌّ يعيده إلى الإعداد متى أراد.
+   */
+  if(orgConfigured===false&&!demoActive&&isOwner&&ownerOnly)
+    return <div className="partner-shell" dir={lang==="ar"?"rtl":"ltr"}>
+      <div className="ambient-canvas" aria-hidden="true"/>
+      <header className="partner-topbar">
+        <BrandLockup compact/>
+        <div className="owner-only-actions">
+          <button type="button" className="btn-secondary" onClick={()=>setOwnerOnly(false)}>{lang==="ar"?"أعِدّ المؤسسة":"Set up organization"}</button>
+          <button type="button" className="top-icon" onClick={()=>void signOut()} disabled={signingOut}
+            title={lang==="ar"?"تسجيل الخروج":"Sign out"} aria-label={lang==="ar"?"تسجيل الخروج":"Sign out"}><LogOut/></button>
+        </div>
+      </header>
+      <main className="partner-stage"><OwnerView lang={lang} notify={notify} onChanged={()=>void refreshBilling()}/></main>
+      {toast&&<div className={`toast ${toast.error?"error":""}`}>{toast.error?<TriangleAlert/>:<CheckCircle2/>}<span>{toast.text}</span></div>}
+    </div>;
+
   if(orgConfigured===false&&!demoActive&&account?.role!=="partner")
     return <OrgSetupView lang={lang} canSetup={account?.role==="admin"||account?.role==="owner"}
-      onDone={()=>{void loadAll();setSection("today")}} onSignOut={()=>void signOut()}/>;
+      onDone={()=>{void loadAll();setSection("today");window.scrollTo(0,0)}} onSignOut={()=>void signOut()}
+      onOpenOwner={isOwner?()=>setOwnerOnly(true):undefined}/>;
 
   if(account?.role==="partner")
     return <div className="partner-shell" dir={lang==="ar"?"rtl":"ltr"}>
