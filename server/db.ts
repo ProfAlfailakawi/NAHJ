@@ -297,7 +297,7 @@ export class Store {
   }
 
   public resetSimulator(): void {
-    const chat = this.sectorCode !== EDUCATION_CODE ? getSectorPack(this.sectorCode)?.demo?.chat : undefined;
+    const chat = this.isDemo && this.sectorCode !== EDUCATION_CODE ? getSectorPack(this.sectorCode)?.demo?.chat : undefined;
     this.simulatorState = {
       step: "initial",
       messages: [
@@ -433,6 +433,7 @@ export const db: Store = new Proxy(baseStore, {
 }) as Store;
 
 export const DEMO_SESSION_TTL_MS = 60 * 60 * 1000;
+const MAX_DEMO_SANDBOXES = Number(process.env.NAHJ_DEMO_MAX_SANDBOXES) > 0 ? Number(process.env.NAHJ_DEMO_MAX_SANDBOXES) : 300;
 
 /** Drop sandboxes whose visitor left, so an unattended demo cannot grow without bound. */
 function sweepExpiredSandboxes(): void {
@@ -445,6 +446,17 @@ export const DemoSandbox = {
   currentSessionId: (): string => demoContext.getStore()?.sessionId || "",
   create(sessionId: string, ttlMs: number = DEMO_SESSION_TTL_MS, sector: string = EDUCATION_CODE): void {
     sweepExpiredSandboxes();
+    /*
+     * سقفٌ لعدد الصناديق: /try/<قطاع> رابطٌ عامّ يُنشئ صندوقاً بكل زيارة، وزاحفٌ
+     * يطرقه بلا توقّف كان سيملأ الذاكرة. يُزاح الأقدم انتهاءً — زائرٌ حقيقي
+     * يعود فيجد عرضاً جديداً، ولا يسقط الخادم.
+     */
+    while (demoSandboxes.size >= MAX_DEMO_SANDBOXES) {
+      let oldestId = "";
+      let oldestAt = Infinity;
+      for (const [id, record] of demoSandboxes) if (record.expiresAt < oldestAt) { oldestAt = record.expiresAt; oldestId = id; }
+      demoSandboxes.delete(oldestId);
+    }
     const code = normalizeDemoSector(sector);
     demoSandboxes.set(sessionId, { store: sandboxStore(code), expiresAt: Date.now() + ttlMs, sector: code });
   },

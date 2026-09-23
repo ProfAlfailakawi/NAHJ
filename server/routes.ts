@@ -1074,7 +1074,8 @@ apiRouter.post("/simulator/message", requireRole("admin", "manager", "operator")
    * «العمل» و«الموافقات» ويحسمهما من بوابة القرار. بعد آخر دور يعود الردّ
    * العام أدناه، فلا يُدّعى سيرٌ لم يُكتب.
    */
-  const chat = db.sectorCode && db.sectorCode !== EDUCATION_CODE ? getSectorPack(db.sectorCode)?.demo?.chat : undefined;
+  /* صندوق العرض وحده: في مؤسسةٍ حقيقية لا تُفتح حالة عمل ولا طلب موافقة من سيرٍ مكتوب لم يقع. */
+  const chat = db.isDemo && db.sectorCode && db.sectorCode !== EDUCATION_CODE ? getSectorPack(db.sectorCode)?.demo?.chat : undefined;
   const turnIndex = db.simulatorState.turn ?? 0;
   if (chat && turnIndex < chat.turns.length && db.simulatorState.approvalStatus !== "pending") {
     const turn = chat.turns[turnIndex];
