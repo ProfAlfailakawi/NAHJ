@@ -150,16 +150,16 @@ export function Shell({
                 <button type="button" onClick={onResetDemo} disabled={demoBusy} title={ar ? "إعادة تعيين البيانات التجريبية" : "Reset demo data"} aria-label={ar ? "إعادة تعيين البيانات التجريبية" : "Reset demo data"}><RefreshCw/></button>
                 <button type="button" onClick={onExitDemo} disabled={demoBusy} title={ar ? "الخروج من البيئة التجريبية" : "Exit demo"} aria-label={ar ? "الخروج من البيئة التجريبية" : "Exit demo"}><LogOut/></button>
               </div>
-            ) : demoEnabled ? (
-              /* أيقونة صامتة: المدخل ثانويّ ولا ينبغي أن يزاحم شريط الأدوات
-                 بعبارة. الوصف في `title`/`aria-label` لقارئ الشاشة ولمن يمرّ. */
+            ) : demoEnabled && isOwner ? (
+              /* للمالك وحده: العرض أداةُ عرضٍ على العملاء، لا شيءٌ يراه موظفو
+                 المؤسسة في شريط أدواتهم. */
               <button
                 type="button"
                 className="demo-enter demo-enter--icon"
                 onClick={onEnterDemo}
                 disabled={demoBusy}
-                title={ar ? "تجربة العرض — بيئة تجريبية معزولة" : "Try the demo — isolated sandbox"}
-                aria-label={ar ? "تجربة العرض" : "Try the demo"}
+                title={ar ? "افتح العرض التجريبي لتقديمه لعميل — بيئة معزولة" : "Open the demo for a presentation — isolated sandbox"}
+                aria-label={ar ? "افتح العرض التجريبي" : "Open demo"}
               >
                 <FlaskConical aria-hidden="true"/>
               </button>

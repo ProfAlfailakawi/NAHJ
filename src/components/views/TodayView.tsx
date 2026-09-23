@@ -1,9 +1,9 @@
 import React from "react";
 import {
-  Activity, AlertTriangle, ArrowUpLeft, BrainCircuit, Clock3, GraduationCap,
-  Lightbulb, Route, ShieldCheck, Sparkles, Waypoints
+  Activity, AlertTriangle, ArrowUpLeft, BookOpenCheck, BrainCircuit, CheckCircle2, Circle, Clock3, GraduationCap,
+  Lightbulb, MessagesSquare, Route, ShieldCheck, Sparkles, Users, Waypoints
 } from "lucide-react";
-import type { ApprovalRequest, LearningProposal, Organization, WorkItem } from "../../types";
+import type { ApprovalRequest, LearningProposal, Organization, Skill, WorkItem } from "../../types";
 import type { SectionId } from "../Shell";
 import { BrainAtlas, MiniProcessGlyph, WorkRiver } from "../Visuals";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
@@ -30,9 +30,13 @@ type Props = {
     singlePersonDependencies: number; candidatesForAutomation: number;
     undocumentedProcesses: number | null;
   } | null;
+  /* لبطاقة «خطواتك الأولى» في مؤسسةٍ بدأت للتو. */
+  skills?: Skill[];
+  practiceCount?: number;
+  canManageAccounts?: boolean;
 };
 
-export function TodayView({ lang, organization, onNavigate, approvals, proposals, workItems, onApproval, todayMetrics, memory }: Props) {
+export function TodayView({ lang, organization, onNavigate, approvals, proposals, workItems, onApproval, todayMetrics, memory, skills = [], practiceCount = 0, canManageAccounts = false }: Props) {
   const ar = lang === "ar";
   const open = proposals.filter(p=>p.status==="pending");
   const active = workItems.filter(w=>w.state!=="completed").slice(0,3);
@@ -40,6 +44,30 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
   return (
     <div className="page-enter">
       <PageHeader eyebrow="NAHJ / PULSE" title={ar ? "العقل يعمل." : "The brain is working."} hint={ar ? "ما يظهر هنا هو ما يحتاجك أنت. الباقي يمشي وحده أو ينتظر دوره." : "What appears here needs you. The rest runs or waits its turn."} action={<button className="btn-primary" onClick={()=>onNavigate("teach")}><GraduationCap/>{ar?"علّم نهج":"Teach NAHJ"}</button>}/>
+
+      {/*
+        * مؤسسةٌ بدأت للتو: لا حالات بعد، فالشاشة الأولى تقول ماذا تفعل أولاً
+        * بدل أرقامٍ صفرية ولوحاتٍ فارغة. وتختفي بطبيعتها حين يبدأ العمل.
+        */}
+      {workItems.length === 0 && (
+        <GettingStarted ar={ar} onNavigate={onNavigate} steps={[
+          { id: "skills", done: skills.some(skill => skill.status !== "draft"), icon: <BrainCircuit/>,
+            title: ar ? "راجع قوالب مهاراتك" : "Review your skill templates",
+            detail: ar ? `${skills.length ? `${skills.length} قالب من قطاعك` : "لا قوالب بعد"} — عدّل خطواتها بما يطابق عملكم.` : "Adjust steps to match how you work." },
+          { id: "teach", done: false, icon: <GraduationCap/>,
+            title: ar ? "علّم نهج أول عملية" : "Teach NAHJ a first process",
+            detail: ar ? "اكتب خطوات عمليةٍ يكررها موظفوك، ونهج يحوّلها إلى مهارة ويسألك عمّا لم يفهمه." : "Write the steps; NAHJ turns them into a skill." },
+          ...(canManageAccounts ? [{ id: "accounts" as SectionId, done: false, icon: <Users/>,
+            title: ar ? "أضف فريقك" : "Add your team",
+            detail: ar ? "حسابٌ لكل موظف بدوره: مدير يعتمد، وموظف يشغّل، ومشاهد يطّلع." : "One account per person, by role." }] : []),
+          { id: "practice", done: practiceCount > 0, icon: <BookOpenCheck/>,
+            title: ar ? "درّبه قبل أن يعمل" : "Practice before it works",
+            detail: ar ? "حالات اختبارٍ ومقارنةٌ بقرارات موظفيك — ولا ترتفع صلاحيته إلا بما يُثبته." : "Tests and shadow before any autonomy." },
+          { id: "simulator", done: false, icon: <MessagesSquare/>,
+            title: ar ? "جرّب محادثة عميل" : "Try a customer conversation",
+            detail: ar ? "اكتب كما يكتب عميلك، وشاهد متى يطلب نهج موافقتك." : "See when NAHJ asks for approval." },
+        ]}/>
+      )}
 
       <section className="hero-grid">
         <article className="brain-hero">
@@ -63,9 +91,10 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
         <article className="decision-deck surface-strong">
           <SectionTitle title={ar?"إشارة تحتاجك":"Needs you"} meta={`${approvals.length + open.length}`} icon={<ShieldCheck/>}/>
           <div className="decision-stack">
+            {approvals.filter(a=>a.status==="pending").length===0&&open.length===0&&<p className="empty-note">{ar?"لا شيء ينتظرك الآن. ما يحتاج قرارك يظهر هنا.":"Nothing needs you right now."}</p>}
             {approvals.filter(a=>a.status==="pending").slice(0,1).map(a=><button key={a.id} className="decision-card approval" onClick={()=>onApproval(a.id)}>
               <span className="decision-icon"><ShieldCheck/></span>
-              <span><strong>{ar?"اعتماد مالي":"Financial gate"}</strong><small>{a.workTitle}</small></span>
+              <span><strong>{ar?"قرارٌ ينتظر موافقتك":"Awaiting your approval"}</strong><small>{a.workTitle}</small></span>
               <ArrowUpLeft/>
             </button>)}
             {open.slice(0,2).map(p=>{
@@ -81,7 +110,8 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
 
         <article className="work-deck surface">
           <SectionTitle title={ar?"العمل يتحرك":"Work in motion"} meta={ar?"الآن":"NOW"} icon={<Waypoints/>}/>
-          <div className="work-deck-glyph"><MiniProcessGlyph/></div>
+          {active.length===0&&<p className="empty-note">{ar?"لا حالات عمل جارية بعد. تبدأ حين تُفعَّل أول مهارة أو تصل أول محادثة.":"No work in motion yet."}</p>}
+          {active.length>0&&<div className="work-deck-glyph"><MiniProcessGlyph/></div>}
           <div className="work-mini-grid">
             {active.map((w,i)=><button key={w.id} className="work-mini" onClick={()=>onNavigate("work")}>
               <div><span className={`risk-dot risk-${w.riskLevel}`}/><b>{w.code}</b></div>
@@ -106,6 +136,31 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
         <MemoryGlyph icon={<Sparkles/>} value={String(memory?.candidatesForAutomation ?? 0)} label={ar?"جاهزة للترقية":"Ready to promote"}/>
       </section>
     </div>
+  );
+}
+
+type Step = { id: SectionId; done: boolean; icon: React.ReactNode; title: string; detail: string };
+function GettingStarted({ ar, steps, onNavigate }: { ar: boolean; steps: Step[]; onNavigate: (s: SectionId) => void }) {
+  const doneCount = steps.filter(step => step.done).length;
+  return (
+    <section className="getting-started surface-strong" aria-labelledby="gs-title">
+      <div className="gs-head">
+        <div><em>{ar ? "البداية" : "GETTING STARTED"}</em><h2 id="gs-title">{ar ? "خطواتك الأولى مع نهج" : "Your first steps"}</h2></div>
+        <span className="gs-count">{doneCount}/{steps.length}</span>
+      </div>
+      <ol>
+        {steps.map((step, index) => (
+          <li key={step.id} className={step.done ? "done" : ""}>
+            <button type="button" onClick={() => onNavigate(step.id)}>
+              <span className="gs-mark" aria-hidden="true">{step.done ? <CheckCircle2/> : <Circle/>}</span>
+              <span className="gs-icon" aria-hidden="true">{step.icon}</span>
+              <span className="gs-text"><strong>{index + 1}. {step.title}</strong><small>{step.detail}</small></span>
+              <ArrowUpLeft className="gs-go" aria-hidden="true"/>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

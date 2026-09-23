@@ -3,6 +3,7 @@ import { DEFAULT_CURRENCY, formatMoney, listPlans, type Plan, type PlanFeatures 
 import { contactEmail, renderLandingPage, renderPrivacyPage, renderTermsPage } from "./marketingPages.ts";
 import { authCookieNames } from "./auth.ts";
 import { listSectors } from "./packs/index.ts";
+import { createLead, LeadError } from "./leads.ts";
 
 /*
  * الصفحة العامة — ما يراه من لم يشترِ بعد.
@@ -243,7 +244,7 @@ export function renderPricingPage(): string {
   </section>
 
   <section class="cta">
-    <a class="primary" href="/#sectors">جرّب نهج على قطاعك — بلا حساب</a>
+    <a class="primary" href="/#contact">اطلب عرضاً توضيحياً</a>
     ${contact ? `<a href="mailto:${escapeHtml(contact)}?subject=${encodeURIComponent("طلب عرض — نهج")}">تواصل معنا: ${escapeHtml(contact)}</a>` : ""}
   </section>
 
@@ -293,6 +294,34 @@ publicRouter.get("/api/public/sectors", (_req: Request, res: Response) => {
       code: sector.code, nameAr: sector.nameAr, nameEn: sector.nameEn, logo: sector.logo, descriptionAr: sector.descriptionAr,
     })),
   });
+});
+
+/*
+ * طلب عرض من الصفحة العامة. بلا جلسة بطبيعته، فيُحدّ لكل عنوان: خمسة طلبات في
+ * الساعة تكفي إنساناً أخطأ وأعاد، ولا تكفي من يملأ القاعدة.
+ */
+const LEAD_WINDOW_MS = 60 * 60_000;
+const LEAD_MAX_PER_WINDOW = 5;
+const leadHits = new Map<string, { count: number; resetAt: number }>();
+
+publicRouter.post("/api/public/leads", (req: Request, res: Response) => {
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  const nowMs = Date.now();
+  const hit = leadHits.get(ip);
+  if (hit && hit.resetAt > nowMs && hit.count >= LEAD_MAX_PER_WINDOW) {
+    return void res.status(429).json({ error: "وصلنا طلبك. إن احتجت شيئاً آخر حاول بعد قليل." });
+  }
+  if (!hit || hit.resetAt <= nowMs) leadHits.set(ip, { count: 1, resetAt: nowMs + LEAD_WINDOW_MS });
+  else hit.count += 1;
+  if (leadHits.size > 10_000) for (const [key, value] of leadHits) if (value.resetAt <= nowMs) leadHits.delete(key);
+
+  try {
+    createLead(req.body || {});
+    res.status(201).json({ ok: true });
+  } catch (error) {
+    if (error instanceof LeadError) return void res.status(error.status).json({ error: error.message });
+    throw error;
+  }
 });
 
 publicRouter.get("/api/public/pricing", (_req: Request, res: Response) => {

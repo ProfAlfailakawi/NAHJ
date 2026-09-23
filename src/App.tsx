@@ -25,10 +25,7 @@ import { CommandPalette, type CommandTarget } from "./components/CommandPalette"
 import { ApprovalModal } from "./components/ApprovalModal";
 import { apiOrNull, authApi, SubscriptionBlockedError, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
 import { LoginScreen } from "./components/LoginScreen";
-import {
-  demoUsers,initialOrganization,initialSkills,initialWorkItems,initialLearningProposals,
-  initialApprovalRequests,initialAuditEvents,initialConnectors
-} from "./data/seedData";
+import { OrgSetupView } from "./components/OrgSetupView";
 import type { ApprovalRequest,AuditEvent,AutonomyLevel,Connector,LearningProposal,Organization,ShadowComparison,Skill,TestCase,User,WorkItem } from "./types";
 
 /*
@@ -47,7 +44,14 @@ const fallbackAnalytics:AnalyticsData={
 };
 const fallbackSimulator:SimulatorState={step:"initial",messages:[{id:"welcome",sender:"ai",text:"أهلاً بك. كيف نقدر نساعدك اليوم؟",timestamp:"الآن"}]};
 
-type ContextResponse={organization:Organization;users:User[];currentUser:User};
+type ContextResponse={organization:Organization;users:User[];currentUser:User;organizationConfigured?:boolean;sectorCode?:string};
+
+/*
+ * الحالة الأولى فارغة لا مبذورة. كانت الواجهة تبدأ ببيانات «أكاديمية المستقبل»
+ * حتى يصل جواب الخادم، فتومض مدرسةٌ وموظفةٌ نموذجية في مؤسسةٍ حقيقية.
+ */
+const blankOrganization:Organization={id:"",name:"",nameEn:"",industry:"",tagline:"",logo:"",verifiedSkillsCount:0,hoursSavedMonth:0};
+const blankUser:User={id:"",name:" ",email:"",role:"employee",department:"",avatar:""};
 
 export default function App(){
   const [lang,setLang]=useState<"ar"|"en">("ar");
@@ -61,16 +65,18 @@ export default function App(){
    */
   const [section,setSection]=useState<SectionId>(()=>
     new URLSearchParams(window.location.search).has("payment")||window.location.hash==="#billing"?"billing":"today");
-  const [organization,setOrganization]=useState<Organization>(initialOrganization);
-  const [user,setUser]=useState<User>(demoUsers[0]);
-  const [skills,setSkills]=useState<Skill[]>(initialSkills);
-  const [work,setWork]=useState<WorkItem[]>(initialWorkItems);
-  const [proposals,setProposals]=useState<LearningProposal[]>(initialLearningProposals);
-  const [approvals,setApprovals]=useState<ApprovalRequest[]>(initialApprovalRequests);
-  const [connectors,setConnectors]=useState<Connector[]>(initialConnectors);
+  const [organization,setOrganization]=useState<Organization>(blankOrganization);
+  const [user,setUser]=useState<User>(blankUser);
+  const [skills,setSkills]=useState<Skill[]>([]);
+  const [work,setWork]=useState<WorkItem[]>([]);
+  const [proposals,setProposals]=useState<LearningProposal[]>([]);
+  const [approvals,setApprovals]=useState<ApprovalRequest[]>([]);
+  const [connectors,setConnectors]=useState<Connector[]>([]);
   const [practice,setPractice]=useState<TestCase[]>([]);
   const [shadow,setShadow]=useState<ShadowComparison[]>([]);
-  const [audit,setAudit]=useState<AuditEvent[]>(initialAuditEvents);
+  const [audit,setAudit]=useState<AuditEvent[]>([]);
+  /* هل أعدّت المؤسسة نفسها؟ null حتى يصل جواب الخادم. */
+  const [orgConfigured,setOrgConfigured]=useState<boolean|null>(null);
   const [analytics,setAnalytics]=useState<AnalyticsData>(fallbackAnalytics);
   const [sim,setSim]=useState<SimulatorState>(fallbackSimulator);
   const [activeApproval,setActiveApproval]=useState<string|null>(null);
@@ -197,7 +203,7 @@ export default function App(){
         apiOrNull<{state:SimulatorState}>("/simulator/state"),
         apiOrNull<{testCases:TestCase[];shadowComparisons:ShadowComparison[]}>("/practice"),
       ]);
-      if(context){setOrganization(context.organization);setUser(context.currentUser)}
+      if(context){setOrganization(context.organization);setUser(context.currentUser);setOrgConfigured(context.organizationConfigured!==false)}
       if(learn?.proposals)setProposals(learn.proposals); if(sk?.skills)setSkills(sk.skills); if(wo?.workItems)setWork(wo.workItems);
       if(ap?.approvalRequests)setApprovals(ap.approvalRequests); if(co?.connectors)setConnectors(co.connectors); if(au?.auditEvents)setAudit(au.auditEvents);
       if(an)setAnalytics(an); if(gv?.governance)setGovernance(gv.governance); if(td)setTodayData(td); if(si?.state)setSim(si.state);
@@ -312,8 +318,7 @@ export default function App(){
 
   if(authState==="checking")return <div className="boot-gate"/>;
   if(authState==="anonymous"||authState==="setup")
-    return <LoginScreen lang={lang} needsSetup={authState==="setup"} demoEnabled={demoEnabled} demoBusy={demoBusy}
-      onEnterDemo={sector=>void enterDemo(sector)} onAuthenticated={()=>void checkAuth()}/>;
+    return <LoginScreen lang={lang} needsSetup={authState==="setup"} onAuthenticated={()=>void checkAuth()}/>;
 
   /*
    * حساب المسوّق سطحٌ واحد.
@@ -322,6 +327,14 @@ export default function App(){
    * ولا حالات عملها. والخادم يحجبه أيضاً — فالحجب في الطبقتين لا في الواجهة
    * وحدها، لأن واجهةً تُخفي زرّاً تبقى مساراتها مفتوحة لمن يعرف عنوانها.
    */
+  /*
+   * نشرٌ لم تُعِدّه مؤسسته بعد: شاشة الإعداد بدل شاشات العمل. فبذرة العرض لا
+   * تُعرض أبداً على أنها سجلّ المؤسسة. والمسوّق خارج هذا — لوحته لا تمسّ المؤسسة.
+   */
+  if(orgConfigured===false&&!demoActive&&account?.role!=="partner")
+    return <OrgSetupView lang={lang} canSetup={account?.role==="admin"||account?.role==="owner"}
+      onDone={()=>{void loadAll();setSection("today")}} onSignOut={()=>void signOut()}/>;
+
   if(account?.role==="partner")
     return <div className="partner-shell" dir={lang==="ar"?"rtl":"ltr"}>
       <div className="ambient-canvas" aria-hidden="true"/>
@@ -336,7 +349,7 @@ export default function App(){
 
   let view:React.ReactNode;
   switch(section){
-    case "today":view=<TodayView lang={lang} organization={organization} onNavigate={setSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval} todayMetrics={todayData?.metrics||null} memory={todayData?.institutionalMemoryCoverage||null}/>;break;
+    case "today":view=<TodayView lang={lang} organization={organization} onNavigate={setSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval} todayMetrics={todayData?.metrics||null} memory={todayData?.institutionalMemoryCoverage||null} skills={skills} practiceCount={practice.length} canManageAccounts={account?.role==="admin"||account?.role==="owner"}/>;break;
     case "learn":view=<LearnView lang={lang} proposals={proposals} onResolve={resolve}/>;break;
     case "teach":view=<TeachView lang={lang} onSkillCodified={()=>void codified()} onNotify={notify}/>;break;
     case "skills":view=<SkillsView lang={lang} skills={skills} onPromote={(id,l)=>void promote(id,l)} onRollback={(id,v)=>void rollback(id,v)} onToggleKill={id=>void toggleSkill(id)}/>;break;

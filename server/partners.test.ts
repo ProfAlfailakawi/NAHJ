@@ -321,13 +321,13 @@ test("تعليق مسوّق بإرسال الحالة وحدها يعمل — و
    */
   freshDatabase();
   const partner = upsertPartner({
-    name: "بدر المطيري", email: "badr@example.com",
+    name: "بدر عادل", email: "badr@example.com",
     model: "percent_of_contract", rateBps: 1_500, durationMonths: 12, notes: "اتفاق 2026",
   });
 
   const suspended = upsertPartner({ status: "suspended" } as any, partner.id);
   assert.equal(suspended.status, "suspended");
-  assert.equal(suspended.name, "بدر المطيري", "مُحي الاسم في تعديلٍ جزئي");
+  assert.equal(suspended.name, "بدر عادل", "مُحي الاسم في تعديلٍ جزئي");
   assert.equal(suspended.email, "badr@example.com");
   assert.equal(suspended.rateBps, 1_500, "ضاعت النسبة المتّفق عليها");
   assert.equal(suspended.durationMonths, 12);

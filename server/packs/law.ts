@@ -25,10 +25,10 @@ export const lawPack: SectorPack = {
   },
 
   people: [
-    { name: "المحامي فهد الدوسري", role: "manager", department: "الشركاء" },
-    { name: "نورة العجمي", role: "employee", department: "سكرتارية القضايا" },
-    { name: "سعد الحربي", role: "employee", department: "التنفيذ والمتابعة" },
-    { name: "ليلى القحطاني", role: "auditor", department: "الالتزام" },
+    { name: "المحامي فهد سالم", role: "manager", department: "الشركاء" },
+    { name: "نورة عادل", role: "employee", department: "سكرتارية القضايا" },
+    { name: "سعد مبارك", role: "employee", department: "التنفيذ والمتابعة" },
+    { name: "ليلى يوسف", role: "auditor", department: "الالتزام" },
   ],
 
   sources: [
@@ -41,7 +41,7 @@ export const lawPack: SectorPack = {
   policies: [
     {
       code: "POL-LAW-01", title: "فحص تعارض المصالح قبل أي قبول", titleEn: "Conflict check before any engagement",
-      riskLevel: "critical", approvedBy: "المحامي فهد الدوسري",
+      riskLevel: "critical", approvedBy: "المحامي فهد سالم",
       summary: "لا يُقبل موكّل ولا تُفتح قضية قبل فحص التعارض ضدّ كل موكّل وخصم قائم.",
       rules: [
         { condition: "طلب توكيل جديد", action: "افحص السجلّ ضدّ الموكّلين والخصوم، وأوقف المسار عند أي تطابق", explanation: "تمثيل طرفين متخاصمين مخالفةٌ مهنية لا تُصحَّح بالاعتذار بعد القبول." },
@@ -50,7 +50,7 @@ export const lawPack: SectorPack = {
     },
     {
       code: "POL-LAW-02", title: "المهل الإجرائية لا تُحتسب تلقائياً وحدها", titleEn: "Procedural deadlines are never auto-final",
-      riskLevel: "critical", approvedBy: "المحامي فهد الدوسري",
+      riskLevel: "critical", approvedBy: "المحامي فهد سالم",
       summary: "النظام يحسب المهلة وينبّه، ولا يُغلق قضيةً ولا يُسقط حقّاً بلا إقرار محامٍ.",
       rules: [
         { condition: "اقتراب مهلة استئناف", action: "نبّه المحامي المسؤول والشريك قبل ثلاثة أيام عمل على الأقل", explanation: "المهلة تسقط بفواتها ولا تُمدّ، فالتنبيه المتأخر لا قيمة له." },
@@ -59,7 +59,7 @@ export const lawPack: SectorPack = {
     },
     {
       code: "POL-LAW-03", title: "الأتعاب فوق الحدّ تحتاج إقرار شريك", titleEn: "Fees above threshold need partner sign-off",
-      riskLevel: "high", approvedBy: "المحامي فهد الدوسري",
+      riskLevel: "high", approvedBy: "المحامي فهد سالم",
       summary: "أي عرض أتعاب يتجاوز اللائحة المعتمدة يقف حتى يعتمده شريك.",
       rules: [
         { condition: "أتعاب تتجاوز حدّ نوع القضية", action: "أوقف العرض واطلب اعتماد شريك", explanation: "التسعير خارج اللائحة التزامٌ تعاقدي لا يملكه موظف." },
@@ -70,7 +70,7 @@ export const lawPack: SectorPack = {
   skills: [
     {
       slug: "conflict-check", name: "فحص تعارض المصالح", nameEn: "Conflict of interest check",
-      category: "قبول الموكّلين", department: "الالتزام", ownerName: "ليلى القحطاني",
+      category: "قبول الموكّلين", department: "الالتزام", ownerName: "ليلى يوسف",
       purpose: "مطابقة الموكّل المحتمل وخصومه بكل الأطراف في سجلّ المكتب قبل القبول.",
       riskLevel: "critical", autonomyLevel: 4, status: "active",
       reliabilityScore: 96, usageCount: 134, successRate: 99, humanTakeoverRate: 3, avgDurationMinutes: 2, hoursSavedTotal: 29,
@@ -91,7 +91,7 @@ export const lawPack: SectorPack = {
     },
     {
       slug: "deadline-watch", name: "رصد المهل الإجرائية", nameEn: "Procedural deadline watch",
-      category: "المتابعة", department: "التنفيذ والمتابعة", ownerName: "سعد الحربي",
+      category: "المتابعة", department: "التنفيذ والمتابعة", ownerName: "سعد مبارك",
       purpose: "حساب المهل من تواريخ الأحكام والتنبيه قبل فواتها.",
       riskLevel: "critical", autonomyLevel: 3, status: "active",
       reliabilityScore: 93, usageCount: 312, successRate: 97, humanTakeoverRate: 5, avgDurationMinutes: 1.5, hoursSavedTotal: 46,
@@ -109,7 +109,7 @@ export const lawPack: SectorPack = {
     },
     {
       slug: "fee-quote", name: "عرض أتعاب", nameEn: "Fee quotation",
-      category: "المالية", department: "الشركاء", ownerName: "المحامي فهد الدوسري",
+      category: "المالية", department: "الشركاء", ownerName: "المحامي فهد سالم",
       purpose: "تسعير التوكيل حسب اللائحة المعتمدة، ورفع ما يتجاوزها.",
       riskLevel: "high", autonomyLevel: 2, status: "shadow",
       reliabilityScore: 74, usageCount: 41, successRate: 90, humanTakeoverRate: 22, avgDurationMinutes: 7, hoursSavedTotal: 6,

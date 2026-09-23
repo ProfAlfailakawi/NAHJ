@@ -694,11 +694,69 @@
 .sim-prompts button:hover:not(:disabled){border-color:var(--moss);color:var(--moss)}
 .sim-note{margin:14px 0 0;font-size:13px;line-height:1.7;color:var(--muted);text-align:center}
 
-/* ---- اختيار القطاع في شاشة الدخول ----------------------------------------- */
-.login-sectors p{margin:0 0 8px;font-size:13.5px;font-weight:700;text-align:center}
-.login-sectors>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.login-sectors button{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid rgba(16,37,31,.16);border-radius:12px;background:#fff;color:#10251f;font:inherit;font-size:13.5px;font-weight:800;cursor:pointer;text-align:start}
-.login-sectors button span{font-size:20px;line-height:1}
-.login-sectors button:hover:not(:disabled){border-color:#2f7d65;background:#f1f8f4}
-.login-sectors button:disabled{opacity:.6;cursor:progress}
 .shadow-run{white-space:nowrap}
+
+/* ---- إعداد المؤسسة (أول تشغيل حقيقي) ------------------------------------ */
+.org-setup{min-height:100vh;background:#f4f1e8;color:#10251f;padding:0 16px 48px}
+.org-setup-top{max-width:760px;margin:0 auto;height:72px;display:flex;align-items:center;justify-content:space-between}
+.org-setup-card{max-width:760px;margin:12px auto 0;padding:32px;border-radius:24px;display:flex;flex-direction:column;gap:16px}
+.org-setup-card>svg{width:36px;height:36px;color:#2f7d65}
+.org-setup-card h1{margin:0;font-size:30px;font-weight:900}
+.org-setup-card>p{margin:0;font-size:15.5px;line-height:1.8;color:#4f625c}
+.org-setup-step{align-self:flex-start;font-size:13px;font-weight:800;color:#2f7d65;background:#e7f1ec;padding:5px 12px;border-radius:999px}
+.org-setup-card label{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:700}
+.org-setup-card label small{font-weight:600;opacity:.65}
+.org-setup-card input[type=text],.org-setup-card input:not([type]){padding:12px 14px;border-radius:12px;border:1px solid rgba(16,37,31,.22);background:#fff;color:inherit;font:inherit;font-weight:600}
+.org-setup-card fieldset{border:0;margin:0;padding:0}
+.org-setup-card legend{font-size:14px;font-weight:700;margin-bottom:8px}
+.org-setup-sectors{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.org-setup-sectors label{position:relative;flex-direction:row;align-items:flex-start;gap:10px;padding:14px;border:1px solid rgba(16,37,31,.16);border-radius:16px;background:#fff;cursor:pointer}
+.org-setup-sectors label.selected{border-color:#2f7d65;box-shadow:0 0 0 3px rgba(47,125,101,.14);background:#f5faf7}
+.org-setup-sectors input{position:absolute;opacity:0;pointer-events:none}
+.org-setup-sectors label:focus-within{outline:2px solid #2f7d65;outline-offset:2px}
+.org-setup-sectors .logo{font-size:26px;line-height:1}
+.org-setup-sectors strong{display:block;font-size:15px}
+.org-setup-sectors small{display:block;font-size:12.5px;font-weight:600;color:#5d716b;line-height:1.6;margin-top:2px}
+.org-setup-sectors .tick{position:absolute;inset-inline-end:10px;top:10px;width:18px;height:18px;color:#2f7d65}
+.org-setup-note{display:flex;gap:10px;align-items:flex-start;font-size:13.5px!important;background:#f1f6f3;border-radius:14px;padding:12px 14px}
+.org-setup-note svg{flex:none;width:18px;height:18px;color:#2f7d65;margin-top:3px}
+.org-setup-card .btn-primary{align-self:stretch;justify-content:center;height:50px;font-size:16px}
+@media(max-width:600px){.org-setup-card{padding:22px}.org-setup-card h1{font-size:25px}}
+
+/* ---- لوحة المالك: طلبات العرض وروابطه ------------------------------------ */
+.lead-list{display:grid;gap:10px}
+.lead-card{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff}
+.lead-card.status-new{border-color:rgba(94,121,230,.4)}
+.lead-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.lead-head strong{font-size:15px}
+.lead-meta{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin-top:4px}
+.lead-card p{margin:8px 0 0;font-size:13.5px;line-height:1.7}
+.lead-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.lead-actions .btn-secondary{height:32px;padding:0 12px;font-size:12.5px}
+.demo-links{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px}
+.demo-link{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff}
+.demo-link .logo{font-size:22px}
+.demo-link strong{flex:1;font-size:14px}
+.demo-link .btn-secondary{height:34px;padding:0 10px;font-size:12.5px;gap:5px}
+.demo-link .btn-secondary svg{width:14px;height:14px}
+
+/* ---- «خطواتك الأولى» والحالات الفارغة في شاشة اليوم ----------------------- */
+.getting-started{border-radius:26px;padding:22px 24px;margin-bottom:18px}
+.gs-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.gs-head em{font-style:normal;font-size:12px;font-weight:900;letter-spacing:.06em;color:var(--moss)}
+.gs-head h2{margin:2px 0 0;font-size:22px;font-weight:900}
+.gs-count{font-size:14px;font-weight:900;color:var(--muted);background:rgba(16,37,31,.05);padding:4px 12px;border-radius:999px}
+.getting-started ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.getting-started li button{width:100%;display:flex;align-items:flex-start;gap:10px;text-align:start;padding:14px;border:1px solid var(--line);border-radius:16px;background:#fff;color:var(--ink);font:inherit;cursor:pointer;transition:.18s var(--ease)}
+.getting-started li button:hover{border-color:rgba(47,125,101,.4);box-shadow:0 8px 22px rgba(16,37,31,.06)}
+.getting-started li button:focus-visible{outline:2px solid var(--moss);outline-offset:2px}
+.getting-started li.done button{background:#f3f8f5}
+.gs-mark svg{width:18px;height:18px;color:var(--muted)}
+.getting-started li.done .gs-mark svg{color:var(--moss)}
+.gs-icon{display:grid;place-items:center;width:34px;height:34px;flex:none;border-radius:11px;background:rgba(47,125,101,.1);color:var(--moss)}
+.gs-icon svg{width:17px;height:17px}
+.gs-text{flex:1;min-width:0}
+.gs-text strong{display:block;font-size:14.5px}
+.gs-text small{display:block;font-size:12.5px;line-height:1.7;color:var(--muted);margin-top:2px}
+.gs-go{width:15px;height:15px;color:var(--muted);flex:none;margin-top:3px}
+.empty-note{margin:14px 0 0;font-size:13.5px;line-height:1.8;color:var(--muted)}

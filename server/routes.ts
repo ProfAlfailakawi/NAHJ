@@ -1,5 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { db, DemoSandbox } from "./db.ts";
+import { db, DemoSandbox, requestAccount } from "./db.ts";
+import { setupSectorCodes } from "./packs/cleanStart.ts";
+import { LeadError, listLeads, setLeadStatus } from "./leads.ts";
 import { PolicyEngine } from "./engine/policyEngine.ts";
 import { SkillEngine } from "./engine/skillEngine.ts";
 import { ConnectorLayer } from "./engine/connectors.ts";
@@ -252,6 +254,13 @@ authRouter.post("/accounts/:id/revoke-sessions", ...accountsGuard, (req: Authent
  */
 apiRouter.use(requireAuth);
 
+/* صاحب الجلسة يُحمل مع الطلب: منه يُقرأ «المستخدم الحالي» وتُوقَّع الإجراءات باسمه. */
+apiRouter.use((req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
+  const account = req.account;
+  if (!account) return next();
+  requestAccount.run({ id: account.id, name: account.name, email: account.email, role: account.role }, next);
+});
+
 /*
  * الترخيص.
  *
@@ -358,6 +367,20 @@ apiRouter.get("/export/:ledger.csv", ...exportGuard, (req: AuthenticatedRequest,
 });
 
 /* الإشعارات: حالتها وطابورها — لمن يملك النشر. */
+/* طلبات العرض الواردة من الصفحة العامة — للمالك وحده. */
+apiRouter.get("/owner/leads", requireAuth, requireOwner, (_req: AuthenticatedRequest, res: Response) => {
+  res.json({ leads: listLeads() });
+});
+
+apiRouter.post("/owner/leads/:id/status", requireAuth, requireOwner, (req: AuthenticatedRequest, res: Response) => {
+  try {
+    res.json({ lead: setLeadStatus(req.params.id, req.body?.status) });
+  } catch (error) {
+    if (error instanceof LeadError) return void res.status(error.status).json({ error: error.message });
+    throw error;
+  }
+});
+
 apiRouter.get("/notifications", requireAuth, requireOwner, (_req: AuthenticatedRequest, res: Response) => {
   res.json({ status: notifyStatus(), recent: listNotifications(40) });
 });
@@ -393,6 +416,8 @@ apiRouter.use(enforceSubscription);
 // 1. Context & User Switching
 apiRouter.get("/context", (req: Request, res: Response) => {
   res.json({
+    organizationConfigured: db.organizationConfigured,
+    sectorCode: db.sectorCode,
     organization: db.organization,
     users: db.users,
     currentUser: db.getCurrentUser(),
@@ -400,6 +425,28 @@ apiRouter.get("/context", (req: Request, res: Response) => {
     pendingApprovalsCount: db.approvalRequests.filter((a) => a.status === "pending").length,
     learnedItemsCount: db.learningProposals.filter((p) => p.status === "pending").length,
   });
+});
+
+/*
+ * إعداد المؤسسة — مرة واحدة، عند بدء التشغيل الحقيقي.
+ *
+ * مشرف المؤسسة أو مالك المنصة يكتب اسمها ويختار قطاعها، فتُستبدل بذرة العرض
+ * ببدايةٍ نظيفة. ولا يُعاد: مؤسسةٌ أُعِدّت تبدّل نشاطها من شاشة «النشاط»، ولا
+ * يُمحى عملها بطلبٍ ثانٍ على هذا المسار.
+ */
+apiRouter.post("/setup/organization", requireRole("admin"), (req: AuthenticatedRequest, res: Response) => {
+  if (db.isDemo) return void res.status(400).json({ error: "صندوق العرض لا يُعَدّ.", code: "DEMO" });
+  if (db.organizationConfigured) {
+    return void res.status(409).json({ error: "أُعِدّت المؤسسة من قبل. لتبديل النشاط استعمل شاشة «النشاط».", code: "ALREADY_CONFIGURED" });
+  }
+  const name = typeof req.body?.name === "string" ? req.body.name.trim().slice(0, 120) : "";
+  const nameEn = typeof req.body?.nameEn === "string" ? req.body.nameEn.trim().slice(0, 120) : "";
+  const sector = String(req.body?.sector || "");
+  if (name.length < 2) return void res.status(400).json({ error: "اكتب اسم المؤسسة.", code: "NAME_REQUIRED" });
+  if (!setupSectorCodes().includes(sector)) return void res.status(400).json({ error: "اختر قطاع المؤسسة.", code: "SECTOR_REQUIRED" });
+  const result = db.configureOrganization(sector, name, nameEn, req.account?.name || "مشرف");
+  if (!result.ok) return void res.status(400).json({ error: result.reason });
+  res.json({ ok: true, organization: db.organization, sectorCode: db.sectorCode });
 });
 
 /*
@@ -1267,7 +1314,7 @@ apiRouter.post("/simulator/upload-doc", requireRole("admin", "manager", "operato
 
 حجزنا لكم مبدئياً موعد الجولة التعريفية والمقابلة:
 📅 الخميس القادم — الساعة 04:30 مساءً (قاعة التقييم B)
-⚠️ نظراً لأن قيمة التسجيل (1,500 د.ك) تتطلب اعتماداً إدارياً رسمياً طبقاً لسياسة POL-FIN-02، تم إرسال بطاقة الاعتماد فوراً لمديرة القبول (نورة الصباح) للموافقة قبل إرسال رابط الدفع النهائي.`,
+⚠️ نظراً لأن قيمة التسجيل (1,500 د.ك) تتطلب اعتماداً إدارياً رسمياً طبقاً لسياسة POL-FIN-02، تم إرسال بطاقة الاعتماد فوراً لمديرة القبول (نورة خالد) للموافقة قبل إرسال رابط الدفع النهائي.`,
     timestamp: "الآن",
     cardType: "approval_pending" as const,
     metadata: {
@@ -1430,7 +1477,8 @@ apiRouter.post("/sectors/apply", requireRole("admin"), (req: AuthenticatedReques
     });
   }
   const code = String(req.body?.code || "");
-  if (code === EDUCATION_CODE) {
+  /* في الصندوق: التعليم هو البذرة، ويُعاد إليها بإعادة الضبط. والمؤسسة الحقيقية تبدّل إليها كأي قطاع. */
+  if (code === EDUCATION_CODE && db.isDemo) {
     return void res.status(400).json({
       error: "حزمة التعليم هي الحزمة المبذورة أصلاً — لإعادتها أعد تهيئة النشر.",
       code: "SEEDED_PACK",

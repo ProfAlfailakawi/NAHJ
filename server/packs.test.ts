@@ -177,13 +177,16 @@ test("تركيب حزمة يستبدل العقل ويُبقي سجلّ التد
 
   const before = store.auditEvents.length;
   const educationSkills = store.skills.map(skill => skill.name);
+  const orgName = store.organization.name;
   assert.ok(educationSkills.length > 0);
 
   const result = store.applySector("clinic", "tester@nahj.test");
   assert.equal(result.ok, true);
 
   assert.equal(store.sectorCode, "clinic");
-  assert.match(store.organization.name, /الشفاء/);
+  /* مؤسسةٌ حقيقية تبدّل نشاطها وتبقى هي — لا تصير «مركز الشفاء» النموذجي. */
+  assert.equal(store.organization.name, orgName);
+  assert.doesNotMatch(store.organization.name, /الشفاء/);
   assert.notDeepEqual(store.skills.map(skill => skill.name), educationSkills, "المهارات لم تُستبدل");
 
   /* ما لا معنى له بعد التبديل يُمحى. */
@@ -196,8 +199,9 @@ test("تركيب حزمة يستبدل العقل ويُبقي سجلّ التد
   assert.ok(store.auditEvents.length > before, "التبديل نفسه لم يُسجَّل");
   assert.equal(store.auditEvents[0].action, "APPLY_SECTOR_PACK");
 
-  /* والقناة تتكلّم بلسان القطاع الجديد. */
-  assert.match(store.simulatorState.messages[0].text, /الشفاء/);
+  /* والقناة تتكلّم بلسان القطاع الجديد، وباسم المؤسسة نفسها. */
+  assert.ok(store.simulatorState.messages[0].text.includes(orgName));
+  assert.doesNotMatch(store.simulatorState.messages[0].text, /الشفاء/);
 });
 
 test("تركيب قطاع غير معروف يفشل بلا أثر", async () => {
@@ -239,11 +243,12 @@ test("القناة لا تعيد كل قطاع إلى سير التسجيل ال
 test("تبديل القطاع يبدّل لسان القناة لا ترحيبها وحده", async () => {
   const { Store } = await import("./db.ts");
   const store = new Store();
+  const orgName = store.organization.name;
   store.applySector("clinic", "tester@nahj.test");
 
   assert.equal(store.sectorCode, "clinic");
   assert.match(store.channel.counterpart, /مريض/, "الطرف المقابل ما زال تعليمياً");
-  assert.match(store.simulatorState.messages[0].text, /الشفاء/);
+  assert.ok(store.simulatorState.messages[0].text.includes(orgName), "الترحيب لا يحمل اسم المؤسسة");
   /* وأمثلة البدء تخصّ القطاع الجديد. */
   assert.ok(store.channel.samplePrompts.some(prompt => /موعد|تأمين|ألم/.test(prompt)),
     "أمثلة القناة لا تخصّ العيادة");
