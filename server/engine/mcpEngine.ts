@@ -799,6 +799,10 @@ export class McpEngine {
           ],
           provenance: "لائحة أكاديمية المستقبل المعتمدة 2026",
         };
+      } else if (!tool) {
+        /* أداةٌ غير مسجّلة لا «تنجح»: كان أي اسمٍ — حتى كائنٌ فارغ — يُسجَّل نجاحاً. */
+        status = "error";
+        result = { error: `أداة غير معروفة: ${String(toolName)}` };
       } else {
         // Fallback for custom or external MCP tools
         result = {

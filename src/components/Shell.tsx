@@ -1,5 +1,5 @@
-import React from "react";
-import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, Building2, CreditCard, Crown, FlaskConical, HandCoins, GraduationCap, History, Languages, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
+import React, { useState } from "react";
+import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, Building2, CreditCard, Crown, FlaskConical, HandCoins, GraduationCap, History, Languages, LayoutGrid, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
 import { BrandLockup, NahjMark } from "./Brand";
 import type { Organization, User } from "../types";
 
@@ -67,6 +67,15 @@ export function Shell({
   const ownerOnly = new Set<SectionId>(["owner", "partners"]);
   const visibleNav = nav.filter(item => !ownerOnly.has(item.id) || isOwner);
   let lastGroup: string | undefined;
+  /*
+   * على الهاتف: كان الشريط السفلي يقصّ القائمة عند ثمانية مداخل، فالحوكمة
+   * والسجلّ والحسابات والاشتراك ولوحة المالك لا تُبلَغ من الهاتف إطلاقاً.
+   * صار الشريط خمسة مداخل أساسية وزرّ «المزيد» يفتح كل الأقسام بأسمائها.
+   */
+  const [moreOpen, setMoreOpen] = useState(false);
+  const dockItems = visibleNav.slice(0, 5);
+  const moreActive = !dockItems.some(item => item.id === section);
+  const go = (id: SectionId) => { setMoreOpen(false); onSection(id); };
   return (
     <div className="app-shell" dir={ar ? "rtl" : "ltr"}>
       <div className="ambient-canvas" aria-hidden="true"/>
@@ -189,8 +198,21 @@ export function Shell({
         </header>
         <main className="content-stage">{licenceBanner}{children}</main>
         <nav className="mobile-dock" aria-label="Mobile navigation">
-          {visibleNav.slice(0,8).map(({id, icon:Icon, ar:a, en})=><button key={id} className={section===id?"active":""} onClick={()=>onSection(id)} aria-label={ar?a:en}><Icon/></button>)}
+          {dockItems.map(({id, icon:Icon, ar:a, en})=><button key={id} className={section===id?"active":""} onClick={()=>go(id)} aria-label={ar?a:en}><Icon/><small>{ar?a:en}</small></button>)}
+          <button className={moreActive||moreOpen?"active":""} onClick={()=>setMoreOpen(v=>!v)} aria-expanded={moreOpen} aria-label={ar?"كل الأقسام":"All sections"}><LayoutGrid/><small>{ar?"المزيد":"More"}</small></button>
         </nav>
+        {moreOpen && (
+          <div className="mobile-sheet-backdrop" onClick={()=>setMoreOpen(false)}>
+            <div className="mobile-sheet" role="dialog" aria-label={ar?"كل الأقسام":"All sections"} onClick={e=>e.stopPropagation()}>
+              <div className="mobile-sheet-grid">
+                {visibleNav.map(({id, icon:Icon, ar:a, en})=>(
+                  <button key={id} className={section===id?"active":""} onClick={()=>go(id)}><Icon/><span>{ar?a:en}</span></button>
+                ))}
+                {onHelp && <button onClick={()=>{setMoreOpen(false);onHelp()}}><CircleHelp/><span>{ar?"دليل سريع":"Quick guide"}</span></button>}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

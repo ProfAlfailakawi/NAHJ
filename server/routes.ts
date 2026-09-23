@@ -104,13 +104,42 @@ authRouter.post("/setup", async (req: Request, res: Response) => {
   }
 });
 
+/*
+ * حدٌّ لكل عنوان IP على المحاولات الفاشلة.
+ *
+ * قفل الحساب يحمي حساباً بعينه؛ ولا يمنع من يجرّب كلمة مرور واحدة شائعة على
+ * مئات البُرُد. تُعدّ الإخفاقات وحدها، فالدخول الناجح لا يستهلك شيئاً.
+ */
+const LOGIN_IP_WINDOW_MS = 15 * 60_000;
+const LOGIN_IP_MAX_FAILURES = 30;
+const loginFailuresByIp = new Map<string, { count: number; resetAt: number }>();
+function ipBlocked(ip: string): boolean {
+  const entry = loginFailuresByIp.get(ip);
+  if (!entry) return false;
+  if (entry.resetAt <= Date.now()) { loginFailuresByIp.delete(ip); return false; }
+  return entry.count >= LOGIN_IP_MAX_FAILURES;
+}
+function recordIpFailure(ip: string): void {
+  const entry = loginFailuresByIp.get(ip);
+  if (!entry || entry.resetAt <= Date.now()) loginFailuresByIp.set(ip, { count: 1, resetAt: Date.now() + LOGIN_IP_WINDOW_MS });
+  else entry.count += 1;
+  if (loginFailuresByIp.size > 10_000) {
+    for (const [key, value] of loginFailuresByIp) if (value.resetAt <= Date.now()) loginFailuresByIp.delete(key);
+  }
+}
+
 authRouter.post("/login", async (req: Request, res: Response) => {
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  if (ipBlocked(ip)) {
+    return void res.status(429).json({ error: "محاولات كثيرة من هذا الجهاز. حاول بعد قليل.", code: "LOGIN_FAILED" });
+  }
   try {
     const result = await login(req.body?.email, req.body?.password);
     setSessionCookies(req, res, result.sessionToken, result.csrfToken);
     res.json({ account: result.account, csrfToken: result.csrfToken, expiresAt: result.expiresAt });
   } catch (error) {
     const status = Number((error as { status?: number })?.status) || 401;
+    if (status === 401) recordIpFailure(ip);
     res.status(status).json({ error: (error as Error)?.message || "تعذّر تسجيل الدخول.", code: "LOGIN_FAILED" });
   }
 });
@@ -380,6 +409,9 @@ apiRouter.get("/context", (req: Request, res: Response) => {
  */
 apiRouter.post("/switch-role", requireRole("admin"), (req: Request, res: Response) => {
   const { userId } = req.body;
+  if (!db.users.some((u) => u.id === userId)) {
+    return res.status(404).json({ success: false, message: "المستخدم غير موجود" });
+  }
   const user = db.setCurrentUser(userId);
   res.json({ success: true, currentUser: user });
 });
@@ -524,7 +556,8 @@ apiRouter.post("/teach/start", (req: Request, res: Response) => {
 
 apiRouter.post("/teach/record-event", (req: Request, res: Response) => {
   const { sessionId, action, system, inputValue, voiceNote, screenshotLabel } = req.body;
-  const session = db.learningSessions.find((s) => s.id === sessionId) || db.learningSessions[0];
+  /* معرّفٌ مجهول يُرفض — كان يُعاد إلى أول جلسة فيُركَّب من عملٍ غير المقصود. */
+  const session = sessionId ? db.learningSessions.find((s) => s.id === sessionId) : db.learningSessions[0];
   if (!session) {
     return res.status(404).json({ success: false, message: "جلسة التعلم غير متوفرة" });
   }
@@ -559,7 +592,8 @@ apiRouter.post("/teach/record-event", (req: Request, res: Response) => {
  */
 apiRouter.post("/teach/synthesize", async (req: Request, res: Response) => {
   const { sessionId } = req.body;
-  const session = db.learningSessions.find((s) => s.id === sessionId) || db.learningSessions[0];
+  /* معرّفٌ مجهول يُرفض — كان يُعاد إلى أول جلسة فيُركَّب من عملٍ غير المقصود. */
+  const session = sessionId ? db.learningSessions.find((s) => s.id === sessionId) : db.learningSessions[0];
 
   if (!session) {
     return void res.status(404).json({ success: false, message: "جلسة التعلم غير متوفرة." });
@@ -611,7 +645,8 @@ apiRouter.post("/teach/synthesize", async (req: Request, res: Response) => {
 // 4b. Approve & Codify a taught process into a versioned Skill
 apiRouter.post("/teach/codify", (req: Request, res: Response) => {
   const { sessionId, title, answers } = req.body;
-  const session = db.learningSessions.find((s) => s.id === sessionId) || db.learningSessions[0];
+  /* معرّفٌ مجهول يُرفض — كان يُعاد إلى أول جلسة فيُركَّب من عملٍ غير المقصود. */
+  const session = sessionId ? db.learningSessions.find((s) => s.id === sessionId) : db.learningSessions[0];
   if (!session || session.discoveredSteps.length === 0) {
     return res.status(400).json({ success: false, message: "لا توجد جلسة تعليم مكتملة يمكن اعتمادها" });
   }
@@ -692,7 +727,7 @@ apiRouter.get("/skills/:id", (req: Request, res: Response) => {
   res.json({ skill });
 });
 
-apiRouter.post("/skills/:id/promote", (req: Request, res: Response) => {
+apiRouter.post("/skills/:id/promote", requireRole("admin", "manager"), (req: Request, res: Response) => {
   const { targetLevel } = req.body;
   /*
    * سقف الاستقلالية من الباقة.
@@ -720,7 +755,7 @@ apiRouter.post("/skills/:id/promote", (req: Request, res: Response) => {
   res.json(result);
 });
 
-apiRouter.post("/skills/:id/rollback", (req: Request, res: Response) => {
+apiRouter.post("/skills/:id/rollback", requireRole("admin", "manager"), (req: Request, res: Response) => {
   const { targetVersion } = req.body;
   const result = SkillEngine.rollbackSkillVersion(
     req.params.id,
@@ -733,18 +768,18 @@ apiRouter.post("/skills/:id/rollback", (req: Request, res: Response) => {
   res.json(result);
 });
 
-apiRouter.post("/skills/:id/killswitch", (req: Request, res: Response) => {
+apiRouter.post("/skills/:id/killswitch", requireRole("admin", "manager"), (req: Request, res: Response) => {
   const result = SkillEngine.toggleKillSwitch(req.params.id, db.getCurrentUser().name);
   res.json(result);
 });
 
 // 6. Practice & Shadow Modes
-apiRouter.post("/practice/run", async (req: Request, res: Response) => {
+apiRouter.post("/practice/run", requireRole("admin", "manager", "operator"), async (req: Request, res: Response) => {
   const result = await SkillEngine.runPracticeTests();
   res.json({ success: true, ...result });
 });
 
-apiRouter.post("/shadow/run", async (req: Request, res: Response) => {
+apiRouter.post("/shadow/run", requireRole("admin", "manager", "operator"), async (req: Request, res: Response) => {
   const result = await SkillEngine.runShadowComparison();
   res.json({ success: true, ...result });
 });
@@ -821,14 +856,22 @@ apiRouter.get("/approvals", (req: Request, res: Response) => {
   res.json({ approvalRequests: db.approvalRequests });
 });
 
-apiRouter.post("/approvals/:id/decide", async (req: Request, res: Response) => {
+apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (req: AuthenticatedRequest, res: Response) => {
   const { decision, comments } = req.body; // 'approved' | 'rejected'
+  if (decision !== "approved" && decision !== "rejected") {
+    return res.status(400).json({ success: false, message: "القرار يجب أن يكون اعتماداً أو رفضاً." });
+  }
   const appr = db.approvalRequests.find((a) => a.id === req.params.id);
   if (!appr) {
     return res.status(404).json({ success: false, message: "طلب الموافقة غير موجود" });
   }
+  /* قرارٌ واحد لكل طلب: إعادة الاعتماد كانت تُعيد تنفيذ الإجراء على النظام الخارجي. */
+  if (appr.status !== "pending") {
+    return res.status(409).json({ success: false, message: "حُسم هذا الطلب من قبل." });
+  }
 
-  const currentUser = db.getCurrentUser();
+  /* المعتمِد هو صاحب الجلسة، لا «المستخدم الحالي» المعروض — وإلا سُجّل القرار باسم غيره. */
+  const currentUser = { name: req.account?.name || db.getCurrentUser().name };
   appr.status = decision === "approved" ? "approved" : "rejected";
   appr.decidedBy = currentUser.name;
   appr.decidedAt = "الآن";
@@ -891,13 +934,16 @@ apiRouter.get("/simulator/state", (req: Request, res: Response) => {
   res.json({ state: db.simulatorState });
 });
 
-apiRouter.post("/simulator/reset", (req: Request, res: Response) => {
+apiRouter.post("/simulator/reset", requireRole("admin", "manager", "operator"), (req: Request, res: Response) => {
   db.resetSimulator();
   res.json({ success: true, state: db.simulatorState });
 });
 
-apiRouter.post("/simulator/message", async (req: Request, res: Response) => {
+apiRouter.post("/simulator/message", requireRole("admin", "manager", "operator"), async (req: Request, res: Response) => {
   const { text } = req.body;
+  if (typeof text !== "string" || !text.trim()) {
+    return res.status(400).json({ success: false, message: "الرسالة فارغة." });
+  }
   const userMsg = {
     id: `msg_${Date.now()}`,
     sender: "customer" as const,
@@ -1020,7 +1066,7 @@ apiRouter.post("/simulator/message", async (req: Request, res: Response) => {
 });
 
 // Upload Document action for Simulator
-apiRouter.post("/simulator/upload-doc", async (req: Request, res: Response) => {
+apiRouter.post("/simulator/upload-doc", requireRole("admin", "manager", "operator"), async (req: Request, res: Response) => {
   const idempotencyKey = `doc_up_${Date.now()}`;
   const verifyRes = await ConnectorLayer.verifyCivilId(
     { civilIdNumber: "321041200987", studentName: "يوسف أحمد فهد" },
@@ -1252,7 +1298,7 @@ apiRouter.get("/audit", (req: Request, res: Response) => {
 // ==========================================
 
 // Standard JSON-RPC 2.0 Handler for external MCP clients & SDKs
-apiRouter.post("/mcp/rpc", async (req: Request, res: Response) => {
+apiRouter.post("/mcp/rpc", requireRole("admin", "manager", "operator"), async (req: Request, res: Response) => {
   const result = await McpEngine.handleJsonRpc(req.body);
   res.json(result);
 });
@@ -1293,13 +1339,13 @@ apiRouter.get("/mcp/tools", (req: Request, res: Response) => {
   });
 });
 
-apiRouter.post("/mcp/tools/call", async (req: Request, res: Response) => {
+apiRouter.post("/mcp/tools/call", requireRole("admin", "manager", "operator"), async (req: Request, res: Response) => {
   const { name, arguments: args } = req.body;
-  if (!name) {
+  if (typeof name !== "string" || !name) {
     return res.status(400).json({ success: false, error: "Tool name is required" });
   }
-  const result = await McpEngine.executeTool(name, args || {});
-  res.json({ success: true, execution: result });
+  const result = await McpEngine.executeTool(name, args && typeof args === "object" ? args : {});
+  res.json({ success: result.status === "success", execution: result });
 });
 
 // MCP Resources
@@ -1339,7 +1385,7 @@ apiRouter.get("/firebase/status", (req: Request, res: Response) => {
   });
 });
 
-apiRouter.post("/firebase/sync", async (req: Request, res: Response) => {
+apiRouter.post("/firebase/sync", requireRole("admin", "manager"), async (req: Request, res: Response) => {
   const result = await db.syncAllToFirebase();
   db.logAudit({
     actorType: "human",

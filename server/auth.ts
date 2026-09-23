@@ -238,13 +238,25 @@ export async function login(email: unknown, password: unknown): Promise<LoginRes
 
   const valid = typeof password === "string" && (await verifyPassword(password, row.password_hash, row.password_salt));
   if (!valid) {
-    const failures = Number(row.failed_login_count) + 1;
-    const lockedUntil = failures >= MAX_FAILED_LOGINS ? new Date(Date.now() + LOCKOUT_MINUTES * 60_000).toISOString() : null;
-    db.prepare("UPDATE accounts SET failed_login_count = ?, locked_until = ?, updated_at = ? WHERE id = ?")
-      .run(failures, lockedUntil, now(), row.id);
+    /*
+     * زيادةٌ ذرّية في قاعدة البيانات، لا «ما قرأناه + 1»: بين القراءة والكتابة
+     * انتظارُ التحقق من كلمة المرور، فمحاولاتٌ متوازية كانت تقرأ العدد نفسه
+     * وتكتبه — فلا يبلغ الحسابُ حدّ القفل مهما كثرت التخمينات.
+     */
+    db.prepare("UPDATE accounts SET failed_login_count = failed_login_count + 1, updated_at = ? WHERE id = ?").run(now(), row.id);
+    const failures = Number((db.prepare("SELECT failed_login_count AS n FROM accounts WHERE id = ?").get(row.id) as { n: number }).n);
+    if (failures >= MAX_FAILED_LOGINS) {
+      db.prepare("UPDATE accounts SET locked_until = ? WHERE id = ?")
+        .run(new Date(Date.now() + LOCKOUT_MINUTES * 60_000).toISOString(), row.id);
+    }
     throw Object.assign(new Error("البريد الإلكتروني أو كلمة المرور غير صحيحة."), { status: 401 });
   }
 
+  /* قد يكون قُفل أثناء التحقق بمحاولاتٍ موازية — فالقفل يسري على هذه أيضاً. */
+  const fresh = db.prepare("SELECT locked_until FROM accounts WHERE id = ?").get(row.id) as { locked_until: string | null };
+  if (fresh.locked_until && fresh.locked_until > now()) {
+    throw Object.assign(new Error("الحساب مقفل مؤقتاً بعد محاولات فاشلة متتالية. حاول لاحقاً."), { status: 429 });
+  }
   db.prepare("UPDATE accounts SET failed_login_count = 0, locked_until = NULL, updated_at = ? WHERE id = ?").run(now(), row.id);
 
   const sessionToken = randomBytes(32).toString("base64url");

@@ -408,3 +408,16 @@ test("حسابٌ عادي لا يُحمى بحماية المالك", async () =
     closeDatabase();
   }
 });
+
+test("parallel wrong guesses still reach the lockout threshold", async () => {
+  useFreshDatabase();
+  try {
+    await createAccount({ email: "p@nahj.test", name: "مشرف", password: fixturePassword(), role: "admin" });
+    // All guesses start before any finishes: the counter must still count every one.
+    const guesses = Array.from({ length: 12 }, (_, i) => login("p@nahj.test", `parallel-guess-${i}`).catch(() => null));
+    await Promise.all(guesses);
+    await assert.rejects(() => login("p@nahj.test", fixturePassword()), /مقفل/);
+  } finally {
+    closeDatabase();
+  }
+});

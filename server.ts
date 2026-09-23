@@ -11,6 +11,32 @@ import { startBackupWorker, stopBackupWorker } from "./server/archive.ts";
 import { startNotifyWorker, stopNotifyWorker } from "./server/notify.ts";
 import { randomBytes } from "node:crypto";
 
+/*
+ * Express 4 لا يلتقط وعداً مرفوضاً من معالجٍ غير متزامن: يبقى الطلب معلّقاً،
+ * وفي Node الحديث يُنهي الرفضُ غير الملتقط العمليةَ كلّها — خطأُ موصلٍ واحد
+ * يُسقط الخدمة عن كل المؤسسة. نلفّ كل معالجٍ في الموجّه فيصل خطؤه إلى `next`.
+ */
+function catchAsyncErrors(router: express.Router): void {
+  const wrap = (layer: { handle: Function }) => {
+    const handle = layer.handle;
+    if (handle.length > 3) return; // معالج أخطاء — يُترك كما هو
+    layer.handle = function (req: express.Request, res: express.Response, next: express.NextFunction) {
+      try {
+        const out = handle.call(this, req, res, next);
+        if (out && typeof out.catch === "function") out.catch(next);
+        return out;
+      } catch (err) {
+        next(err);
+      }
+    };
+  };
+  for (const layer of (router as unknown as { stack: Array<{ handle: Function; route?: { stack: Array<{ handle: Function }> } }> }).stack) {
+    if (layer.route) layer.route.stack.forEach(wrap);
+    else if ((layer.handle as unknown as { stack?: unknown }).stack) catchAsyncErrors(layer.handle as unknown as express.Router);
+    else wrap(layer);
+  }
+}
+
 const DEMO_COOKIE = "nahj_demo";
 /** Demo is on by default; a deployment that must never show it sets NAHJ_DEMO_ENABLED=false. */
 const demoEnabled = () => process.env.NAHJ_DEMO_ENABLED !== "false";
@@ -50,6 +76,13 @@ async function startServer() {
 
   // Do not advertise the server framework (reduces info disclosure / fingerprinting)
   app.disable("x-powered-by");
+  /*
+   * النشر خلف Caddy على شبكة Docker الخاصة. بدون هذا يرى الخادم عنوان الوكيل
+   * لكل زائر، فيصير حدّ محاولات الدخول لكل IP حدّاً واحداً على الجميع، ولا يُعرف
+   * أن الطلب وصل مشفّراً. يُوثق بالوكلاء على الشبكات الخاصة وحدها، فلا يزوّر
+   * زائرٌ من الإنترنت ترويسة X-Forwarded-For.
+   */
+  app.set("trust proxy", "loopback, linklocal, uniquelocal");
 
   // Conservative security response headers. Kept intentionally minimal so they
   // cannot break the SPA or embedding in the AI Studio applet host (no CSP /
@@ -58,6 +91,10 @@ async function startServer() {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
     res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+    /* HSTS على HTTPS وحده (مباشرةً أو خلف وكيلٍ يُعلنه) — لا يُرسل على HTTP المحلي. */
+    if (_req.secure) {
+      res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
+    }
     next();
   });
 
@@ -150,7 +187,28 @@ async function startServer() {
   app.use("/api/auth", authRouter);
 
   // Mount domain API routes
+  catchAsyncErrors(authRouter);
+  catchAsyncErrors(apiRouter);
   app.use("/api", apiRouter);
+
+  /* مسار API مجهول يُجاب بـ404 JSON، لا بصفحة التطبيق وحالة 200. */
+  app.use("/api", (_req, res) => {
+    res.status(404).json({ error: "المسار غير موجود.", code: "NOT_FOUND" });
+  });
+
+  /*
+   * معالج الأخطاء الأخير: JSON موحّد دائماً. بدونه يردّ Express بصفحة HTML،
+   * وخارج الإنتاج تحمل تلك الصفحة أثر المكدّس كاملاً.
+   */
+  app.use((err: { status?: number; statusCode?: number; type?: string }, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (res.headersSent) return next(err);
+    const status = err?.status || err?.statusCode || 500;
+    if (status >= 500) console.error("[NAHJ] unhandled route error:", err);
+    const message = err?.type === "entity.parse.failed" ? "جسم الطلب ليس JSON صالحاً."
+      : err?.type === "entity.too.large" ? "جسم الطلب أكبر من المسموح."
+      : status >= 500 ? "حدث خطأ غير متوقع في الخادم." : "طلب غير صالح.";
+    res.status(status).json({ error: message, code: status >= 500 ? "SERVER_ERROR" : "BAD_REQUEST" });
+  });
 
   await bootstrapFirstAccount();
   /*
@@ -210,6 +268,11 @@ async function startServer() {
     });
   }
 }
+
+/* آخر شبكة أمان: رفضٌ غير ملتقط خارج الطلبات يُسجَّل ولا يُسقط الخدمة. */
+process.on("unhandledRejection", (reason) => {
+  console.error("[NAHJ] unhandled rejection:", reason);
+});
 
 startServer().catch((err) => {
   console.error("[NAHJ] Fatal error starting server:", err);
