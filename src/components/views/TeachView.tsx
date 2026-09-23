@@ -1,4 +1,4 @@
-import React,{useMemo,useState} from "react";
+import React,{useEffect,useState} from "react";
 import { Check, CircleStop, FileCheck2, GraduationCap, Mic2, Plus, Sparkles, WandSparkles } from "lucide-react";
 import type { SkillStep } from "../../types";
 import { apiOrNull } from "../../lib/api";
@@ -9,16 +9,14 @@ type EventRow={id:string;time:string;action:string;system:string;note?:string};
 type Synthesis={steps:SkillStep[];rules:string[];questions:{id:string;question:string;answered?:boolean}[]};
 type Props={lang:"ar"|"en";onSkillCodified:(skill?:unknown)=>void;onNotify:(message:string)=>void};
 
-const starter:EventRow[]=[
-  {id:"e1",time:"10:14",action:"تحديد العمر والمرحلة",system:"Conversation",note:"العمر يحدد KG1/KG2"},
-  {id:"e2",time:"10:16",action:"فحص المقاعد",system:"SIS",note:"لا نتجاوز السعة"},
-  {id:"e3",time:"10:19",action:"جلب الرسوم الرسمية",system:"Billing",note:"المصدر المالي هو الحقيقة"},
-];
-
+/*
+ * المثال الأول يأتي من قطاع المؤسسة (`/teach/sample`) — لا من مدرسةٍ مكتوبة هنا.
+ * كانت الشاشة تبدأ بـ«تسجيل طالب جديد — KG» في عيادةٍ ومكتب محاماة.
+ */
 export function TeachView({lang,onSkillCodified,onNotify}:Props){
   const ar=lang==="ar";
-  const [title,setTitle]=useState("تسجيل طالب جديد — KG");
-  const [events,setEvents]=useState<EventRow[]>(starter);
+  const [title,setTitle]=useState("");
+  const [events,setEvents]=useState<EventRow[]>([]);
   const [sessionId,setSessionId]=useState<string|null>(null);
   const [recording,setRecording]=useState(false);
   const [busy,setBusy]=useState(false);
@@ -27,20 +25,15 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
   const [newAction,setNewAction]=useState("");
   const [codified,setCodified]=useState(false);
 
-  const fallback=useMemo<Synthesis>(()=>({
-    steps:[
-      {id:"s1",order:1,title:"تحديد المرحلة",description:"فحص العمر",system:"Conversation",isAutomated:true},
-      {id:"s2",order:2,title:"فحص المقاعد",description:"سعة الصف",system:"SIS",isAutomated:true},
-      {id:"s3",order:3,title:"الوثائق",description:"تحقق البطاقة",system:"Vision",isAutomated:true},
-      {id:"s4",order:4,title:"حجز الزيارة",description:"موعد متاح",system:"Calendar",isAutomated:true},
-      {id:"s5",order:5,title:"اعتماد الرسوم",description:"بوابة موافقة",system:"Approval",isAutomated:false},
-    ],
-    rules:["الرسوم من SIS فقط","الاستثناء المالي يحتاج مدير","لا حجز دون وثيقة موثقة"],
-    questions:[
-      {id:"q1",question:"هل المقابلة مطلوبة لجميع الطلاب؟"},
-      {id:"q2",question:"إذا امتلأ KG2: قائمة انتظار أم فرع آخر؟"},
-    ]
-  }),[]);
+  useEffect(()=>{
+    let alive=true;
+    void apiOrNull<{title:string;events:{action:string;system:string;note?:string}[]}>("/teach/sample").then(sample=>{
+      if(!alive||!sample)return;
+      setTitle(current=>current||sample.title);
+      setEvents(current=>current.length?current:sample.events.map((e,i)=>({id:`sample_${i}`,time:"",action:e.action,system:e.system,note:e.note})));
+    });
+    return ()=>{alive=false};
+  },[]);
 
   const ensureSession=async()=>{
     if(sessionId)return sessionId;
@@ -57,7 +50,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
   const addEvent=async()=>{
     if(!newAction.trim())return;
     const id=await ensureSession();
-    const ev:EventRow={id:`ev_${Date.now()}`,time:new Date().toLocaleTimeString("ar-KW",{hour:"2-digit",minute:"2-digit"}),action:newAction,system:"Future SIS Core"};
+    const ev:EventRow={id:`ev_${Date.now()}`,time:new Date().toLocaleTimeString("ar-KW",{hour:"2-digit",minute:"2-digit"}),action:newAction,system:ar?"يدوي":"Manual"};
     setEvents(v=>[...v,ev]); setNewAction("");
     if(!id.startsWith("local_")) await apiOrNull("/teach/record-event",{method:"POST",body:JSON.stringify({sessionId:id,action:ev.action,system:ev.system})});
   };
@@ -69,8 +62,11 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
       for(const ev of events){await apiOrNull("/teach/record-event",{method:"POST",body:JSON.stringify({sessionId:id,action:ev.action,system:ev.system,voiceNote:ev.note})});}
     }
     const data=await apiOrNull<{steps:SkillStep[];rules:string[];questions:{id:string;question:string}[]}>("/teach/synthesize",{method:"POST",body:JSON.stringify({sessionId:id})});
-    setResult(data?{steps:data.steps,rules:data.rules,questions:data.questions}:fallback);
-    setRecording(false);setBusy(false);onNotify(ar?"نهج استخلص المهارة ووجد أسئلة قبل الاعتماد":"NAHJ synthesized the skill and found open questions");
+    setRecording(false);setBusy(false);
+    /* لا مهارةٌ بديلة مكتوبة سلفاً حين يفشل الاستخلاص — يُقال إنه فشل. */
+    if(!data||!Array.isArray(data.steps)){onNotify(ar?"تعذّر استخلاص المهارة — أضف خطوات أوضح وحاول مجدداً":"Could not synthesize — add clearer steps and retry");return;}
+    setResult({steps:data.steps,rules:data.rules||[],questions:data.questions||[]});
+    onNotify(ar?"نهج استخلص المهارة ووجد أسئلة قبل الاعتماد":"NAHJ synthesized the skill and found open questions");
   };
 
   const codify=async()=>{
@@ -83,7 +79,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
     <PageHeader eyebrow="TEACH / LIVE" title={ar?"ورّني كيف تسوونها.":"Show me how you do it."} hint={ar?"جلسة واضحة ومصرّح بها. نهج يلتقط المنطق، لا النقرات فقط.":"An explicit session. NAHJ learns the logic, not just the clicks."}/>
     <section className="teach-layout">
       <article className="teach-stage surface">
-        <div className="teach-title-row"><input value={title} onChange={e=>setTitle(e.target.value)} aria-label={ar?"اسم العملية":"Process name"}/><span><FileCheck2/>{events.length}</span></div>
+        <div className="teach-title-row"><input value={title} onChange={e=>setTitle(e.target.value)} placeholder={ar?"اسم العملية التي ستعلّمها":"Process name"} aria-label={ar?"اسم العملية":"Process name"}/><span><FileCheck2/>{events.length}</span></div>
         <TeachStageVisual active={recording||busy} eventCount={events.length}/>
         <div className="teach-controls">
           <button className={`record-orb ${recording?"recording":""}`} onClick={toggleRecording} aria-label={recording?(ar?"إيقاف":"Stop"):(ar?"بدء":"Start")}>{recording?<CircleStop/>:<Mic2/>}</button>

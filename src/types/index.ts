@@ -287,6 +287,11 @@ export interface ShadowComparison {
   title?: string;
   humanActor?: string;
   humanDecision?: string;
+  /**
+   * رمز القرار البشري للمقارنة، حين يُكتب `humanAction` بكلام الموظف.
+   * بدونه يُقارَن نصٌّ عربي حرّ برمز المحرّك فيُسجَّل انحرافٌ لم يقع.
+   */
+  humanActionCode?: string;
   aiDecision?: string;
   confidence?: number;
   divergenceReason?: string;

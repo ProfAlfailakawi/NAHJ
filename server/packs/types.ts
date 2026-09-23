@@ -95,6 +95,89 @@ export interface PackChannel {
   samplePrompts: string[];
 }
 
+/* ------------------------------------------------------ محتوى العرض */
+
+/*
+ * نشاطٌ حيّ للعرض التجريبي.
+ *
+ * بدونه كان تبديل الحزمة في العرض يُفرغ نصف المنتج: «العمل» بلا حالات،
+ * «التدرّب» بلا اختبارات، «علّم» يعرض تسجيل طالب في عيادة، والمحادثة ردٌّ
+ * عام واحد. فمن يأتي من عيادة يرى مدرسةً ممتلئة وعيادةً فارغة.
+ *
+ * ولا يُركَّب إلا في صندوق العرض: مؤسسةٌ حقيقية تبدّل نشاطها تبدأ نظيفة، ولا
+ * تُكتب في سجلّها حالاتُ عملٍ لم تقع.
+ */
+export interface PackDemoWork {
+  /** slug المهارة التي تعمل عليها الحالة. */
+  skill: string;
+  code: string;
+  title: string;
+  contact: string;
+  state: "queued" | "collecting_data" | "waiting_documents" | "waiting_approval" | "executing" | "completed" | "escalated";
+  progress: number;
+  step: string;
+  risk: Skill["riskLevel"];
+  mode?: "ai" | "human_takeover";
+  details?: Record<string, unknown>;
+  timeline: Array<{ time: string; actor: "ai" | "human" | "system"; title: string; details: string; badge?: string }>;
+}
+
+export interface PackDemoApproval {
+  /** رمز حالة العمل (`code`) التي ينتظر إجراؤها القرار. */
+  work: string;
+  action: string;
+  reasonCode: string;
+  reason: string;
+  requiredRole: User["role"];
+  risk: Skill["riskLevel"];
+  payload: Record<string, unknown>;
+}
+
+/*
+ * حالة تدرّب. `expected` هو ما يجب أن يقرّره المحرّك — مكتوبٌ بيد إنسان لا
+ * مشتقٌّ من المحرّك نفسه، وإلا صار الاختبار يُصدّق نفسه.
+ */
+export interface PackDemoCase { skill: string; name: string; scenario: string; expected: string }
+
+export interface PackDemoShadow {
+  title: string;
+  /** وقائع الحالة التي يقرّر عليها المحرّك. */
+  scenario: string;
+  /** ما فعله الموظف، بكلامه. */
+  human: string;
+  /** رمز القرار البشري الذي يُقارَن بقرار المحرّك. */
+  humanCode: string;
+  humanReason: string;
+  humanActor: string;
+}
+
+export interface PackDemoTeach { title: string; events: Array<{ action: string; system: string; note?: string }> }
+
+export interface PackDemoChat {
+  /** مراحل السير كما تُعرض بجوار المحادثة. */
+  stages: string[];
+  /** المهارة التي تعمل عليها المحادثة. */
+  skill: string;
+  workTitle: string;
+  /** كل رسالة من الطرف الآخر تتقدّم دوراً. */
+  turns: Array<{
+    reply: string;
+    stage: number;
+    approval?: { action: string; reasonCode: string; reason: string; requiredRole: User["role"]; payload: Record<string, unknown> };
+  }>;
+  approvedReply: string;
+  rejectedReply: string;
+}
+
+export interface PackDemo {
+  work: PackDemoWork[];
+  approvals: PackDemoApproval[];
+  cases: PackDemoCase[];
+  shadow: PackDemoShadow[];
+  teach: PackDemoTeach;
+  chat: PackDemoChat;
+}
+
 export interface SectorPack {
   code: string;
   nameAr: string;
@@ -108,6 +191,8 @@ export interface SectorPack {
   connectors: PackConnector[];
   proposals: PackProposal[];
   channel: PackChannel;
+  /** نشاط العرض التجريبي — يُركَّب في صندوق العرض وحده. */
+  demo?: PackDemo;
 }
 
 /* --------------------------------------------------------- التوسيع */

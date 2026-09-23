@@ -31,7 +31,8 @@ import { syncDocToFirestore, getFirebaseStatus } from "./firebase.ts";
 import { AUDIT_RETENTION, readState, startPersistenceWorker } from "./persistence.ts";
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createDemoSandboxSeed, type DemoSandboxSeed } from "./demoSandbox.ts";
-import { buildSector, EDUCATION_CODE } from "./packs/index.ts";
+import { buildSector, EDUCATION_CODE, getSectorPack } from "./packs/index.ts";
+import { buildDemoActivity } from "./packs/demoActivity.ts";
 import { stampLegacyInstant } from "./engine/metricsEngine.ts";
 
 export interface SimulatorMessage {
@@ -44,7 +45,7 @@ export interface SimulatorMessage {
 }
 
 export interface SimulatorState {
-  step: "initial" | "age_asked" | "grade_confirmed" | "doc_requested" | "doc_uploaded" | "booking_offered" | "approval_triggered" | "completed";
+  step: "initial" | "age_asked" | "grade_confirmed" | "doc_requested" | "doc_uploaded" | "booking_offered" | "approval_triggered" | "completed" | "scripted";
   studentName?: string;
   childAge?: number;
   grade?: string;
@@ -53,8 +54,21 @@ export interface SimulatorState {
   visitDate?: string;
   tuitionFee?: number;
   requiresManagerApproval?: boolean;
-  approvalStatus?: "pending" | "approved";
+  approvalStatus?: "pending" | "approved" | "rejected";
   messages: SimulatorMessage[];
+  /*
+   * سيرُ القطاعات غير التعليمية: مراحلُه تأتي من الحزمة، ويتقدّم دوراً مع كل
+   * رسالة. والتعليم يبقى على سيره المكتوب — فهذه الحقول غائبة عنه.
+   */
+  stages?: string[];
+  stage?: number;
+  turn?: number;
+  /** معرّف طلب الموافقة الذي فتحته المحادثة، ليُحسم منها ويُردّ عليها. */
+  approvalId?: string;
+  /** أمثلة يبدأ بها من يجرّب القناة. */
+  samplePrompts?: string[];
+  /** اسم المؤسسة كما يراه الطرف الآخر في رأس المحادثة. */
+  orgName?: string;
 }
 
 /*
@@ -226,6 +240,46 @@ export class Store {
     this.testCases = [];
     this.shadowComparisons = [];
     this.learningSessions = [];
+
+    /*
+     * صندوق العرض وحده يُملأ بنشاط القطاع: من يجرّب نهج لعيادته يرى عيادةً
+     * تعمل لا عيادةً فارغة. والمؤسسة الحقيقية تبدأ نظيفة — لا تُكتب في سجلّها
+     * حالاتٌ لم تقع.
+     */
+    const demo = getSectorPack(code)?.demo;
+    if (this.isDemo && demo) {
+      const activity = buildDemoActivity(demo, built, code);
+      this.workItems = activity.workItems;
+      this.approvalRequests = activity.approvalRequests;
+      this.testCases = activity.testCases;
+      this.shadowComparisons = activity.shadowComparisons;
+      /*
+       * سجلّ الصندوق يبدأ من تاريخ هذه المؤسسة لا من تاريخ المدرسة المبذورة:
+       * كان «السجل» في عيادة العرض يعرض «مديرة القبول» و«KG2». ويُبنى من
+       * أحداث حالاتها نفسها، فما في السجل هو ما في «العمل».
+       */
+      this.auditEvents = [];
+      const humanNames = built.users.map(user => user.name);
+      for (const item of [...activity.workItems].reverse()) {
+        for (const entry of [...item.timeline].reverse()) {
+          this.logAudit({
+            actorType: entry.actor,
+            actorName: entry.actor === "ai" ? "نهج" : entry.actor === "human" ? (humanNames[0] || "موظف") : "النظام",
+            action: entry.badge ? entry.badge.toUpperCase().replace(/[^A-Z0-9]+/g, "_") || "WORK_EVENT" : "WORK_EVENT",
+            provenance: item.code,
+            risk: item.riskLevel,
+            latencyMs: 0,
+            details: `${item.title}: ${entry.title} — ${entry.details}`,
+            status: item.state === "escalated" ? "warning" : "success",
+          });
+        }
+      }
+      this.organization = {
+        ...this.organization,
+        verifiedSkillsCount: built.skills.filter(skill => skill.status === "active").length,
+        hoursSavedMonth: Number(built.skills.reduce((sum, skill) => sum + (skill.hoursSavedTotal || 0), 0).toFixed(1)),
+      };
+    }
     this.resetSimulator();
 
     this.logAudit({
@@ -243,6 +297,7 @@ export class Store {
   }
 
   public resetSimulator(): void {
+    const chat = this.sectorCode !== EDUCATION_CODE ? getSectorPack(this.sectorCode)?.demo?.chat : undefined;
     this.simulatorState = {
       step: "initial",
       messages: [
@@ -253,6 +308,9 @@ export class Store {
           timestamp: "الآن",
         },
       ],
+      samplePrompts: this.channel.samplePrompts,
+      orgName: this.organization.name,
+      ...(chat ? { stages: chat.stages, stage: 0, turn: 0 } : {}),
     };
     if (!this.isDemo) void syncDocToFirestore("simulator", "state", this.simulatorState);
   }
@@ -336,7 +394,23 @@ const baseStore = new Store();
  * the single real store. Route handlers were written against `db` and did not
  * have to change.
  */
-type DemoRecord = { store: Store; expiresAt: number };
+type DemoRecord = { store: Store; expiresAt: number; sector: string };
+
+/*
+ * صندوق عرضٍ على قطاعٍ بعينه. التعليم هو البذرة نفسها؛ وما عداه يُركَّب فوقها
+ * بحزمته ونشاطها — فمن اختار «عيادة» يدخل عيادةً من أول شاشة.
+ */
+function sandboxStore(sector: string): Store {
+  const store = new Store(createDemoSandboxSeed());
+  if (sector && sector !== EDUCATION_CODE) store.applySector(sector, "زائر العرض");
+  return store;
+}
+
+/** قطاعٌ معروف أو التعليم — لا يُركَّب صندوقٌ على رمزٍ مجهول. */
+export function normalizeDemoSector(value: unknown): string {
+  const code = String(value || "").trim();
+  return code && getSectorPack(code) ? code : EDUCATION_CODE;
+}
 const demoContext = new AsyncLocalStorage<{ sessionId: string; store: Store }>();
 const demoSandboxes = new Map<string, DemoRecord>();
 
@@ -369,13 +443,16 @@ function sweepExpiredSandboxes(): void {
 export const DemoSandbox = {
   isDemoRequest: (): boolean => Boolean(demoContext.getStore()),
   currentSessionId: (): string => demoContext.getStore()?.sessionId || "",
-  create(sessionId: string, ttlMs: number = DEMO_SESSION_TTL_MS): void {
+  create(sessionId: string, ttlMs: number = DEMO_SESSION_TTL_MS, sector: string = EDUCATION_CODE): void {
     sweepExpiredSandboxes();
-    demoSandboxes.set(sessionId, { store: new Store(createDemoSandboxSeed()), expiresAt: Date.now() + ttlMs });
+    const code = normalizeDemoSector(sector);
+    demoSandboxes.set(sessionId, { store: sandboxStore(code), expiresAt: Date.now() + ttlMs, sector: code });
   },
+  /** إعادة الضبط تُبقي القطاع الذي اختاره الزائر — لا تُعيده إلى المدرسة. */
   reset(sessionId: string, ttlMs: number = DEMO_SESSION_TTL_MS): boolean {
     if (!sessionId.startsWith("demo_") || !demoSandboxes.has(sessionId)) return false;
-    demoSandboxes.set(sessionId, { store: new Store(createDemoSandboxSeed()), expiresAt: Date.now() + ttlMs });
+    const sector = demoSandboxes.get(sessionId)!.sector;
+    demoSandboxes.set(sessionId, { store: sandboxStore(sector), expiresAt: Date.now() + ttlMs, sector });
     return true;
   },
   destroy(sessionId: string): void { demoSandboxes.delete(sessionId); },

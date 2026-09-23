@@ -5,7 +5,7 @@ import { SkillEngine } from "./engine/skillEngine.ts";
 import { ConnectorLayer } from "./engine/connectors.ts";
 import { McpEngine } from "./engine/mcpEngine.ts";
 import { deriveMetrics, type MetricsInput } from "./engine/metricsEngine.ts";
-import { listSectors, EDUCATION_CODE } from "./packs/index.ts";
+import { listSectors, EDUCATION_CODE, getSectorPack } from "./packs/index.ts";
 import { synthesize } from "./engine/teachEngine.ts";
 import { generateAiResponse } from "./gemini.ts";
 import { AutonomyLevel, SkillStep, LearningSession, Skill } from "../src/types/index.ts";
@@ -525,11 +525,41 @@ apiRouter.post("/learn/clarify", (req: Request, res: Response) => {
 });
 
 // 4. Teach Mode Studio
+/*
+ * مثالٌ يبدأ به من يفتح «علّم» — من قطاع المؤسسة.
+ *
+ * كانت الشاشة تبدأ دائماً بـ«تسجيل طالب جديد — KG» وخطوات مقاعد الصف، ولو
+ * كانت المؤسسة عيادة. فأول ما يراه من يجرّب ميزة «يتعلّم منك» مدرسةٌ ليست له.
+ */
+const EDUCATION_TEACH_SAMPLE = {
+  title: "تسجيل طالب جديد — KG",
+  events: [
+    { action: "تحديد العمر والمرحلة", system: "المحادثة", note: "العمر يحدد KG1/KG2" },
+    { action: "فحص المقاعد", system: "نظام معلومات الطلاب", note: "لا نتجاوز السعة" },
+    { action: "جلب الرسوم الرسمية", system: "الفوترة", note: "المصدر المالي هو الحقيقة" },
+  ],
+};
+function teachSample(): { title: string; events: Array<{ action: string; system: string; note?: string }> } {
+  if (!db.sectorCode || db.sectorCode === EDUCATION_CODE) return EDUCATION_TEACH_SAMPLE;
+  const pack = getSectorPack(db.sectorCode);
+  if (pack?.demo?.teach) return pack.demo.teach;
+  /* قطاعٌ بلا مثالٍ مكتوب: أول مهارةٍ فيه بخطواتها الثلاث الأولى. */
+  const skill = db.skills[0];
+  return {
+    title: skill?.name || "عملية جديدة",
+    events: (skill?.steps || []).slice(0, 3).map(step => ({ action: step.title, system: step.system || "النظام الرئيسي" })),
+  };
+}
+
+apiRouter.get("/teach/sample", (_req: Request, res: Response) => {
+  res.json(teachSample());
+});
+
 apiRouter.post("/teach/start", (req: Request, res: Response) => {
   const { title } = req.body;
   const session: LearningSession = {
     id: `sess_${Date.now()}`,
-    title: title || "تسجيل طالب جديد في المرحلة التمهيدية",
+    title: (typeof title === "string" && title.trim()) || teachSample().title,
     startedAt: "الآن",
     status: "recording",
     teacherName: db.getCurrentUser().name,
@@ -569,7 +599,7 @@ apiRouter.post("/teach/record-event", (req: Request, res: Response) => {
     id: `ev_${Date.now()}`,
     timestamp: timeStr,
     action: action || "إدخال بيانات في النظام",
-    system: system || "Future SIS Core",
+    system: system || "النظام الرئيسي",
     inputValue,
     voiceNote,
     screenshotLabel,
@@ -779,6 +809,16 @@ apiRouter.post("/practice/run", requireRole("admin", "manager", "operator"), asy
   res.json({ success: true, ...result });
 });
 
+/*
+ * حالات التدرّب ومقارنات الظل كما هي في المؤسسة.
+ *
+ * كانت الواجهة لا تقرؤها إلا بعد الضغط على «شغّل»، وتعرض قبلها نسخةً مبذورة في
+ * الواجهة نفسها — حالات ولي أمرٍ وخصم أشقاء، في عيادةٍ أو متجر.
+ */
+apiRouter.get("/practice", (_req: Request, res: Response) => {
+  res.json({ testCases: db.testCases, shadowComparisons: db.shadowComparisons });
+});
+
 apiRouter.post("/shadow/run", requireRole("admin", "manager", "operator"), async (req: Request, res: Response) => {
   const result = await SkillEngine.runShadowComparison();
   res.json({ success: true, ...result });
@@ -878,6 +918,58 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
 
   // If approved, trigger action execution with idempotency & post-verification!
   let executionResult: Awaited<ReturnType<typeof ConnectorLayer.createApplicationRecord>> | null = null;
+
+  /*
+   * موافقةٌ من قطاعٍ غير تعليمي.
+   *
+   * كان كل اعتمادٍ يُنفَّذ كأنه تسجيل طالب: يُكتب على حالة العمل «اكتمل التسجيل
+   * وصدر الرقم الأكاديمي»، وتُضاف إلى المحادثة رسالة «مديرة القبول» — ولو كان
+   * المعتمَد تعويضَ شحنة. فالقطاع يُقرأ من الطلب نفسه، ويُكتب ما حدث بلسانه.
+   */
+  const apprSector = String((appr.payload as Record<string, unknown>)?.sector || "");
+  if (apprSector && apprSector !== EDUCATION_CODE) {
+    const approved = decision === "approved";
+    const workItem = db.workItems.find((w) => w.id === appr.workItemId);
+    if (workItem) {
+      workItem.state = approved ? "completed" : "escalated";
+      workItem.progressPercent = approved ? 100 : workItem.progressPercent;
+      workItem.assignedMode = approved ? workItem.assignedMode : "human_takeover";
+      workItem.currentStepTitle = approved ? `نُفّذ بعد اعتماد ${currentUser.name}` : `رُفض — أُعيد إلى الموظف المختص`;
+      workItem.updatedAt = "الآن";
+      workItem.timeline.unshift({
+        time: "الآن",
+        actor: "human",
+        title: approved ? `اعتماد: ${currentUser.name}` : `رفض: ${currentUser.name}`,
+        details: comments || appr.reasonDescription,
+        badge: approved ? "Approved" : "Rejected",
+      });
+    }
+    const chat = getSectorPack(apprSector)?.demo?.chat;
+    if (chat && db.simulatorState.approvalId === appr.id) {
+      db.simulatorState.approvalStatus = approved ? "approved" : "rejected";
+      db.simulatorState.requiresManagerApproval = false;
+      db.simulatorState.stage = approved ? chat.stages.length - 1 : db.simulatorState.stage;
+      db.simulatorState.messages.push({
+        id: `msg_${Date.now()}`,
+        sender: "system",
+        text: approved ? chat.approvedReply : chat.rejectedReply,
+        timestamp: "الآن",
+      });
+    }
+    db.logAudit({
+      actorType: "human",
+      actorName: currentUser.name,
+      action: approved ? "APPROVE_ACTION_EXECUTION" : "REJECT_ACTION_EXECUTION",
+      policyCode: appr.reasonCode,
+      provenance: "Manager Approval Decision Gate",
+      risk: appr.riskLevel,
+      latencyMs: 40,
+      details: `${approved ? "اعتماد" : "رفض"} إجراء ${appr.actionName} للمعاملة ${appr.workTitle} بواسطة ${currentUser.name}.`,
+      status: approved ? "success" : "warning",
+    });
+    return res.json({ success: true, approval: appr, executionResult: null });
+  }
+
   if (decision === "approved") {
     const idempotencyKey = `appr_${appr.id}_exec`;
     executionResult = await ConnectorLayer.createApplicationRecord(appr.payload, idempotencyKey);
@@ -897,7 +989,8 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
       });
     }
 
-    // Also update simulator state if it matches active conversation
+    /* المحادثة تُحدَّث حين تكون هي من فتحت الطلب — لا مع كل اعتمادٍ في المؤسسة. */
+    if (db.simulatorState.step === "approval_triggered" && db.simulatorState.approvalStatus === "pending") {
     db.simulatorState.step = "completed";
     db.simulatorState.approvalStatus = "approved";
     db.simulatorState.messages.push({
@@ -912,6 +1005,7 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
         tourDate: "الخميس القادم 04:30 م",
       },
     });
+    }
   }
 
   db.logAudit({
@@ -931,7 +1025,14 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
 
 // 9. Golden Scenario: Web Conversation Simulator
 apiRouter.get("/simulator/state", (req: Request, res: Response) => {
-  res.json({ state: db.simulatorState });
+  /* اسم المؤسسة وأمثلة القناة يُقرآن حيّين: حالةٌ محفوظة قبل إضافتهما لا تُعرض بلا اسم. */
+  res.json({
+    state: {
+      ...db.simulatorState,
+      orgName: db.organization.name,
+      samplePrompts: db.simulatorState.samplePrompts || db.channel.samplePrompts,
+    },
+  });
 });
 
 apiRouter.post("/simulator/reset", requireRole("admin", "manager", "operator"), (req: Request, res: Response) => {
@@ -967,6 +1068,73 @@ apiRouter.post("/simulator/message", requireRole("admin", "manager", "operator")
    * أن تفعله من مهاراتها الحيّة، ويُحيل إلى موظف. بناء سيرٍ كامل لكل قطاع عملٌ
    * قائم بذاته — وادّعاؤه أسوأ من غيابه.
    */
+  /*
+   * سيرُ القطاع المكتوب في حزمته — دورٌ مع كل رسالة، وحين يبلغ دورَ القرار
+   * تُفتح حالة عمل وطلب موافقة حقيقيان في الصندوق نفسه، فيراهما الزائر في
+   * «العمل» و«الموافقات» ويحسمهما من بوابة القرار. بعد آخر دور يعود الردّ
+   * العام أدناه، فلا يُدّعى سيرٌ لم يُكتب.
+   */
+  const chat = db.sectorCode && db.sectorCode !== EDUCATION_CODE ? getSectorPack(db.sectorCode)?.demo?.chat : undefined;
+  const turnIndex = db.simulatorState.turn ?? 0;
+  if (chat && turnIndex < chat.turns.length && db.simulatorState.approvalStatus !== "pending") {
+    const turn = chat.turns[turnIndex];
+    db.simulatorState.step = "scripted";
+    db.simulatorState.turn = turnIndex + 1;
+    db.simulatorState.stages = chat.stages;
+    db.simulatorState.stage = turn.stage;
+    db.simulatorState.messages.push({
+      id: `msg_ai_${Date.now()}`,
+      sender: "ai",
+      text: turn.reply,
+      timestamp: "الآن",
+      ...(turn.approval ? { cardType: "approval_pending" as const } : {}),
+    });
+
+    if (turn.approval) {
+      const skill = db.skills.find(candidate => candidate.slug === chat.skill);
+      const stamp = Date.now();
+      const workItem = {
+        id: `wi_chat_${stamp}`,
+        code: `CH-${String(stamp).slice(-4)}`,
+        title: chat.workTitle,
+        skillId: skill?.id || "",
+        skillName: skill?.name || chat.workTitle,
+        contactName: db.channel.counterpart,
+        contactPhone: "",
+        state: "waiting_approval" as const,
+        riskLevel: "high" as const,
+        assignedMode: "ai" as const,
+        createdAt: "الآن",
+        updatedAt: "الآن",
+        progressPercent: 75,
+        currentStepTitle: "بانتظار القرار",
+        details: { sector: db.sectorCode, channel: "simulator" },
+        timeline: [
+          { time: "الآن", actor: "ai" as const, title: "رفع طلب اعتماد من المحادثة", details: turn.approval.reason, badge: turn.approval.reasonCode },
+        ],
+      };
+      db.workItems.unshift(workItem);
+      const approvalId = `appr_chat_${stamp}`;
+      db.approvalRequests.unshift({
+        id: approvalId,
+        workItemId: workItem.id,
+        workTitle: workItem.title,
+        actionName: turn.approval.action,
+        payload: { sector: db.sectorCode, channel: "simulator", ...turn.approval.payload },
+        reasonCode: turn.approval.reasonCode,
+        reasonDescription: turn.approval.reason,
+        riskLevel: "high",
+        requiredRole: turn.approval.requiredRole,
+        requestedAt: "الآن",
+        status: "pending",
+      });
+      db.simulatorState.requiresManagerApproval = true;
+      db.simulatorState.approvalStatus = "pending";
+      db.simulatorState.approvalId = approvalId;
+    }
+    return res.json({ success: true, state: db.simulatorState });
+  }
+
   if (db.sectorCode && db.sectorCode !== EDUCATION_CODE) {
     const liveSkills = db.skills.filter(skill => skill.status === "active");
     const offered = liveSkills.slice(0, 3).map(skill => `• ${skill.name}`).join("\n");

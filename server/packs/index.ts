@@ -4,6 +4,7 @@ import { lawPack } from "./law.ts";
 import { retailPack } from "./retail.ts";
 import { logisticsPack } from "./logistics.ts";
 import { realEstatePack } from "./realestate.ts";
+import { SECTOR_DEMOS } from "./demos.ts";
 
 /*
  * سجلّ حزم الأنشطة.
@@ -13,7 +14,9 @@ import { realEstatePack } from "./realestate.ts";
  * يعرفها بالإشارة، ويطبّقها بإعادة البذر لا بالتوسيع.
  */
 
-export const SECTOR_PACKS: SectorPack[] = [clinicPack, lawPack, retailPack, logisticsPack, realEstatePack];
+export const SECTOR_PACKS: SectorPack[] = [clinicPack, lawPack, retailPack, logisticsPack, realEstatePack]
+  /* نشاط العرض يُلحق هنا لا في ملف الحزمة: الحزمة عقلُ القطاع، والعرض مشهدٌ فوقه. */
+  .map(pack => ({ ...pack, demo: pack.demo || SECTOR_DEMOS[pack.code] }));
 
 /** رمز الحزمة التعليمية — المبذورة أصلاً في المنصة. */
 export const EDUCATION_CODE = "education";

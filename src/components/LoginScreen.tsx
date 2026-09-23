@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FlaskConical, LogIn, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ApiError, authApi } from "../lib/api";
 
@@ -9,7 +9,8 @@ interface Props {
   /** البيئة التجريبية مفعّلة في هذا النشر. */
   demoEnabled?: boolean;
   demoBusy?: boolean;
-  onEnterDemo?: () => void;
+  /** يفتح العرض على القطاع المختار — أو التعليم إن لم يُختر. */
+  onEnterDemo?: (sector?: string) => void;
   onAuthenticated: () => void;
 }
 
@@ -24,6 +25,19 @@ export function LoginScreen({ lang, needsSetup, demoEnabled = false, demoBusy = 
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pickSector, setPickSector] = useState(false);
+  const [sectors, setSectors] = useState<Array<{ code: string; nameAr: string; nameEn: string; logo: string }>>([]);
+
+  /* القطاعات من الخادم: القائمة نفسها التي يُبنى منها العرض، فلا يُعرض قطاعٌ لا حزمة له. */
+  useEffect(() => {
+    if (!demoEnabled || needsSetup) return;
+    let alive = true;
+    fetch("/api/public/sectors", { credentials: "same-origin" })
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => { if (alive && Array.isArray(data?.sectors)) setSectors(data.sectors); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [demoEnabled, needsSetup]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -136,21 +150,38 @@ export function LoginScreen({ lang, needsSetup, demoEnabled = false, demoBusy = 
           */}
         {!needsSetup && (
           <div className="login-demo-row">
-            {demoEnabled && onEnterDemo && (
+            {demoEnabled && onEnterDemo && !pickSector && (
               <button
                 type="button"
                 className="demo-enter"
-                onClick={onEnterDemo}
+                onClick={() => (sectors.length ? setPickSector(true) : onEnterDemo())}
                 disabled={busy || demoBusy}
                 title={ar
                   ? "بيئة تجريبية معزولة ببيانات اصطناعية، لا تُقرأ ولا تُكتب أي بيانات مؤسسة"
                   : "Isolated sandbox with synthetic data; no institution record is read or written"}
               >
                 <FlaskConical aria-hidden="true" />
-                <strong>{demoBusy ? (ar ? "جارٍ فتح التجربة..." : "Opening demo...") : ar ? "جرّب نهج الآن — بلا حساب" : "Try NAHJ now — no account"}</strong>
+                <strong>{ar ? "جرّب نهج الآن — بلا حساب" : "Try NAHJ now — no account"}</strong>
               </button>
             )}
+            {/*
+              * اختيار القطاع قبل الدخول: كان العرض يفتح دائماً على مدرسة، فمن جاء
+              * من عيادة يرى منتجاً لقطاعٍ آخر ويُطالَب بأن يتخيّل.
+              */}
+            {demoEnabled && onEnterDemo && pickSector && (
+              <div className="login-sectors" role="group" aria-label={ar ? "اختر قطاعك" : "Choose your sector"}>
+                <p>{demoBusy ? (ar ? "جارٍ تجهيز مؤسستك التجريبية..." : "Preparing your demo...") : ar ? "اختر قطاعك — ندخلك مؤسسةً نموذجية منه:" : "Choose your sector:"}</p>
+                <div>
+                  {sectors.map(sector => (
+                    <button key={sector.code} type="button" disabled={demoBusy} onClick={() => onEnterDemo(sector.code)}>
+                      <span aria-hidden="true">{sector.logo}</span>{ar ? sector.nameAr : sector.nameEn}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="login-links">
+              <a href="/">{ar ? "عن نهج" : "About NAHJ"}</a>
               <a href="/pricing">{ar ? "الباقات والأسعار" : "Plans & pricing"}</a>
             </div>
           </div>
