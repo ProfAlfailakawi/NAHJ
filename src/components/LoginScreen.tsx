@@ -127,31 +127,32 @@ export function LoginScreen({ lang, needsSetup, demoEnabled = false, demoBusy = 
           * مدخل البيئة التجريبية. بدونه لا يستطيع زائر بلا حساب أن يراها إطلاقاً —
           * وزائر بلا حساب هو بالضبط من بُنيت له.
           */}
-        {demoEnabled && onEnterDemo && (
-          /*
-           * أيقونة صامتة، لا لافتة.
-           *
-           * كان المدخل زرًّا بعرض النموذج كله، يسبقه فاصل «أو» وتتبعه فقرةُ شرح —
-           * فيزاحم تسجيلَ الدخول ويبدو أنه الطريق المقصود، وهو ثانويّ. والمعنى
-           * كاملٌ في `title` و`aria-label`: من يمرّ عليه يقرأه، ومن يقرأ بالشاشة
-           * يسمعه، ولا يحتلّ النموذج شيء.
-           *
-           * والشكل هو شكل مدخل شريط الأدوات نفسه (`demo-enter--icon`): مدخلٌ
-           * واحد بهيئتين مختلفتين يبدو شيئين.
-           */
+        {/*
+          * مدخل البيئة التجريبية ورابط الأسعار.
+          *
+          * كان المدخل أيقونةَ قارورةٍ بلا نص: الزائر الذي بُنيت له التجربة — بلا
+          * حساب — لا يعرف أنها موجودة. صار زرّاً ثانوياً بنصٍّ صريح تحت خط فاصل،
+          * فيبقى تسجيل الدخول هو الطريق الأول ويُرى الطريق الثاني.
+          */}
+        {!needsSetup && (
           <div className="login-demo-row">
-            <button
-              type="button"
-              className="demo-enter demo-enter--icon"
-              onClick={onEnterDemo}
-              disabled={busy || demoBusy}
-              title={ar
-                ? "تجربة العرض — بيئة تجريبية معزولة ببيانات اصطناعية، لا تُقرأ ولا تُكتب أي بيانات مؤسسة"
-                : "Try the demo — isolated sandbox with synthetic data; no institution record is read or written"}
-              aria-label={ar ? "تجربة العرض" : "Try the demo"}
-            >
-              <FlaskConical aria-hidden="true" />
-            </button>
+            {demoEnabled && onEnterDemo && (
+              <button
+                type="button"
+                className="demo-enter"
+                onClick={onEnterDemo}
+                disabled={busy || demoBusy}
+                title={ar
+                  ? "بيئة تجريبية معزولة ببيانات اصطناعية، لا تُقرأ ولا تُكتب أي بيانات مؤسسة"
+                  : "Isolated sandbox with synthetic data; no institution record is read or written"}
+              >
+                <FlaskConical aria-hidden="true" />
+                <strong>{demoBusy ? (ar ? "جارٍ فتح التجربة..." : "Opening demo...") : ar ? "جرّب نهج الآن — بلا حساب" : "Try NAHJ now — no account"}</strong>
+              </button>
+            )}
+            <div className="login-links">
+              <a href="/pricing">{ar ? "الباقات والأسعار" : "Plans & pricing"}</a>
+            </div>
           </div>
         )}
       </form>

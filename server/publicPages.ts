@@ -94,6 +94,18 @@ export interface PublicPlanView {
   features: FeatureView[];
 }
 
+export const CUSTOM_PRICE = "سعرٌ مخصّص";
+
+function priceLabel(amount: number, currency: string): string {
+  return amount > 0 ? formatMoney(amount, currency) : CUSTOM_PRICE;
+}
+
+/** بريد التواصل التجاري إن ضُبط — وإلا فلا رابط تواصلٍ يقود إلى لا شيء. */
+function contactEmail(): string {
+  const value = (process.env.NAHJ_CONTACT_EMAIL || "").trim();
+  return /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(value) ? value : "";
+}
+
 /** الباقات العلنية وحدها — والخاصة والمؤرشفة لا تخرج من هنا أبداً. */
 export function publicPlans(): PublicPlanView[] {
   return listPlans(false)
@@ -103,9 +115,11 @@ export function publicPlans(): PublicPlanView[] {
       name: plan.nameAr || plan.nameEn,
       tagline: plan.taglineAr || plan.taglineEn || "",
       currency: plan.currency || DEFAULT_CURRENCY,
-      monthly: formatMoney(plan.priceMonthly, plan.currency),
-      quarterly: formatMoney(plan.priceQuarterly, plan.currency),
-      annual: formatMoney(plan.priceAnnual, plan.currency),
+      /* سعرٌ صفريّ يعني باقةً تُسعَّر بالعقد، لا باقةً مجانية — و«KWD 0.000 شهرياً»
+       * على صفحة بيع تقول للزائر العكس تماماً. */
+      monthly: priceLabel(plan.priceMonthly, plan.currency),
+      quarterly: priceLabel(plan.priceQuarterly, plan.currency),
+      annual: priceLabel(plan.priceAnnual, plan.currency),
       setupFee: plan.setupFee > 0 ? formatMoney(plan.setupFee, plan.currency) : "",
       limits: {
         seats: plan.limits.seats === null ? "بلا حدّ" : String(plan.limits.seats),
@@ -134,6 +148,9 @@ const STYLE = `
   .plan { background:#fff; border:1px solid var(--line); border-radius:22px; padding:22px; }
   .plan h2 { margin:0 0 4px; font-size:20px; }
   .plan .tag { color:var(--muted); font-size:14px; min-height:22px; }
+  .cta { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin:32px 0 8px; }
+  .cta a { padding:12px 20px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink); text-decoration:none; font-weight:700; }
+  .cta a.primary { background:var(--ink); color:#fff; border-color:var(--ink); }
   .price { font-size:30px; font-weight:800; margin:14px 0 2px; letter-spacing:-1px; }
   .per { color:var(--muted); font-size:13px; }
   .setup { color:var(--muted); font-size:13px; margin-top:6px; }
@@ -165,12 +182,13 @@ const STYLE = `
  */
 export function renderPricingPage(): string {
   const plans = publicPlans();
+  const contact = contactEmail();
   const cards = plans.map(plan => `
     <article class="plan">
       <h2>${escapeHtml(plan.name)}</h2>
       <div class="tag">${escapeHtml(plan.tagline)}</div>
       <div class="price" data-monthly="${escapeHtml(plan.monthly)}" data-quarterly="${escapeHtml(plan.quarterly)}" data-annual="${escapeHtml(plan.annual)}">${escapeHtml(plan.monthly)}</div>
-      <div class="per" data-per>شهرياً</div>
+      <div class="per" data-per${plan.monthly === CUSTOM_PRICE ? ' hidden' : ""}>شهرياً</div>
       ${plan.setupFee ? `<div class="setup">رسوم تأسيس مرة واحدة: ${escapeHtml(plan.setupFee)}</div>` : ""}
       <ul class="limits">
         <li><span>المقاعد</span><b>${escapeHtml(plan.limits.seats)}</b></li>
@@ -227,7 +245,12 @@ export function renderPricingPage(): string {
     <p style="color:var(--muted);font-size:14px;margin:8px 0 0">نكتب هذا قبل البيع لا بعده: البيع الذي يُنقض في أول تجديد أغلى من بيعٍ لم يقع.</p>
   </section>
 
-  <footer>الأسعار بالدينار الكويتي وتشمل ما هو مذكور أعلاه. للتعاقد أو لعرضٍ مخصّص تواصل مع مالك المنصة.</footer>
+  <section class="cta">
+    <a class="primary" href="/">جرّب نهج الآن — بيئة تجريبية بلا حساب</a>
+    ${contact ? `<a href="mailto:${escapeHtml(contact)}?subject=${encodeURIComponent("طلب عرض — نهج")}">تواصل معنا: ${escapeHtml(contact)}</a>` : ""}
+  </section>
+
+  <footer>الأسعار بالدينار الكويتي وتشمل ما هو مذكور أعلاه. ${contact ? `للتعاقد أو لعرضٍ مخصّص راسلنا على ${escapeHtml(contact)}.` : "للتعاقد أو لعرضٍ مخصّص تواصل معنا."}</footer>
 </div>
 <script>
   /* تبديل الدورة يقرأ الأسعار المرسومة في الصفحة — لا طلب شبكة بعد التحميل. */
@@ -240,8 +263,9 @@ export function renderPricingPage(): string {
       });
       document.querySelectorAll('.price').forEach(function (price) {
         price.textContent = price.getAttribute('data-' + cycle) || price.textContent;
+        var per = price.parentNode.querySelector('[data-per]');
+        if (per) { per.textContent = labels[cycle]; per.hidden = price.textContent === ${JSON.stringify(CUSTOM_PRICE)}; }
       });
-      document.querySelectorAll('[data-per]').forEach(function (per) { per.textContent = labels[cycle]; });
     });
   });
 </script>
@@ -267,4 +291,12 @@ publicRouter.get("/pricing", (_req: Request, res: Response) => {
 publicRouter.get("/api/public/pricing", (_req: Request, res: Response) => {
   res.setHeader("Cache-Control", "public, max-age=120");
   res.json({ plans: publicPlans(), featureStates: FEATURE_BUILD_STATE });
+});
+
+/*
+ * robots.txt — كان يقع على مسار الواجهة فيُعاد HTML التطبيق بدله. الأسطح
+ * التشغيلية والواجهة البرمجية خلف دخول ولا معنى لزحفها.
+ */
+publicRouter.get("/robots.txt", (_req: Request, res: Response) => {
+  res.type("text/plain").send("User-agent: *\nDisallow: /api/\nAllow: /pricing\n");
 });
