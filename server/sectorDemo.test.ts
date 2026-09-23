@@ -134,10 +134,13 @@ test("عرض التعليم: حالات التدرّب كلها قابلة لل�
   assert.deepEqual(failed, []);
 });
 
-test("صفحات الهبوط والشروط والخصوصية تُرسم، وتُدخل كل قطاعٍ إلى عرضه", () => {
+test("صفحات الهبوط والشروط والخصوصية تُرسم — والعرض ليس باباً عامّاً فيها", () => {
   const landing = renderLandingPage();
-  for (const pack of SECTOR_PACKS) assert.ok(landing.includes(`/try/${pack.code}`), `الهبوط بلا مدخل ${pack.code}`);
-  assert.ok(landing.includes(`/try/${EDUCATION_CODE}`));
+  /* العرض أداةٌ يعرضها المالك: لا رابط /try في الصفحة العامة، بل طلب عرضٍ لكل قطاع. */
+  assert.ok(!landing.includes("/try/"), "الصفحة العامة تفتح العرض لكل زائر");
+  assert.match(landing, /id="lead-form"/);
+  for (const pack of SECTOR_PACKS) assert.ok(landing.includes(`data-sector="${pack.code}"`), `لا طلب عرض لقطاع ${pack.code}`);
+  assert.ok(landing.includes(`data-sector="${EDUCATION_CODE}"`));
   assert.match(landing, /<html lang="ar" dir="rtl">/);
   assert.match(renderTermsPage(), /شروط الاستخدام/);
   /* الخصوصية تُفصح عن المعالجين الخارجيين الاختياريين — لا وعد بما ليس صحيحاً. */

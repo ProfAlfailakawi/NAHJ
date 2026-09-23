@@ -23,10 +23,10 @@ export const logisticsPack: SectorPack = {
   },
 
   people: [
-    { name: "ماجد العتيبي", role: "manager", department: "العمليات" },
-    { name: "هند الفهد", role: "employee", department: "التخليص الجمركي" },
-    { name: "خالد بورسلي", role: "employee", department: "خدمة العملاء" },
-    { name: "أمل الكندري", role: "auditor", department: "الالتزام" },
+    { name: "ماجد سعود", role: "manager", department: "العمليات" },
+    { name: "هند محمد", role: "employee", department: "التخليص الجمركي" },
+    { name: "خالد عبدالله", role: "employee", department: "خدمة العملاء" },
+    { name: "أمل حسين", role: "auditor", department: "الالتزام" },
   ],
 
   sources: [
@@ -39,7 +39,7 @@ export const logisticsPack: SectorPack = {
   policies: [
     {
       code: "POL-LOG-01", title: "البضائع المقيّدة تُوقف قبل الحجز", titleEn: "Restricted goods stop before booking",
-      riskLevel: "critical", approvedBy: "أمل الكندري",
+      riskLevel: "critical", approvedBy: "أمل حسين",
       summary: "أي شحنة يظهر فيها صنف مقيّد تُوقف قبل تأكيد الحجز حتى يُراجعها الالتزام.",
       rules: [
         { condition: "وصف الشحنة يطابق لائحة المقيّدة", action: "أوقف الحجز وحوّل إلى الالتزام", explanation: "شحن صنف ممنوع مسؤوليةٌ نظامية على الشركة لا على العميل." },
@@ -48,7 +48,7 @@ export const logisticsPack: SectorPack = {
     },
     {
       code: "POL-LOG-02", title: "البيان الجمركي يُراجَع بشرياً", titleEn: "Customs declarations are human-reviewed",
-      riskLevel: "critical", approvedBy: "هند الفهد",
+      riskLevel: "critical", approvedBy: "هند محمد",
       summary: "النظام يُحضّر البيان ولا يقدّمه؛ التقديم بعد مراجعة مخلّص معتمد.",
       rules: [
         { condition: "بيان جمركي جاهز", action: "اعرضه على المخلّص للمراجعة قبل التقديم", explanation: "غرامة البيان الخاطئ وحجز الشحنة لا يُصلحهما تعديل لاحق." },
@@ -56,7 +56,7 @@ export const logisticsPack: SectorPack = {
     },
     {
       code: "POL-LOG-03", title: "التعويض فوق الحدّ يحتاج اعتماد العمليات", titleEn: "Claims above threshold need operations sign-off",
-      riskLevel: "high", approvedBy: "ماجد العتيبي",
+      riskLevel: "high", approvedBy: "ماجد سعود",
       summary: "مطالبات التلف حتى 100 د.ك تُسوّى آلياً بالمستندات؛ وما فوقها يحتاج اعتماداً.",
       rules: [
         { condition: "قيمة المطالبة ≤ 100 د.ك ومستنداتها مكتملة", action: "سوِّ المطالبة آلياً", explanation: "التأخير في المبالغ الصغيرة يكلّف علاقةً بالعميل أكثر من المبلغ." },
@@ -68,7 +68,7 @@ export const logisticsPack: SectorPack = {
   skills: [
     {
       slug: "shipment-tracking", name: "تتبّع شحنة", nameEn: "Shipment tracking",
-      category: "خدمة العملاء", department: "خدمة العملاء", ownerName: "خالد بورسلي",
+      category: "خدمة العملاء", department: "خدمة العملاء", ownerName: "خالد عبدالله",
       purpose: "الإجابة عن موقع الشحنة ووقت التسليم المتوقع.",
       riskLevel: "low", autonomyLevel: 5, status: "active",
       reliabilityScore: 95, usageCount: 3120, successRate: 98, humanTakeoverRate: 2.2, avgDurationMinutes: 0.8, hoursSavedTotal: 310,
@@ -86,7 +86,7 @@ export const logisticsPack: SectorPack = {
     },
     {
       slug: "customs-declaration", name: "تحضير بيان جمركي", nameEn: "Customs declaration prep",
-      category: "التخليص", department: "التخليص الجمركي", ownerName: "هند الفهد",
+      category: "التخليص", department: "التخليص الجمركي", ownerName: "هند محمد",
       purpose: "تصنيف البضاعة واحتساب الرسوم وتحضير البيان للمراجعة.",
       riskLevel: "critical", autonomyLevel: 3, status: "shadow",
       reliabilityScore: 81, usageCount: 190, successRate: 92, humanTakeoverRate: 21, avgDurationMinutes: 12, hoursSavedTotal: 34,
@@ -109,7 +109,7 @@ export const logisticsPack: SectorPack = {
     },
     {
       slug: "damage-claim", name: "مطالبة تلف", nameEn: "Damage claim",
-      category: "المطالبات", department: "العمليات", ownerName: "ماجد العتيبي",
+      category: "المطالبات", department: "العمليات", ownerName: "ماجد سعود",
       purpose: "استقبال مطالبة التلف، التحقق من المستندات، والتسوية ضمن الحدّ.",
       riskLevel: "high", autonomyLevel: 4, status: "active",
       reliabilityScore: 88, usageCount: 210, successRate: 94, humanTakeoverRate: 11, avgDurationMinutes: 6, hoursSavedTotal: 41,

@@ -22,10 +22,10 @@ export const realEstatePack: SectorPack = {
   },
 
   people: [
-    { name: "وليد السالم", role: "manager", department: "إدارة الأملاك" },
-    { name: "غادة المطوع", role: "employee", department: "التأجير" },
-    { name: "راشد العازمي", role: "employee", department: "الصيانة" },
-    { name: "نوف الهاجري", role: "auditor", department: "المالية" },
+    { name: "وليد أحمد", role: "manager", department: "إدارة الأملاك" },
+    { name: "غادة إبراهيم", role: "employee", department: "التأجير" },
+    { name: "راشد منصور", role: "employee", department: "الصيانة" },
+    { name: "نوف طلال", role: "auditor", department: "المالية" },
   ],
 
   sources: [
@@ -38,7 +38,7 @@ export const realEstatePack: SectorPack = {
   policies: [
     {
       code: "POL-RE-01", title: "لا تعديل على بنود العقد بلا إقرار", titleEn: "No contract clause edits without sign-off",
-      riskLevel: "critical", approvedBy: "وليد السالم",
+      riskLevel: "critical", approvedBy: "وليد أحمد",
       summary: "نموذج العقد يُستعمل كما هو؛ أي تعديل على بنوده يحتاج إقرار إدارة الأملاك.",
       rules: [
         { condition: "طلب تعديل بند في العقد", action: "أوقف الإصدار وارفع إلى إدارة الأملاك", explanation: "بندٌ معدَّل يُلزم الشركة اثني عشر شهراً ولا يُتراجع عنه بإشعار." },
@@ -46,7 +46,7 @@ export const realEstatePack: SectorPack = {
     },
     {
       code: "POL-RE-02", title: "الإيجار خارج الجدول يحتاج اعتماداً", titleEn: "Off-schedule rent needs approval",
-      riskLevel: "high", approvedBy: "وليد السالم",
+      riskLevel: "high", approvedBy: "وليد أحمد",
       summary: "العروض ضمن حدود الجدول تُقدَّم مباشرة؛ وما يخرج عنها يقف حتى الاعتماد.",
       rules: [
         { condition: "الإيجار المعروض ضمن حدود الجدول", action: "قدّم العرض بعد مراجعة موظف التأجير", explanation: "الجدول معتمد مسبقاً، فلا داعي لاعتماد مكرّر." },
@@ -55,7 +55,7 @@ export const realEstatePack: SectorPack = {
     },
     {
       code: "POL-RE-03", title: "أعطال السلامة استجابة فورية", titleEn: "Safety faults get immediate response",
-      riskLevel: "critical", approvedBy: "راشد العازمي",
+      riskLevel: "critical", approvedBy: "راشد منصور",
       summary: "أعطال الكهرباء والغاز والمصاعد تُصنَّف طارئة وتُرسل فوراً بلا انتظار دور.",
       rules: [
         { condition: "عطل في قائمة السلامة", action: "أرسل فنّي الطوارئ فوراً وأبلغ إدارة الأملاك", explanation: "تأخير عطل مصعد أو تسرّب غاز مسؤولية على الأرواح لا على الخدمة." },
@@ -66,7 +66,7 @@ export const realEstatePack: SectorPack = {
   skills: [
     {
       slug: "maintenance-request", name: "طلب صيانة", nameEn: "Maintenance request",
-      category: "الصيانة", department: "الصيانة", ownerName: "راشد العازمي",
+      category: "الصيانة", department: "الصيانة", ownerName: "راشد منصور",
       purpose: "استقبال العطل، تصنيف أولويته، وجدولة الفنّي المناسب.",
       riskLevel: "medium", autonomyLevel: 5, status: "active",
       reliabilityScore: 93, usageCount: 980, successRate: 97, humanTakeoverRate: 4, avgDurationMinutes: 2.4, hoursSavedTotal: 128,
@@ -89,7 +89,7 @@ export const realEstatePack: SectorPack = {
     },
     {
       slug: "viewing-booking", name: "حجز معاينة", nameEn: "Viewing booking",
-      category: "التأجير", department: "التأجير", ownerName: "غادة المطوع",
+      category: "التأجير", department: "التأجير", ownerName: "غادة إبراهيم",
       purpose: "مطابقة طلب المستأجر بالوحدات المتاحة وحجز موعد معاينة.",
       riskLevel: "low", autonomyLevel: 5, status: "active",
       reliabilityScore: 91, usageCount: 640, successRate: 96, humanTakeoverRate: 6, avgDurationMinutes: 3, hoursSavedTotal: 82,
@@ -106,7 +106,7 @@ export const realEstatePack: SectorPack = {
     },
     {
       slug: "lease-issuance", name: "إصدار عقد إيجار", nameEn: "Lease issuance",
-      category: "التعاقد", department: "التأجير", ownerName: "وليد السالم",
+      category: "التعاقد", department: "التأجير", ownerName: "وليد أحمد",
       purpose: "تجهيز العقد من النموذج المعتمد بعد التحقق من المستندات والتسعير.",
       riskLevel: "critical", autonomyLevel: 4, status: "active",
       reliabilityScore: 90, usageCount: 156, successRate: 95, humanTakeoverRate: 12, avgDurationMinutes: 11, hoursSavedTotal: 47,
@@ -128,7 +128,7 @@ export const realEstatePack: SectorPack = {
     },
     {
       slug: "rent-collection", name: "متابعة التحصيل", nameEn: "Rent collection follow-up",
-      category: "المالية", department: "المالية", ownerName: "نوف الهاجري",
+      category: "المالية", department: "المالية", ownerName: "نوف طلال",
       purpose: "رصد الأقساط المستحقة وتذكير المستأجرين وتصعيد المتأخرات.",
       riskLevel: "medium", autonomyLevel: 4, status: "active",
       reliabilityScore: 87, usageCount: 1420, successRate: 93, humanTakeoverRate: 9, avgDurationMinutes: 1.1, hoursSavedTotal: 96,

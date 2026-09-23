@@ -206,7 +206,7 @@ export class McpEngine {
         },
         required: ["studentName", "grade"],
       },
-      exampleParams: { studentName: "يوسف أحمد الكندري", grade: "KG2", holdDurationHours: 48 },
+      exampleParams: { studentName: "يوسف أحمد", grade: "KG2", holdDurationHours: 48 },
     },
     {
       name: "ocr_verify_civil_id",
@@ -228,7 +228,7 @@ export class McpEngine {
       },
       exampleParams: {
         civilIdNumber: "319081200192",
-        studentName: "يوسف أحمد الكندري",
+        studentName: "يوسف أحمد",
         documentImageRef: "vault://docs/civil-id-sample.png",
       },
     },
@@ -251,7 +251,7 @@ export class McpEngine {
         required: ["studentName", "preferredTime"],
       },
       exampleParams: {
-        studentName: "يوسف أحمد الكندري",
+        studentName: "يوسف أحمد",
         preferredTime: "الخميس القادم — 04:30 مساءً",
         contactPhone: "+965 99887766",
       },
@@ -276,7 +276,7 @@ export class McpEngine {
         required: ["studentName", "amountKwd"],
       },
       exampleParams: {
-        studentName: "يوسف أحمد الكندري",
+        studentName: "يوسف أحمد",
         amountKwd: 1500,
         feeType: "tuition_deposit",
         approvalToken: "APPR-MGR-NOURA-VALIDATED",
@@ -354,7 +354,7 @@ export class McpEngine {
       description: "اللائحة المالية الصريحة: يحظر على الذكاء الاصطناعي إصدار فواتير أو دفعات أعلى من 50 د.ك دون توقيع بشري.",
       previewContent: `# لائحة الصلاحيات المالية 2026 (POL-FIN-02)
 - الحد الأقصى للإجراء المالي التلقائي (Autopilot): 50 د.ك (فقط لفتح الملفات).
-- أي فاتورة سداد، رسوم تسجيل، أو طلب استرجاع تتجاوز 50 د.ك تتطلب موافقة صريحة من (مديرة القبول نورة الصباح).
+- أي فاتورة سداد، رسوم تسجيل، أو طلب استرجاع تتجاوز 50 د.ك تتطلب موافقة صريحة من (مديرة القبول نورة خالد).
 - لا يجوز التجاوز أو الاستثناء الودي بدون توقيع خطي موثق في سجل التدقيق.`,
     },
     {
@@ -416,7 +416,7 @@ export class McpEngine {
       timestamp: "10:16 AM",
       toolName: "ocr_verify_civil_id",
       serverName: "DocVault Vision & OCR MCP Server",
-      parameters: { civilIdNumber: "319081200192", studentName: "يوسف أحمد الكندري" },
+      parameters: { civilIdNumber: "319081200192", studentName: "يوسف أحمد" },
       result: { isValid: true, extractedAgeMonths: 65, determinedGrade: "KG2 - الروضة الثانية" },
       latencyMs: 115,
       status: "success",
@@ -427,7 +427,7 @@ export class McpEngine {
       timestamp: "10:16 AM",
       toolName: "knet_create_invoice",
       serverName: "K-Net Payment Gateway MCP Server",
-      parameters: { studentName: "يوسف أحمد الكندري", amountKwd: 1500 },
+      parameters: { studentName: "يوسف أحمد", amountKwd: 1500 },
       result: { requiresApproval: true, policyBlocked: "POL-FIN-02", reason: "1,500 KWD > 50 KWD limit" },
       latencyMs: 12,
       status: "success",
@@ -794,7 +794,7 @@ export class McpEngine {
           effectiveDate: "2025-09-01",
           rules: [
             "المعاملات حتى 50 د.ك: عمل ذاتي بالكامل (Autopilot)",
-            "المعاملات أكثر من 50 د.ك: موافقة صريحة من نورة الصباح (مديرة القبول)",
+            "المعاملات أكثر من 50 د.ك: موافقة صريحة من نورة خالد (مديرة القبول)",
             "أي خصم إضافي غير أشقاء: موافقة المدير العام",
           ],
           provenance: "لائحة أكاديمية المستقبل المعتمدة 2026",

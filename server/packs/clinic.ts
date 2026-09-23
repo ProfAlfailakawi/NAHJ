@@ -23,10 +23,10 @@ export const clinicPack: SectorPack = {
   },
 
   people: [
-    { name: "د. هيا المطيري", role: "manager", department: "الإدارة الطبية" },
-    { name: "عبدالله الرشيد", role: "employee", department: "الاستقبال" },
-    { name: "منى الصباح", role: "employee", department: "التأمين والمطالبات" },
-    { name: "طارق العنزي", role: "auditor", department: "الالتزام والجودة" },
+    { name: "د. هيا ناصر", role: "manager", department: "الإدارة الطبية" },
+    { name: "عبدالله فهد", role: "employee", department: "الاستقبال" },
+    { name: "منى سعد", role: "employee", department: "التأمين والمطالبات" },
+    { name: "طارق حمد", role: "auditor", department: "الالتزام والجودة" },
   ],
 
   sources: [
@@ -39,7 +39,7 @@ export const clinicPack: SectorPack = {
   policies: [
     {
       code: "POL-MED-01", title: "لا نتيجة فحص بلا تحقّق هوية", titleEn: "No result without identity verification",
-      riskLevel: "critical", approvedBy: "د. هيا المطيري",
+      riskLevel: "critical", approvedBy: "د. هيا ناصر",
       summary: "نتائج الفحوص لا تُسلَّم إلا لصاحبها بعد تحقّق مزدوج، ولا تُرسل عبر قناة نصّية.",
       rules: [
         { condition: "طلب نتيجة فحص عبر أي قناة", action: "تحقّق من الهوية برقم الملف وتاريخ الميلاد، ثم حوّل إلى موظف الاستقبال", explanation: "تسليم نتيجة لغير صاحبها خرقٌ لخصوصية المريض لا يُصحَّح بعد وقوعه." },
@@ -48,7 +48,7 @@ export const clinicPack: SectorPack = {
     },
     {
       code: "POL-MED-02", title: "الأعراض الحرجة تُحوَّل ولا تُجدوَل", titleEn: "Critical symptoms escalate, never schedule",
-      riskLevel: "critical", approvedBy: "د. هيا المطيري",
+      riskLevel: "critical", approvedBy: "د. هيا ناصر",
       summary: "ما يظهر فيه عَرَضٌ حرج يُحوَّل إلى الطوارئ فوراً، ولا يُعرض عليه موعد.",
       rules: [
         { condition: "ورود عَرَض من قائمة العلامات الحرجة", action: "أوقف الحجز وحوّل إلى الطوارئ وأبلغ الطبيب المناوب", explanation: "حجز موعد بعد أسبوع لمن يصف ألم صدر قد يكون قراراً قاتلاً." },
@@ -56,7 +56,7 @@ export const clinicPack: SectorPack = {
     },
     {
       code: "POL-MED-03", title: "الموافقة المسبقة للتأمين قبل الإجراء", titleEn: "Pre-authorization before procedure",
-      riskLevel: "high", approvedBy: "منى الصباح",
+      riskLevel: "high", approvedBy: "منى سعد",
       summary: "الإجراءات التي تشترط موافقة مسبقة لا تُجدوَل قبل صدورها.",
       rules: [
         { condition: "إجراء ضمن قائمة الموافقة المسبقة", action: "قدّم المطالبة وانتظر الموافقة قبل تثبيت الموعد", explanation: "جدولة إجراء بلا موافقة تُحمّل المريض تكلفةً لم يوافق عليها." },
@@ -67,7 +67,7 @@ export const clinicPack: SectorPack = {
   skills: [
     {
       slug: "appointment-booking", name: "حجز موعد وفرز أوّلي", nameEn: "Appointment booking & triage",
-      category: "المواعيد", department: "الاستقبال", ownerName: "عبدالله الرشيد",
+      category: "المواعيد", department: "الاستقبال", ownerName: "عبدالله فهد",
       purpose: "استقبال طلب الموعد، فرز الأعراض، ومطابقة التخصص والوقت المتاح.",
       riskLevel: "high", autonomyLevel: 3, status: "active",
       reliabilityScore: 91, usageCount: 240, successRate: 96, humanTakeoverRate: 6, avgDurationMinutes: 3.5, hoursSavedTotal: 38,
@@ -90,7 +90,7 @@ export const clinicPack: SectorPack = {
     },
     {
       slug: "insurance-claim", name: "مطالبة تأمين", nameEn: "Insurance claim",
-      category: "التأمين", department: "التأمين والمطالبات", ownerName: "منى الصباح",
+      category: "التأمين", department: "التأمين والمطالبات", ownerName: "منى سعد",
       purpose: "التحقق من التغطية، احتساب التحمّل، وتقديم المطالبة.",
       riskLevel: "high", autonomyLevel: 2, status: "shadow",
       reliabilityScore: 78, usageCount: 86, successRate: 88, humanTakeoverRate: 18, avgDurationMinutes: 9, hoursSavedTotal: 14,
@@ -110,7 +110,7 @@ export const clinicPack: SectorPack = {
     },
     {
       slug: "result-release", name: "تسليم نتيجة فحص", nameEn: "Test result release",
-      category: "الملفات الطبية", department: "الاستقبال", ownerName: "د. هيا المطيري",
+      category: "الملفات الطبية", department: "الاستقبال", ownerName: "د. هيا ناصر",
       purpose: "التحقق من هوية طالب النتيجة قبل أي إفصاح.",
       riskLevel: "critical", autonomyLevel: 1, status: "practicing",
       reliabilityScore: 64, usageCount: 12, successRate: 83, humanTakeoverRate: 42, avgDurationMinutes: 4, hoursSavedTotal: 1.5,

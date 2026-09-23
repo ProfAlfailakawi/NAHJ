@@ -245,12 +245,12 @@ test("المقارنة في الظل تُشكّل قرار نهج ثم تقيس 
    */
   db.shadowComparisons = [
     {
-      id: "sc_match", caseTitle: "معاملة أسرة الغانم", scenario: "طلب تسجيل لطفل عمره سنتين", timestamp: "",
+      id: "sc_match", caseTitle: "معاملة ولي أمر أول", scenario: "طلب تسجيل لطفل عمره سنتين", timestamp: "",
       humanAction: "REJECT_OR_REDIRECT_NURSERY", humanReason: "السن دون الحد",
       aiAction: "", aiReason: "", matched: false, driftDetected: false,
     },
     {
-      id: "sc_drift", caseTitle: "معاملة أسرة المطيري", scenario: "طلب استرجاع بعد مضي شهر", timestamp: "",
+      id: "sc_drift", caseTitle: "معاملة ولي أمر ثانٍ", scenario: "طلب استرجاع بعد مضي شهر", timestamp: "",
       humanAction: "ISSUE_REFUND", humanReason: "استثناء من المدير",
       aiAction: "", aiReason: "", matched: true, driftDetected: false,
     },
@@ -285,7 +285,7 @@ test("حالةٌ بلا وقائع مسجَّلة لا يُخترع لها قر�
 
   db.workItems = [];
   db.shadowComparisons = [{
-    id: "sc_no_facts", caseTitle: "طلب استفسار عن خصم الأشقاء — أسرة المطيري", timestamp: "",
+    id: "sc_no_facts", caseTitle: "طلب استفسار عن خصم الأشقاء — ولي أمر لثلاثة أبناء", timestamp: "",
     humanAction: "منح خصم 10% وإرسال استمارة إثبات الأشقاء",
     humanReason: "تطبيق لائحة الخصومات المعتمدة.",
     aiAction: "اقتراح خصم 10%", aiReason: "", matched: true, driftDetected: false,

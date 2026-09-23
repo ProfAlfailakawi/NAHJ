@@ -57,9 +57,13 @@ const FIRST_NAMES = [
   "بدر", "مريم", "طلال", "نورة", "عبدالله", "حصة", "خالد", "غلا", "فيصل", "ريم",
   "ناصر", "سارة", "عمر", "هيا", "محمد", "العنود", "سعود", "منيرة", "أحمد", "وضحى",
 ];
-const FAMILY_NAMES = [
-  "الشمري", "العتيبي", "المطيري", "الرشيدي", "العجمي", "الدوسري", "الهاجري", "الكندري",
-  "الفضلي", "السبيعي", "البلوشي", "الخالدي", "المطوع", "العنزي", "الصالح", "الحربي",
+/*
+ * اسم الأب لا اسم العائلة: الأسماء النموذجية ثنائية («يوسف خالد»)، فلا تُنسب
+ * حالةٌ مُختلقة إلى عائلةٍ حقيقية معروفة.
+ */
+const FATHER_NAMES = [
+  "خالد", "فهد", "ناصر", "سعد", "محمد", "عبدالله", "أحمد", "يوسف",
+  "فيصل", "بدر", "سالم", "عادل", "جاسم", "حمد", "طلال", "مبارك",
 ];
 const GRADES = [
   ["KG1 - الروضة الأولى", 1350], ["KG2 - الروضة الثانية", 1500], ["الصف الأول الابتدائي", 1750],
@@ -137,8 +141,9 @@ function syntheticWorkItems(skills: Skill[]): WorkItem[] {
   const generated: WorkItem[] = Array.from({ length: 140 }, (_, index) => {
     const skill = skills[index % skills.length];
     const first = FIRST_NAMES[index % FIRST_NAMES.length];
-    const family = FAMILY_NAMES[(index * 3) % FAMILY_NAMES.length];
-    const guardianFirst = FIRST_NAMES[(index * 7 + 4) % FIRST_NAMES.length];
+    /* الطفل «الاسم + اسم الأب»، وولي الأمر هو الأب نفسه «اسم الأب + اسم الجدّ». */
+    const father = FATHER_NAMES[(index * 3) % FATHER_NAMES.length];
+    const grandfather = FATHER_NAMES[(index * 5 + 7) % FATHER_NAMES.length];
     const [grade, fee] = GRADES[index % GRADES.length];
     const state = STATES[index % STATES.length];
     const hour = 8 + (index % 9);
@@ -150,10 +155,10 @@ function syntheticWorkItems(skills: Skill[]): WorkItem[] {
     return {
       id: `wi_demo_${2000 + index}`,
       code: `${skill.department === "الشؤون المالية" ? "FIN" : skill.department === "النقل المدرسي" ? "TRN" : "ADM"}-${2000 + index}`,
-      title: `${skill.name}: ${first} ${family} (${grade})`,
+      title: `${skill.name}: ${first} ${father} (${grade})`,
       skillId: skill.id,
       skillName: skill.name,
-      contactName: `${guardianFirst} ${family} (ولي الأمر)`,
+      contactName: `${father} ${grandfather} (ولي الأمر)`,
       contactPhone: `+965 9${String(100000 + ((index * 7919) % 899999)).slice(0, 3)} ${String(1000 + ((index * 131) % 8999))}`,
       state,
       riskLevel: RISKS[(index * 5) % RISKS.length],
@@ -170,7 +175,7 @@ function syntheticWorkItems(skills: Skill[]): WorkItem[] {
         : state === "collecting_data" ? "جمع بيانات الطالب والتحقق منها"
         : "في قائمة الانتظار — لم يبدأ التنفيذ بعد",
       details: {
-        studentName: `${first} ${family}`,
+        studentName: `${first} ${father}`,
         gradeAssigned: grade,
         tuitionFeeKwd: fee,
         registrationFeeKwd: 50,

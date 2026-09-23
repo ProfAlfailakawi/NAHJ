@@ -27,7 +27,7 @@ export const initialOrganization: Organization = {
 export const demoUsers: User[] = [
   {
     id: 'usr_noura',
-    name: 'نورة الصباح',
+    name: 'نورة خالد',
     email: 'noura.s@futureacademy.edu.kw',
     role: 'manager',
     department: 'إدارة القبول والتسجيل',
@@ -35,7 +35,7 @@ export const demoUsers: User[] = [
   },
   {
     id: 'usr_fahad',
-    name: 'فهد المطوع',
+    name: 'فهد عبدالرحمن',
     email: 'fahad.m@futureacademy.edu.kw',
     role: 'owner',
     department: 'الإدارة العامة والمجلس التنفيذي',
@@ -43,7 +43,7 @@ export const demoUsers: User[] = [
   },
   {
     id: 'usr_yousef',
-    name: 'يوسف الكندري',
+    name: 'يوسف عيسى',
     email: 'yousef.k@futureacademy.edu.kw',
     role: 'employee',
     department: 'شؤون أولياء الأمور والطلاب',
@@ -96,7 +96,7 @@ export const initialPolicies: Policy[] = [
     riskLevel: 'high',
     version: 3,
     effectiveFrom: '2026-01-01',
-    approvedBy: 'فهد المطوع (المدير العام)',
+    approvedBy: 'فهد عبدالرحمن (المدير العام)',
     summary: 'أي إجراء يتضمن إصدار فاتورة تسجيل رسمية أو خصم يتجاوز 50 د.ك يتطلب موافقة يدوية مسبقة من مدير القبول.',
     rules: [
       {
@@ -119,7 +119,7 @@ export const initialPolicies: Policy[] = [
     riskLevel: 'medium',
     version: 2,
     effectiveFrom: '2026-02-15',
-    approvedBy: 'نورة الصباح (مديرة القبول)',
+    approvedBy: 'نورة خالد (مديرة القبول)',
     summary: 'لا يُسمح بحجز موعد تقييم نهائي للطالب دون إرفاق البطاقة المدنية والتحقق من وضوح الصورة.',
     rules: [
       {
@@ -146,7 +146,7 @@ export const initialSkills: Skill[] = [
     reliabilityTier: 'verified',
     riskLevel: 'medium',
     activeVersion: 2,
-    ownerName: 'نورة الصباح',
+    ownerName: 'نورة خالد',
     isSinglePointOfFailure: false,
     usageCount: 168,
     successRate: 98.2,
@@ -217,7 +217,7 @@ export const initialSkills: Skill[] = [
         description: 'إنشاء طلب الالتحاق وإصدار بطاقة موافقة رسمية لمدير القبول قبل إصدار رابط الدفع.',
         system: 'بوابة تسجيل الطلاب وإشعارات الإدارة',
         actionRequired: 'createApplicationRecord',
-        decisionRule: 'POL-FIN-02: يتطلب موافقة نورة الصباح',
+        decisionRule: 'POL-FIN-02: يتطلب موافقة نورة خالد',
         isAutomated: false
       }
     ],
@@ -234,7 +234,7 @@ export const initialSkills: Skill[] = [
       },
       {
         condition: 'إصدار طلب تسجيل بقيمة تفوق 500 د.ك',
-        outcome: 'توليد بطاقة اعتماد لمدير القبول (نورة الصباح) قبل اعتماد الحجز النهائي',
+        outcome: 'توليد بطاقة اعتماد لمدير القبول (نورة خالد) قبل اعتماد الحجز النهائي',
         risk: 'high'
       }
     ],
@@ -252,7 +252,7 @@ export const initialSkills: Skill[] = [
       {
         version: 1,
         createdAt: '2026-08-10',
-        approvedBy: 'نورة الصباح',
+        approvedBy: 'نورة خالد',
         changeSummary: 'الإصدار الأول: جمع البيانات الأساسية وحجز الزيارة عبر البريد الإلكتروني.',
         steps: [],
         rules: ['استقبال الاستفسارات الأولية يدويًا'],
@@ -261,7 +261,7 @@ export const initialSkills: Skill[] = [
       {
         version: 2,
         createdAt: '2026-09-02',
-        approvedBy: 'فهد المطوع ونورة الصباح',
+        approvedBy: 'فهد عبدالرحمن ونورة خالد',
         changeSummary: 'الإصدار الثاني: ربط مباشر بنظام SIS للتحقق الفوري من المقاعد ودمج محرك التدقيق بالذكاء الاصطناعي مع بوابة الموافقة الإدارية.',
         steps: [],
         rules: ['فحص المستندات تلقائيًا', 'اعتماد المدير المالي للطلبات المؤكدة'],
@@ -283,7 +283,7 @@ export const initialSkills: Skill[] = [
     reliabilityTier: 'medium',
     riskLevel: 'high',
     activeVersion: 1,
-    ownerName: 'فهد المطوع',
+    ownerName: 'فهد عبدالرحمن',
     isSinglePointOfFailure: true,
     usageCount: 43,
     successRate: 91.0,
@@ -342,7 +342,7 @@ export const initialSkills: Skill[] = [
     reliabilityTier: 'verified',
     riskLevel: 'low',
     activeVersion: 3,
-    ownerName: 'يوسف الكندري',
+    ownerName: 'يوسف عيسى',
     isSinglePointOfFailure: false,
     usageCount: 312,
     successRate: 99.6,
@@ -449,7 +449,7 @@ export const initialLearningProposals: LearningProposal[] = [
     detectedAt: '09 سبتمبر 2026',
     observedCasesCount: 12,
     confidence: 96,
-    summary: 'إجراء تقييم وتوزيع حالات صعوبات التعلم والاحتياجات الخاصة لا ينفذه سوى الأخصائية دلال الهاجري دون وجود مهارة موثقة أو بديل معتمد.',
+    summary: 'إجراء تقييم وتوزيع حالات صعوبات التعلم والاحتياجات الخاصة لا ينفذه سوى الأخصائية دلال مبارك دون وجود مهارة موثقة أو بديل معتمد.',
     status: 'pending',
     evidence: {
       details: 'يوصي النظام ببدء جلسة "Teach AI" مع دلال لتوثيق وتحويل المعرفة لمهارة رسمية معتمدة قبل موسم الإجازات.'
@@ -464,7 +464,7 @@ export const initialWorkItems: WorkItem[] = [
     title: 'طلب قبول جديد: يوسف أحمد (مرحلة الروضة KG2)',
     skillId: 'sk_new_student_admission',
     skillName: 'تسجيل وقبول طالب جديد (KG)',
-    contactName: 'أحمد فهد الشمري (ولي الأمر)',
+    contactName: 'أحمد فهد (ولي الأمر)',
     contactPhone: '+965 9988 1234',
     state: 'waiting_approval',
     riskLevel: 'high',
@@ -522,7 +522,7 @@ export const initialWorkItems: WorkItem[] = [
         time: '10:28 ص',
         actor: 'system',
         title: 'تفعيل حاجز الموافقة POL-FIN-02',
-        details: 'المبلغ الإجمالي 1,500 د.ك يتطلب اعتماد مديرة القبول (نورة الصباح) لإتمام التسجيل.',
+        details: 'المبلغ الإجمالي 1,500 د.ك يتطلب اعتماد مديرة القبول (نورة خالد) لإتمام التسجيل.',
         badge: 'Approval Required'
       }
     ]
@@ -530,10 +530,10 @@ export const initialWorkItems: WorkItem[] = [
   {
     id: 'wi_1024',
     code: 'ADM-1024',
-    title: 'طلب قبول جديد: ليلى الغانم (مرحلة KG1)',
+    title: 'طلب قبول جديد: ليلى فواز (مرحلة KG1)',
     skillId: 'sk_new_student_admission',
     skillName: 'تسجيل وقبول طالب جديد (KG)',
-    contactName: 'مريم الغانم (ولية الأمر)',
+    contactName: 'مريم عبدالله (ولية الأمر)',
     contactPhone: '+965 6677 8899',
     state: 'waiting_documents',
     riskLevel: 'medium',
@@ -543,7 +543,7 @@ export const initialWorkItems: WorkItem[] = [
     progressPercent: 45,
     currentStepTitle: 'في انتظار رفع صورة واضحة لشهادة الميلاد',
     details: {
-      studentName: 'ليلى فواز الغانم',
+      studentName: 'ليلى فواز',
       birthDate: '2022-05-10',
       gradeAssigned: 'KG1',
       civilIdVerified: true,
@@ -567,10 +567,10 @@ export const initialWorkItems: WorkItem[] = [
   {
     id: 'wi_402',
     code: 'REF-402',
-    title: 'طلب استرجاع رسوم: مشاري العنزي (الصف الرابع)',
+    title: 'طلب استرجاع رسوم: مشاري خالد (الصف الرابع)',
     skillId: 'sk_tuition_refund',
     skillName: 'معالجة استرجاع الرسوم الدراسية',
-    contactName: 'خالد العنزي',
+    contactName: 'خالد صالح',
     contactPhone: '+965 9776 5544',
     state: 'waiting_approval',
     riskLevel: 'high',
@@ -630,7 +630,7 @@ export const initialAuditEvents: AuditEvent[] = [
     provenance: 'Future SIS + Admission Policy v2.4',
     risk: 'high',
     latencyMs: 142,
-    details: 'إيقاف التنفيذ التلقائي لطلب ADM-1023 وتوليد بطاقة اعتماد لمديرة القبول نورة الصباح قبل إنشاء الملف الرسمي.',
+    details: 'إيقاف التنفيذ التلقائي لطلب ADM-1023 وتوليد بطاقة اعتماد لمديرة القبول نورة خالد قبل إنشاء الملف الرسمي.',
     status: 'warning'
   },
   {
@@ -780,7 +780,7 @@ export const initialTestCases: TestCase[] = [
 export const initialShadowComparisons: ShadowComparison[] = [
   {
     id: 'sh_101',
-    caseTitle: 'طلب استفسار عن خصم الأشقاء — أسرة المطيري',
+    caseTitle: 'طلب استفسار عن خصم الأشقاء — ولي أمر لثلاثة أبناء',
     timestamp: 'اليوم، 09:12 ص',
     humanAction: 'أبلغ ولي الأمر بنسبة 10% للأخ الثاني وأرسل استمارة الإخوة الرسمية.',
     humanReason: 'تطبيق لائحة الخصومات v1 المعتمدة لعام 2026.',
@@ -790,7 +790,7 @@ export const initialShadowComparisons: ShadowComparison[] = [
     driftDetected: false,
     workItemId: 'ADM-1024',
     title: 'طلب خصم أشقاء',
-    humanActor: 'يوسف الكندري',
+    humanActor: 'يوسف عيسى',
     humanDecision: 'منح خصم 10% وإرسال استمارة إثبات الأشقاء',
     aiDecision: 'اقتراح خصم 10% وتجهيز استمارة إثبات الأشقاء',
     confidence: 98,
@@ -809,7 +809,7 @@ export const initialShadowComparisons: ShadowComparison[] = [
     scenario: 'طلب حجز موعد مقابلة لطالب صف أول بعمر 6 سنوات ببطاقة منتهية الصلاحية.',
     workItemId: 'ADM-1028',
     title: 'بطاقة مدنية منتهية الصلاحية',
-    humanActor: 'يوسف الكندري',
+    humanActor: 'يوسف عيسى',
     humanDecision: 'تجاوز مؤقت للشرط وتحديد موعد المقابلة يدويًا',
     aiDecision: 'إيقاف الحجز وإرسال مهلة نظامية 48 ساعة لتجديد البطاقة',
     confidence: 96,
@@ -1091,7 +1091,7 @@ export const initialMcpTools = [
     },
     exampleParams: {
       civilIdNumber: "319081200192",
-      studentName: "يوسف أحمد الكندري",
+      studentName: "يوسف أحمد",
     },
   },
   {
@@ -1112,7 +1112,7 @@ export const initialMcpTools = [
       required: ["studentName", "preferredTime"],
     },
     exampleParams: {
-      studentName: "يوسف أحمد الكندري",
+      studentName: "يوسف أحمد",
       preferredTime: "الخميس القادم — 04:30 مساءً",
     },
   },
@@ -1134,7 +1134,7 @@ export const initialMcpTools = [
       required: ["studentName", "amountKwd"],
     },
     exampleParams: {
-      studentName: "يوسف أحمد الكندري",
+      studentName: "يوسف أحمد",
       amountKwd: 1500,
     },
   },
@@ -1207,7 +1207,7 @@ export const initialMcpResources = [
     description: "اللائحة المالية الصريحة: يحظر على الذكاء الاصطناعي إصدار فواتير أعلى من 50 د.ك دون توقيع بشري.",
     previewContent: `# لائحة الصلاحيات المالية 2026 (POL-FIN-02)
 - الحد الأقصى للإجراء المالي التلقائي (Autopilot): 50 د.ك.
-- أي معاملة تتجاوز 50 د.ك تتطلب موافقة صريحة من (مديرة القبول نورة الصباح).
+- أي معاملة تتجاوز 50 د.ك تتطلب موافقة صريحة من (مديرة القبول نورة خالد).
 - لا يجوز التجاوز أو الاستثناء الودي بدون توقيع خطي موثق في سجل التدقيق.`,
   },
 ];
@@ -1238,9 +1238,9 @@ export const initialAuditLogs = [
   {
     id: 'aud_03',
     timestamp: '09:45 AM',
-    actor: 'نورة الصباح (مديرة القبول)',
+    actor: 'نورة خالد (مديرة القبول)',
     workItemId: 'ADM-1020',
-    action: 'اعتماد خصم الأشقاء 10% للطالب فهد المطيري',
+    action: 'اعتماد خصم الأشقاء 10% للطالب فهد سعود',
     latencyMs: 140,
     policyApplied: 'POL-DISCOUNT-SIB',
     provenanceSource: 'سجل الأسرة الأكاديمي',

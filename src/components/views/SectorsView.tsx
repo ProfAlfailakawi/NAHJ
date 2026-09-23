@@ -70,7 +70,7 @@ export function SectorsView({ lang, canApply, isDemo, notify, onApplied }: Props
     <div className="page-enter">
       <PageHeader
         eyebrow="SECTOR / النشاط"
-        title={ar ? "نهج ليس نظام مدارس." : "NAHJ is not a school system."}
+        title={isDemo ? (ar ? "نهج ليس نظام مدارس." : "NAHJ is not a school system.") : (ar ? "نشاط مؤسستك." : "Your sector.")}
         hint={ar
           ? "القلب عامّ: يتعلّم كيف تعمل المؤسسة أياً كان نشاطها. والحزمة هنا عقلٌ تشغيلي كامل لقطاع — مهاراته وسياساته وأنظمته ومن يحادثه — لا ألوانٌ وأسماء."
           : "The core is sector-agnostic. A pack is a full operating brain for an industry, not a theme."}
@@ -110,7 +110,8 @@ export function SectorsView({ lang, canApply, isDemo, notify, onApplied }: Props
                   <span className="sector-logo" aria-hidden="true">{sector.logo}</span>
                   <div>
                     <strong>{ar ? sector.nameAr : sector.nameEn}</strong>
-                    <small>{sector.organizationName}</small>
+                    {/* اسم المؤسسة النموذجية يخصّ العرض؛ في مؤسسةٍ حقيقية لا معنى له. */}
+                    {isDemo && <small>{sector.organizationName}</small>}
                   </div>
                   {active && <i className="sector-flag"><CheckCircle2 /> {ar ? "الحالي" : "Current"}</i>}
                 </div>
@@ -121,13 +122,15 @@ export function SectorsView({ lang, canApply, isDemo, notify, onApplied }: Props
                   <span><b>{sector.connectors}</b> {ar ? "موصل" : "connectors"}</span>
                 </div>
 
-                {!active && canApply && !sector.isSeeded && (
+                {!active && canApply && (!sector.isSeeded || !isDemo) && (
                   confirming === sector.code ? (
                     <div className="sector-confirm">
                       {/* الهدم يُقال قبله لا بعده. */}
                       <AlertTriangle />
                       <p>{ar
-                        ? "سيُمحى ما في العقل الآن: المهارات والسياسات والموصلات وحالات العمل. سجلّ التدقيق يبقى."
+                        ? isDemo
+                          ? "سيُمحى ما في العقل الآن: المهارات والسياسات والموصلات وحالات العمل. سجلّ التدقيق يبقى."
+                          : "ستُستبدل مهارات مؤسستك وسياساتها وموصلاتها وحالات عملها بقوالب القطاع الجديد (مسوّدات). اسم مؤسستك وسجلّ التدقيق يبقيان."
                         : "This erases skills, policies, connectors and work items. The audit trail is kept."}</p>
                       <div>
                         <button className="btn-danger" disabled={busy} onClick={() => void apply(sector.code)}>
@@ -145,7 +148,7 @@ export function SectorsView({ lang, canApply, isDemo, notify, onApplied }: Props
                   )
                 )}
 
-                {sector.isSeeded && !active && (
+                {sector.isSeeded && !active && isDemo && (
                   <p className="sector-note">{ar
                     ? "الحزمة المبذورة في النشر — لإعادتها أعد التهيئة."
                     : "The seeded pack — re-initialize the deployment to restore it."}</p>

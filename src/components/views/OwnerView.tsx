@@ -4,6 +4,7 @@ import {
   PlayCircle, Plus, RefreshCw, Save, Send, Trash2, TrendingUp, Wallet, X,
 } from "lucide-react";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
+import { OwnerSalesPanel } from "./OwnerSalesPanel";
 import {
   archiveApi, billingApi, fromMinor, money, notifyApi, paymentsApi, toMinor,
   type BillingCycle, type InvoiceLine, type OwnerOverview, type PaymentIntentView, type Plan, type PlanFeatureKey,
@@ -223,6 +224,9 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
           <Stat label="فواتير متأخرة" value={revenue.invoicesOverdue} tone={revenue.invoicesOverdue > 0 ? "amber" : "moss"} icon={<History />} />
         </div>
       )}
+
+      {/* ---------------------------------------------- البيع: الطلبات وروابط العرض */}
+      <OwnerSalesPanel notify={notify} />
 
       {/* ---------------------------------------------- الاشتراك الجاري */}
       <section className="surface-strong owner-block">

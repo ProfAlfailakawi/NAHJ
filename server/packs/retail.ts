@@ -26,10 +26,10 @@ export const retailPack: SectorPack = {
   },
 
   people: [
-    { name: "بدر الخالدي", role: "manager", department: "العمليات" },
-    { name: "سارة المنصور", role: "employee", department: "خدمة العملاء" },
-    { name: "يوسف العلي", role: "employee", department: "المخزون" },
-    { name: "دلال الشمري", role: "auditor", department: "الجودة" },
+    { name: "بدر ناصر", role: "manager", department: "العمليات" },
+    { name: "سارة علي", role: "employee", department: "خدمة العملاء" },
+    { name: "يوسف جاسم", role: "employee", department: "المخزون" },
+    { name: "دلال فيصل", role: "auditor", department: "الجودة" },
   ],
 
   sources: [
@@ -42,7 +42,7 @@ export const retailPack: SectorPack = {
   policies: [
     {
       code: "POL-RET-01", title: "الاسترجاع الآلي تحت سقف مبلغ", titleEn: "Auto-refund under a value ceiling",
-      riskLevel: "medium", approvedBy: "بدر الخالدي",
+      riskLevel: "medium", approvedBy: "بدر ناصر",
       summary: "الاسترجاع حتى 20 د.ك يُنفَّذ آلياً عند توفّر الشروط؛ وما فوقه يحتاج موافقة مشرف.",
       rules: [
         { condition: "قيمة الاسترجاع ≤ 20 د.ك وضمن المدة", action: "نفّذ الاسترجاع آلياً وسجّله", explanation: "خطأٌ هنا يُصحَّح بمبلغه، وتأخير العميل أغلى من المخاطرة." },
@@ -52,7 +52,7 @@ export const retailPack: SectorPack = {
     },
     {
       code: "POL-RET-02", title: "لا إجابة آلية عن الحساسية الغذائية", titleEn: "No automated allergen answers",
-      riskLevel: "critical", approvedBy: "دلال الشمري",
+      riskLevel: "critical", approvedBy: "دلال فيصل",
       summary: "أسئلة مسبّبات الحساسية تُحوَّل إلى موظف مؤهَّل دائماً، مهما بدا الجواب واضحاً.",
       rules: [
         { condition: "سؤال يذكر حساسية أو مكوّناً بعينه", action: "حوّل فوراً إلى موظف الجودة ولا تُجب", explanation: "جوابٌ خاطئ عن مكوّن قد يقتل، وهذا خطأ لا يُصحَّح باسترجاع." },
@@ -60,7 +60,7 @@ export const retailPack: SectorPack = {
     },
     {
       code: "POL-RET-03", title: "إعادة الطلب عند الحدّ الآمن", titleEn: "Reorder at safety threshold",
-      riskLevel: "low", approvedBy: "يوسف العلي",
+      riskLevel: "low", approvedBy: "يوسف جاسم",
       summary: "الأصناف التي تبلغ حدّ إعادة الطلب تُرفع في أمر شراء مقترح.",
       rules: [
         { condition: "الكمية ≤ حدّ إعادة الطلب", action: "جهّز أمر شراء مقترحاً للمراجعة", explanation: "نفاد صنف سريع الدوران خسارة مبيعات مباشرة." },
@@ -71,7 +71,7 @@ export const retailPack: SectorPack = {
   skills: [
     {
       slug: "refund-request", name: "طلب استرجاع", nameEn: "Refund request",
-      category: "خدمة العملاء", department: "خدمة العملاء", ownerName: "سارة المنصور",
+      category: "خدمة العملاء", department: "خدمة العملاء", ownerName: "سارة علي",
       purpose: "التحقق من الفاتورة والمدّة والحالة، وتنفيذ الاسترجاع ضمن السقف.",
       riskLevel: "medium", autonomyLevel: 6, status: "active",
       reliabilityScore: 97, usageCount: 1840, successRate: 99, humanTakeoverRate: 1.5, avgDurationMinutes: 1.2, hoursSavedTotal: 212,
@@ -94,7 +94,7 @@ export const retailPack: SectorPack = {
     },
     {
       slug: "order-support", name: "متابعة طلب", nameEn: "Order support",
-      category: "خدمة العملاء", department: "خدمة العملاء", ownerName: "سارة المنصور",
+      category: "خدمة العملاء", department: "خدمة العملاء", ownerName: "سارة علي",
       purpose: "الإجابة عن حالة الطلب ووقت التوصيل وتعديل العنوان.",
       riskLevel: "low", autonomyLevel: 5, status: "active",
       reliabilityScore: 94, usageCount: 2610, successRate: 98, humanTakeoverRate: 2.8, avgDurationMinutes: 0.9, hoursSavedTotal: 268,
@@ -112,7 +112,7 @@ export const retailPack: SectorPack = {
     },
     {
       slug: "allergen-inquiry", name: "استفسار عن مكوّنات وحساسية", nameEn: "Allergen inquiry",
-      category: "الجودة", department: "الجودة", ownerName: "دلال الشمري",
+      category: "الجودة", department: "الجودة", ownerName: "دلال فيصل",
       purpose: "التقاط أسئلة الحساسية وتحويلها إلى مؤهَّل بشري بلا إجابة آلية.",
       riskLevel: "critical", autonomyLevel: 1, status: "practicing",
       reliabilityScore: 58, usageCount: 34, successRate: 100, humanTakeoverRate: 100, avgDurationMinutes: 0.5, hoursSavedTotal: 0,
@@ -130,7 +130,7 @@ export const retailPack: SectorPack = {
     },
     {
       slug: "stock-reorder", name: "اقتراح إعادة طلب", nameEn: "Stock reorder proposal",
-      category: "المخزون", department: "المخزون", ownerName: "يوسف العلي",
+      category: "المخزون", department: "المخزون", ownerName: "يوسف جاسم",
       purpose: "رصد الأصناف عند الحدّ الآمن وتجهيز أمر شراء مقترح.",
       riskLevel: "low", autonomyLevel: 4, status: "active",
       reliabilityScore: 89, usageCount: 420, successRate: 95, humanTakeoverRate: 8, avgDurationMinutes: 2, hoursSavedTotal: 52,

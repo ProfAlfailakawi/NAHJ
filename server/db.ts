@@ -33,6 +33,27 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { createDemoSandboxSeed, type DemoSandboxSeed } from "./demoSandbox.ts";
 import { buildSector, EDUCATION_CODE, getSectorPack } from "./packs/index.ts";
 import { buildDemoActivity } from "./packs/demoActivity.ts";
+import { buildCleanStart, type CleanStart } from "./packs/cleanStart.ts";
+
+/*
+ * صاحب الجلسة في الطلب الجاري — يُضبط بعد المصادقة (routes.ts). منه يُقرأ
+ * «المستخدم الحالي» في المؤسسة الحقيقية بدل ملفٍّ نموذجي من البذرة.
+ */
+export const requestAccount = new AsyncLocalStorage<{ id: string; name: string; email: string; role: string }>();
+
+const ACCOUNT_ROLE_LABEL: Record<string, string> = {
+  owner: "مالك المنصة", admin: "مشرف المؤسسة", manager: "مدير", operator: "موظف تشغيل", viewer: "مشاهدة",
+};
+
+function accountRoleToUserRole(role: string): User["role"] {
+  if (role === "owner") return "owner";
+  if (role === "admin") return "admin";
+  if (role === "manager") return "manager";
+  if (role === "viewer") return "auditor";
+  return "employee";
+}
+
+const SYSTEM_USER: User = { id: "system", name: "النظام", email: "", role: "admin", department: "", avatar: "" };
 import { stampLegacyInstant } from "./engine/metricsEngine.ts";
 
 export interface SimulatorMessage {
@@ -117,6 +138,12 @@ export class Store {
   public sectorCode: string;
   /** الشخصية التي تحادث المؤسسة من الخارج — تختلف جذرياً بين القطاعات. */
   public channel: { counterpart: string; welcome: string; samplePrompts: string[] };
+  /*
+   * هل أعدّت المؤسسة نفسها؟ نشرٌ جديد يُقلع على بذرة العرض، والإعداد الأول
+   * يستبدلها ببدايةٍ نظيفة باسم المؤسسة وقطاعها. وحتى يتمّ لا تُعرض البذرة على
+   * أنها سجلّ المؤسسة — الواجهة تعرض شاشة الإعداد بدلها.
+   */
+  public organizationConfigured: boolean;
 
   constructor(seed?: DemoSandboxSeed) {
     this.isDemo = Boolean(seed);
@@ -152,6 +179,8 @@ export class Store {
     }
 
     this.sectorCode = seed ? EDUCATION_CODE : persisted("sectorCode", EDUCATION_CODE);
+    /* صندوق العرض مُعَدٌّ بطبيعته؛ والمؤسسة الحقيقية حتى تُعِدّ نفسها. */
+    this.organizationConfigured = seed ? true : persisted("organizationConfigured", false);
     this.channel = seed ? DEFAULT_CHANNEL : persisted("channel", { ...DEFAULT_CHANNEL });
 
     const freshSimulator: SimulatorState = {
@@ -176,7 +205,27 @@ export class Store {
   public simulatorState: SimulatorState;
 
   public getCurrentUser(): User {
-    return this.users.find((u) => u.id === this.currentUserId) || this.users[0];
+    /*
+     * في المؤسسة الحقيقية: صاحب الجلسة هو المستخدم الحالي.
+     *
+     * كان رأس الشاشة يعرض «نورة خالد — إدارة القبول» لمالك المنصة نفسه، وكل
+     * إجراء (إيقاف مهارة، جلسة تعليم) يُسجَّل باسمها. والصندوق التجريبي يبقى على
+     * ملفّه النموذجي.
+     */
+    if (!this.isDemo) {
+      const account = requestAccount.getStore();
+      if (account) {
+        return {
+          id: account.id,
+          name: account.name,
+          email: account.email,
+          role: accountRoleToUserRole(account.role),
+          department: ACCOUNT_ROLE_LABEL[account.role] || "",
+          avatar: "",
+        };
+      }
+    }
+    return this.users.find((u) => u.id === this.currentUserId) || this.users[0] || SYSTEM_USER;
   }
 
   public setCurrentUser(userId: string): User {
@@ -216,7 +265,73 @@ export class Store {
    * الحزمة، ومحوُه عند تبديل القطاع يُفقد المراجعة معناها — ويمحو الحدث الذي
    * يسجّل التبديل نفسه.
    */
+  /**
+   * بداية التشغيل الحقيقي: اسم المؤسسة وقطاعها، على صفحةٍ نظيفة.
+   *
+   * يُمحى كل ما جاء من بذرة العرض — الموظفون النموذجيون، وحالات العمل،
+   * والموافقات، والاختبارات، وملاحظات التعلّم، وسجلّ التدقيق النموذجي — لأنه لم
+   * يقع في هذه المؤسسة. وأول سطرٍ في سجلّها الحقيقي هو هذا الإعداد نفسه.
+   */
+  public configureOrganization(code: string, name: string, nameEn: string, actorName: string): { ok: boolean; reason?: string } {
+    if (this.isDemo) return { ok: false, reason: "لا تُعَدّ مؤسسةٌ من داخل صندوق العرض." };
+    const start = buildCleanStart(code, name, nameEn);
+    if (!start) return { ok: false, reason: name.trim() ? `قطاع غير معروف: ${code}` : "اسم المؤسسة مطلوب." };
+    this.installCleanStart(start);
+    this.auditEvents = [];
+    this.organizationConfigured = true;
+    this.logAudit({
+      actorType: "human",
+      actorName,
+      action: "ORGANIZATION_CONFIGURED",
+      provenance: `إعداد المؤسسة — ${start.sectorCode}`,
+      risk: "medium",
+      latencyMs: 0,
+      details: `بدأ التشغيل الفعلي لـ«${start.organization.name}». ${start.skills.length} قالب مهارة و${start.policies.length} قالب سياسة بانتظار المراجعة؛ لا حالات ولا موافقات ولا بيانات نموذجية.`,
+      status: "success",
+    });
+    return { ok: true };
+  }
+
+  private installCleanStart(start: CleanStart): void {
+    this.organization = start.organization;
+    this.users = [];
+    this.knowledgeSources = start.knowledgeSources;
+    this.policies = start.policies;
+    this.skills = start.skills;
+    this.connectors = start.connectors;
+    this.learningProposals = [];
+    this.channel = start.channel;
+    this.sectorCode = start.sectorCode;
+    this.workItems = [];
+    this.approvalRequests = [];
+    this.testCases = [];
+    this.shadowComparisons = [];
+    this.learningSessions = [];
+    this.resetSimulator();
+  }
+
   public applySector(code: string, actorName: string): { ok: boolean; reason?: string } {
+    /*
+     * المؤسسة الحقيقية تبدّل نشاطها إلى قوالب نظيفة، وتحتفظ باسمها. كانت تُركَّب
+     * عليها حزمة العرض كما هي: اسم «مركز الشفاء» مكان اسمها، وموظفون
+     * مُختلَقون، ومهاراتٌ حيّة بموثوقية 91٪ لم تكتسبها.
+     */
+    if (!this.isDemo) {
+      const start = buildCleanStart(code, this.organization.name, this.organization.nameEn);
+      if (!start) return { ok: false, reason: `قطاع غير معروف: ${code}` };
+      this.installCleanStart(start);
+      this.logAudit({
+        actorType: "human",
+        actorName,
+        action: "APPLY_SECTOR_PACK",
+        provenance: `حزمة القطاع: ${code}`,
+        risk: "high",
+        latencyMs: 0,
+        details: `بُدّل نشاط «${this.organization.name}» إلى ${code}: ${start.skills.length} قالب مهارة و${start.policies.length} قالب سياسة بانتظار المراجعة. سجلّ التدقيق محفوظ.`,
+        status: "success",
+      });
+      return { ok: true };
+    }
     const built = buildSector(code);
     if (!built) return { ok: false, reason: `قطاع غير معروف: ${code}` };
 
@@ -502,6 +617,7 @@ export function snapshotState(): Record<string, unknown> {
     simulatorState: baseStore.simulatorState,
     sectorCode: baseStore.sectorCode,
     channel: baseStore.channel,
+    organizationConfigured: baseStore.organizationConfigured,
   };
 }
 

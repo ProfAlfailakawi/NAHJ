@@ -7,7 +7,8 @@ import { escapeHtml, publicPlans, CUSTOM_PRICE } from "./publicPages.ts";
  * كان الرابط الرئيسي يفتح نموذج دخولٍ مباشرة. فمن يصله رابط نهج في رسالة يرى
  * «البريد الإلكتروني / كلمة المرور» ولا يعرف ما المنتج، ولا لأي قطاع هو،
  * ولا أن بوسعه تجربته بلا حساب. والصفحة هنا تقول ذلك في الشاشة الأولى، وتُدخل
- * كل زائرٍ إلى العرض على قطاعه هو — لا على مدرسةٍ ليست قطاعه.
+ * كل زائرٍ إلى طلب عرضٍ على قطاعه هو. والعرض التجريبي نفسه أداةٌ يعرضها المالك
+ * (روابط /try في لوحته)، لا بابٌ مفتوح لكل زائر.
  *
  * صفحاتٌ مكتفية بذاتها: لا إطار عمل، لا طلب شبكة بعد التحميل، وكل نصٍّ متغيّر
  * يُهرَّب.
@@ -17,6 +18,12 @@ import { escapeHtml, publicPlans, CUSTOM_PRICE } from "./publicPages.ts";
 export function contactEmail(): string {
   const value = (process.env.NAHJ_CONTACT_EMAIL || "").trim();
   return /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/.test(value) ? value : "";
+}
+
+/** رقم واتساب للتواصل التجاري (أرقام فقط بالصيغة الدولية) إن ضُبط. */
+export function contactWhatsapp(): string {
+  const digits = (process.env.NAHJ_CONTACT_WHATSAPP || "").replace(/[^\d]/g, "");
+  return digits.length >= 8 && digits.length <= 15 ? digits : "";
 }
 
 /** الاسم القانوني لمشغّل المنصة كما يُكتب في الشروط والخصوصية. */
@@ -44,6 +51,9 @@ const BASE_STYLE = `
   .top nav a { text-decoration:none; padding:8px 12px; border-radius:10px; font-weight:700; font-size:15px; color:var(--muted); }
   .top nav a:hover { color:var(--ink); background:var(--card); }
   .top nav a.cta { background:var(--ink); color:var(--bg); }
+  .top nav a { white-space:nowrap; }
+  /* الترويسة لاصقة: القفز إلى قسمٍ لا يُخفي عنوانه تحتها. */
+  [id] { scroll-margin-top:84px; }
   .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 22px; border-radius:14px; font-weight:800; text-decoration:none; border:1px solid var(--line); background:var(--card); color:var(--ink); font-size:16px; }
   .btn.primary { background:var(--ink); color:var(--bg); border-color:var(--ink); }
   .btn:focus-visible, .top nav a:focus-visible, .sector a:focus-visible { outline:3px solid var(--moss); outline-offset:2px; }
@@ -55,7 +65,11 @@ const BASE_STYLE = `
   @media (max-width:720px) {
     body { font-size:16px; }
     .top nav a:not(.cta):not(.keep) { display:none; }
+    .top .wrap { gap:10px; }
+    .top nav { gap:2px; }
+    .top nav a { padding:7px 9px; font-size:14px; }
   }
+  @media (max-width:380px) { .top nav a.keep[href="/pricing"] { display:none; } }
 `;
 
 const MARK = `<svg viewBox="0 0 72 72" fill="none" aria-hidden="true"><rect x="2" y="2" width="68" height="68" rx="23" fill="var(--card)" stroke="var(--line)"/><path d="M18 18v12c0 7.2 5.8 13 13 13h9c7.8 0 14 6.2 14 14v3" stroke="var(--ink)" stroke-width="4.6" stroke-linecap="round"/><path d="M18 18h10M44 16h10v10" stroke="var(--moss)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18" cy="18" r="5" fill="#e0a04b"/><circle cx="54" cy="60" r="5" fill="#5e79e6"/><circle cx="38" cy="43" r="4.8" fill="var(--moss)"/></svg>`;
@@ -92,7 +106,7 @@ ${options.index === false ? `<meta name="robots" content="noindex">` : ""}
     <a href="/#how">كيف يعمل</a>
     <a class="keep" href="/pricing">الأسعار</a>
     <a class="keep" href="/app">دخول</a>
-    <a class="cta" href="/#sectors">جرّب مجاناً</a>
+    <a class="cta" href="/#contact">اطلب عرضاً</a>
   </nav>
 </div></header>
 <main>${options.body}</main>
@@ -152,6 +166,19 @@ const LANDING_STYLE = `
   .faq details { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 20px; margin-bottom:10px; }
   .faq summary { font-weight:800; cursor:pointer; font-size:17px; }
   .faq p { margin:10px 0 0; color:var(--muted); }
+  .contact { display:grid; grid-template-columns:1fr 1.2fr; gap:28px; align-items:start; background:var(--card); border:1px solid var(--line); border-radius:24px; padding:28px; margin-top:24px; }
+  .contact .direct { font-weight:700; }
+  .contact .direct a { color:var(--moss); }
+  .contact form { display:grid; gap:12px; }
+  .contact label { display:grid; gap:6px; font-weight:700; font-size:15px; }
+  .contact label small { color:var(--muted); font-weight:600; }
+  .contact input, .contact select, .contact textarea { font:inherit; font-weight:500; padding:11px 13px; border-radius:12px; border:1px solid var(--line); background:var(--bg); color:var(--ink); }
+  .contact input:focus-visible, .contact select:focus-visible, .contact textarea:focus-visible { outline:3px solid var(--moss); outline-offset:1px; }
+  .contact .hp { position:absolute; inset-inline-start:-9999px; width:1px; height:1px; overflow:hidden; }
+  .form-status { margin:0; min-height:1.6em; font-weight:700; }
+  .form-status.ok { color:var(--moss); }
+  .form-status.err { color:#c0392b; }
+  @media (max-width:820px) { .contact { grid-template-columns:1fr; padding:20px; } }
   .final { text-align:center; background:var(--ink); color:var(--bg); border-radius:28px; padding:48px 24px; margin-top:24px; }
   .final h2 { color:var(--bg); }
   .final p { opacity:.8; margin:0 auto 24px; max-width:620px; }
@@ -164,6 +191,16 @@ export function renderLandingPage(): string {
   const priced = plans.filter(plan => plan.monthly !== CUSTOM_PRICE);
   const from = priced[0]?.monthly;
 
+  const contact = contactEmail();
+  const whatsapp = contactWhatsapp();
+  const contactLinks = contact || whatsapp
+    ? `<p class="direct">أو تواصل مباشرة: ${[
+        whatsapp ? `<a href="https://wa.me/${whatsapp}" rel="noopener">واتساب</a>` : "",
+        contact ? `<a href="mailto:${escapeHtml(contact)}">${escapeHtml(contact)}</a>` : "",
+      ].filter(Boolean).join(" · ")}</p>`
+    : "";
+  const sectorOptions = sectors.map(sector => `<option value="${escapeHtml(sector.code)}">${escapeHtml(sector.nameAr)}</option>`).join("");
+
   const sectorCards = sectors.map(sector => {
     const examples = sector.code === EDUCATION_CODE
       ? EDUCATION_EXAMPLES
@@ -174,7 +211,7 @@ export function renderLandingPage(): string {
         <div><h3>${escapeHtml(sector.nameAr)}</h3><div class="org">مثال: ${escapeHtml(sector.organizationName)}</div></div></div>
       <p>${escapeHtml(sector.descriptionAr)}</p>
       <ul aria-label="أمثلة على ما يتولّاه">${examples.map(example => `<li>${escapeHtml(example)}</li>`).join("")}</ul>
-      <a class="btn primary" href="/try/${encodeURIComponent(sector.code)}" aria-label="ادخل عرض ${escapeHtml(sector.nameAr)}">ادخل العرض ←</a>
+      <a class="btn primary" href="?sector=${encodeURIComponent(sector.code)}#contact" data-sector="${escapeHtml(sector.code)}" aria-label="اطلب عرضاً لقطاع ${escapeHtml(sector.nameAr)}">اطلب عرضاً لقطاعك</a>
     </article>`;
   }).join("");
 
@@ -185,15 +222,15 @@ export function renderLandingPage(): string {
     <h1>موظفوك يعرفون كيف يُنجَز العمل.<br>نهج يتعلّمه منهم، ثم يُنجزه معهم.</h1>
     <p class="lead">نهج نظامٌ عربيّ يراقب كيف يعمل فريقك، ويحوّل خبرته إلى إجراءاتٍ مكتوبة، ثم يتدرّب عليها حتى يُثبت أنه يُتقنها — ولا ينفّذ إلا ما أذنتَ له به، ويطلب موافقتك في كل قرارٍ حسّاس.</p>
     <div class="actions">
-      <a class="btn primary" href="#sectors">اختر قطاعك وجرّب الآن</a>
+      <a class="btn primary" href="#contact">اطلب عرضاً توضيحياً</a>
       <a class="btn" href="/pricing">الباقات والأسعار</a>
     </div>
-    <div class="note">التجربة مجانية وبلا حساب، في بيئةٍ معزولة ببيانات تجريبية${from ? ` · الباقات تبدأ من ${escapeHtml(from)} شهرياً` : ""}</div>
+    <div class="note">نعرضه عليك على مثالٍ من قطاعك، ثم نُعِدّ مؤسستك ونبدأ${from ? ` · الباقات تبدأ من ${escapeHtml(from)} شهرياً` : ""}</div>
   </section>
 
   <section id="sectors" aria-labelledby="sectors-title">
-    <h2 id="sectors-title">اختر قطاعك — وجرّبه كما لو كان مؤسستك</h2>
-    <p class="sub">كل قطاع له مهاراته وسياساته ومن يعتمد قراراته. اضغط على قطاعك فتدخل مؤسسةً نموذجية منه تعمل أمامك: حالات جارية، وموافقات تنتظرك، ومحادثة مع عميلها.</p>
+    <h2 id="sectors-title">مبنيّ لقطاعك — لا لقطاعٍ واحد</h2>
+    <p class="sub">كل قطاع يبدأ بقوالب مهاراته وسياساته ومن يعتمد قراراته، تُراجعها مؤسستك وتعدّلها وتعلّم نهج ما ينقصها. وإن لم يكن قطاعك هنا فنهج يتعلّم عملك من موظفيك مباشرة.</p>
     <div class="sectors">${sectorCards}</div>
   </section>
 
@@ -241,15 +278,63 @@ export function renderLandingPage(): string {
     <details><summary>هل يحتاج فريقي إلى خبرة تقنية؟</summary><p>لا. من يعرف كيف يُنجز عمله يستطيع أن يعلّمه لنهج بكلامه، والشاشات بالعربية وواضحة.</p></details>
     <details><summary>هل سيستبدل موظفيّ؟</summary><p>لا. يتولّى المتكرّر ويترك للموظف ما يحتاج حكماً بشرياً، ولا يتّخذ قراراً حسّاساً بلا موافقة إنسان.</p></details>
     <details><summary>ماذا لو أخطأ؟</summary><p>لا يعمل وحده إلا فيما أثبت دقّته فيه بالاختبار والظل، ويمكن إيقافه فوراً بزرّ واحد، وكل ما فعله مسجَّل.</p></details>
-    <details><summary>هل تجربة العرض تمسّ بيانات حقيقية؟</summary><p>لا. العرض بيئةٌ معزولة ببيانات تجريبية تُمحى خلال ساعة من آخر استخدام، ولا تُكتب في أي قاعدة بيانات.</p></details>
+    <details><summary>كيف نبدأ؟</summary><p>اطلب عرضاً من النموذج أدناه، فنعرض عليك نهج على مثالٍ من قطاعك. ثم نُنشئ حساب مؤسستك، وتكتب اسمها وتختار قطاعها، فتبدأ بقوالب القطاع وتعلّم نهج عملكم خطوةً بخطوة.</p></details>
+    <details><summary>هل تبقى بياناتنا لنا؟</summary><p>نعم. تصدّر كل بيانات مؤسستك متى شئت، ولا تُستعمل لغير تشغيل خدمتكم.</p></details>
+  </section>
+
+  <section id="contact" class="contact" aria-labelledby="contact-title">
+    <div>
+      <h2 id="contact-title">اطلب عرضاً توضيحياً</h2>
+      <p class="sub">اترك بياناتك ونتواصل معك لنعرض نهج على مثالٍ من قطاعك.</p>
+      ${contactLinks}
+    </div>
+    <form id="lead-form" novalidate>
+      <label>الاسم<input name="name" autocomplete="name" required maxlength="120"></label>
+      <label>اسم المؤسسة<input name="organization" autocomplete="organization" required maxlength="160"></label>
+      <label>القطاع<select name="sector">${sectorOptions}<option value="other">قطاع آخر</option></select></label>
+      <label>البريد أو رقم الهاتف<input name="contact" required maxlength="160" inputmode="email" dir="ltr"></label>
+      <label>ما الذي تريد أن يتولّاه نهج؟ <small>(اختياري)</small><textarea name="message" rows="3" maxlength="1000"></textarea></label>
+      <label class="hp" aria-hidden="true">الموقع<input name="website" tabindex="-1" autocomplete="off"></label>
+      <button class="btn primary" type="submit">أرسل الطلب</button>
+      <p class="form-status" role="status" aria-live="polite"></p>
+    </form>
   </section>
 
   <section class="final">
-    <h2>شاهده يعمل على قطاعك — في دقيقة</h2>
-    <p>بلا حساب ولا بطاقة. اختر قطاعك، واعتمد أول طلب، وحادث عميلاً نموذجياً.</p>
-    <a class="btn" href="#sectors">اختر قطاعك</a>
+    <h2>شاهده يعمل على قطاعك</h2>
+    <p>عرضٌ قصير على مثالٍ من قطاعك: كيف يتعلّم، وكيف يطلب موافقتك، وكيف يسجّل كل شيء.</p>
+    <a class="btn" href="#contact">اطلب عرضاً</a>
   </section>
-</div>`;
+</div>
+<script>
+  (function () {
+    var form = document.getElementById("lead-form");
+    if (!form) return;
+    /* القطاع من البطاقة التي ضُغطت — يوفّر على الزائر اختياره مرة ثانية. */
+    var preset = new URLSearchParams(location.search).get("sector");
+    if (preset && form.sector.querySelector('option[value="' + preset.replace(/[^a-z]/g, "") + '"]')) form.sector.value = preset;
+    document.querySelectorAll("[data-sector]").forEach(function (link) {
+      link.addEventListener("click", function () { form.sector.value = link.getAttribute("data-sector"); });
+    });
+    var status = form.querySelector(".form-status");
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var button = form.querySelector("button");
+      var data = {};
+      new FormData(form).forEach(function (value, key) { data[key] = value; });
+      button.disabled = true;
+      status.textContent = "جارٍ الإرسال...";
+      fetch("/api/public/leads", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(data) })
+        .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+        .then(function (result) {
+          if (result.ok) { form.reset(); status.textContent = "وصلنا طلبك، وسنتواصل معك قريباً. شكراً لك."; status.className = "form-status ok"; }
+          else { status.textContent = (result.body && result.body.error) || "تعذّر الإرسال. حاول مجدداً."; status.className = "form-status err"; }
+        })
+        .catch(function () { status.textContent = "تعذّر الاتصال. حاول مجدداً."; status.className = "form-status err"; })
+        .then(function () { button.disabled = false; });
+    });
+  })();
+</script>`;
 
   return page({
     title: "نهج — عقلٌ تشغيليّ يتعلّم من فريقك، لكل قطاع",
@@ -331,6 +416,7 @@ export function renderPrivacyPage(): string {
   <ul>
     <li><strong>بيانات الحساب:</strong> الاسم والبريد الإلكتروني والدور. وتُحفظ كلمات المرور مشفّرةً بتجزئةٍ مملّحة ولا تُحفظ نصّاً أبداً.</li>
     <li><strong>بيانات التشغيل:</strong> ما تُدخله مؤسستك من إجراءات وسياسات وحالات عمل ومحادثات وموافقات، وسجلّ التدقيق.</li>
+    <li><strong>طلبات العرض:</strong> ما تكتبه في نموذج «اطلب عرضاً» (الاسم، والمؤسسة، ووسيلة التواصل، ورسالتك) — نستعمله للتواصل معك بشأن طلبك فقط.</li>
     <li><strong>بيانات الفوترة:</strong> الفواتير وحالة السداد. أما بيانات البطاقة فتُدخل في صفحة مزوّد الدفع مباشرة ولا تمرّ بخوادمنا.</li>
   </ul>
 
@@ -346,7 +432,7 @@ export function renderPrivacyPage(): string {
   </ul>
 
   <h2>4. ملفات تعريف الارتباط (الكوكيز)</h2>
-  <p>نستخدم كوكيز ضرورية فقط: كوكي الجلسة لإبقائك مسجّلاً، وكوكي الحماية من تزوير الطلبات، وكوكي بيئة العرض التجريبية. لا نستخدم كوكيز تتبّعٍ أو إعلان.</p>
+  <p>نستخدم كوكيز ضرورية فقط: كوكي الجلسة لإبقائك مسجّلاً، وكوكي الحماية من تزوير الطلبات، وكوكي بيئة العرض حين نعرض عليك نهج. لا نستخدم كوكيز تتبّعٍ أو إعلان.</p>
 
   <h2>5. بيئة العرض التجريبية</h2>
   <p>العرض يعمل ببيانات تجريبية داخل الذاكرة، ولا يُحفظ في قاعدة البيانات، ويُمحى خلال ساعة من آخر استخدام. لا تُدخل فيه بيانات حقيقية.</p>
