@@ -25,6 +25,9 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 # يقرؤه server/firebase.ts من مجلد العمل وقت التشغيل.
 COPY --from=builder /app/firebase-applet-config.json ./firebase-applet-config.json
+# فاحص الإعداد يعمل داخل الحاوية على إعداداتها الفعلية:
+#   bash scripts/server-env.sh check
+COPY --from=builder /app/scripts/verify-env.mjs ./scripts/verify-env.mjs
 
 # مجلد البيانات الافتراضي، ونقطة تركيب القرص الدائم.
 ENV NAHJ_DATA_DIR=/var/nahj

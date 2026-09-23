@@ -182,6 +182,34 @@ if (!mailProvider) {
   }
 }
 
+console.log(`\n${C.bold}  الموقع والتواصل${C.off}`);
+/*
+ * نشر المالك هو الموقع الذي يُسوَّق منه: الزائر يطلب عرضاً ويجب أن يصل طلبه.
+ * ونشر كل عميل يُطفئ التسويق (NAHJ_MARKETING=off) فيفتح موظفوه عملهم مباشرة.
+ */
+const marketing = val('NAHJ_MARKETING').toLowerCase() !== 'off';
+line(marketing ? '✓' : '○', marketing ? C.green : C.dim, marketing ? 'الموقع التسويقي مفعّل' : 'نشر عميل — التسويق مطفأ',
+  marketing ? 'الصفحة الرئيسية ونموذج «اطلب عرضاً» — هذا نشرك أنت' : 'الجذر يفتح التطبيق، ولا نموذج طلبات ولا فهرسة');
+if (marketing) {
+  if (has('NAHJ_CONTACT_EMAIL')) {
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val('NAHJ_CONTACT_EMAIL'))) line('✓', C.green, 'بريد التواصل', val('NAHJ_CONTACT_EMAIL'));
+    else { blocking += 1; line('✗', C.red, 'بريد التواصل غير صالح', val('NAHJ_CONTACT_EMAIL')); }
+  } else {
+    warnings += 1;
+    line('◐', C.amber, 'بلا بريد تواصل', 'NAHJ_CONTACT_EMAIL — طلبات العرض تُحفظ في لوحتك، لكن لا يظهر للزائر بريدٌ يراسلك عليه.');
+  }
+  if (has('NAHJ_CONTACT_WHATSAPP')) {
+    const digits = val('NAHJ_CONTACT_WHATSAPP').replace(/[^\d]/g, '');
+    if (digits.length >= 8 && digits.length <= 15) line('✓', C.green, 'واتساب التواصل', `wa.me/${digits}`);
+    else { blocking += 1; line('✗', C.red, 'رقم واتساب غير صالح', 'بالصيغة الدولية بلا + ولا صفرين، مثل 96550000000'); }
+  }
+}
+if (has('NAHJ_LEGAL_NAME')) line('✓', C.green, 'الاسم القانوني', val('NAHJ_LEGAL_NAME'));
+else { warnings += 1; line('◐', C.amber, 'بلا اسم قانوني', 'NAHJ_LEGAL_NAME — يظهر «مشغّل منصة نهج» في الشروط والخصوصية والتذييل.'); }
+const demoOn = val('NAHJ_DEMO_ENABLED') !== 'false';
+line('○', C.dim, demoOn ? 'العرض التجريبي متاح لك' : 'العرض التجريبي مطفأ',
+  demoOn ? 'روابطه في لوحة المالك وحدها — لا يظهر للزوار ولا لموظفي المؤسسة' : 'NAHJ_DEMO_ENABLED=false');
+
 console.log('\n  ─────────────────────────────────────────────');
 console.log(`  ${blocking ? C.red : C.green}${blocking} مانع${C.off} · ${C.amber}${warnings} تنبيه${C.off}`);
 if (blocking) console.log(`  ${C.red}لا تنشر قبل معالجة الموانع أعلاه.${C.off}`);

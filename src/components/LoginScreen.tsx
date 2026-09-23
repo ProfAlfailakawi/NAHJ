@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { LogIn, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ApiError, authApi } from "../lib/api";
 
@@ -20,6 +20,12 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated }: Props) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /* في نشر عميلٍ (NAHJ_MARKETING=off) الجذر هو التطبيق نفسه: لا «عن نهج» ولا «اطلب عرضاً». */
+  const [marketing, setMarketing] = useState(true);
+  useEffect(() => {
+    fetch("/api/public/site").then(res => (res.ok ? res.json() : null))
+      .then(data => { if (data && data.marketing === false) setMarketing(false); }).catch(() => undefined);
+  }, []);
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (busy) return;
@@ -126,7 +132,7 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated }: Props) {
           * لا مدخل للعرض التجريبي هنا: شاشة الدخول لأصحاب الحسابات. العرض أداةٌ
           * يعرضها مالك المنصة بروابط /try من لوحته، والزائر يطلبه من الصفحة الرئيسية.
           */}
-        {!needsSetup && (
+        {!needsSetup && marketing && (
           <div className="login-demo-row">
             <div className="login-links">
               <a href="/">{ar ? "عن نهج" : "About NAHJ"}</a>

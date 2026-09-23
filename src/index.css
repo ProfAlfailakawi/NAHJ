@@ -760,3 +760,28 @@
 .gs-text small{display:block;font-size:12.5px;line-height:1.7;color:var(--muted);margin-top:2px}
 .gs-go{width:15px;height:15px;color:var(--muted);flex:none;margin-top:3px}
 .empty-note{margin:14px 0 0;font-size:13.5px;line-height:1.8;color:var(--muted)}
+
+.org-setup-owner{align-self:stretch;justify-content:center;height:46px;gap:8px}
+.org-setup-owner svg{width:16px;height:16px}
+.owner-only-actions{display:flex;align-items:center;gap:8px}
+
+/* ---- الشريط الجانبي بأسمائه ---------------------------------------------
+ * على الشاشات العريضة: أيقونةٌ واسمها. كان الاسم تلميحاً عند مرور الفأرة وحده.
+ * وبين الهاتف والشاشة العريضة يعود الشريط أيقوناتٍ مع التلميح، فلا تضيق الصفحة. */
+.rail-brand-name{display:none}
+.nav-label{display:none}
+@media(min-width:1200px){
+  .desktop-rail{width:208px;align-items:stretch;padding:14px 12px 12px}
+  .rail-brand{display:flex;align-items:center;justify-content:flex-start;gap:10px;padding-inline:6px}
+  .rail-brand-name{display:block;font-size:20px;font-weight:900;color:var(--ink)}
+  .rail-nav{align-items:stretch;gap:2px;overflow-y:auto;scrollbar-width:thin;padding-inline:2px}
+  .rail-nav .nav-item-wrap{width:100%}
+  .desktop-rail .nav-icon{width:100%;height:38px;display:flex;align-items:center;justify-content:flex-start;gap:11px;padding:0 12px;border-radius:12px;position:relative}
+  .desktop-rail .nav-icon svg{flex:none}
+  .nav-label{display:block;font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .desktop-rail .nav-tooltip{display:none}
+  .rail-divider{width:auto;margin:6px 10px}
+  .desktop-rail .nav-signal{inset-block-start:50%;transform:translateY(-50%);inset-inline-end:12px}
+  .shell-body{padding-inline-start:208px}
+  .rail-help{margin-top:8px}
+}

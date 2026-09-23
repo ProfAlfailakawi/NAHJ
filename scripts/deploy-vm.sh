@@ -30,9 +30,14 @@ DATA_DISK="${DATA_DISK:-nahj-data}"
 DATA_DISK_GB="${DATA_DISK_GB:-10}"
 MACHINE_TYPE="${MACHINE_TYPE:-e2-small}"
 NAHJ_DOMAIN="${NAHJ_DOMAIN:-}"   # نطاقك إن ملكته؛ وإلا يُشتق اسم من العنوان عبر sslip.io
+# off لخادم عميل: لا صفحة تسويق ولا عرض تجريبي — موظفوه يدخلون عملهم مباشرة.
+NAHJ_MARKETING="${NAHJ_MARKETING:-}"
 REPO="${REPO:-nahj}"
 REGION="${REGION:-${ZONE%-*}}"
-IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/nahj:$(date +%Y%m%d-%H%M%S)"
+# صورةٌ مُعطاة تُنشر كما هي: نشرُ العملاء بعد نشرك يعيد استعمال الصورة نفسها
+# (SKIP_BUILD=1) بدل بنائها مرةً لكل خادم.
+IMAGE="${IMAGE:-${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}/nahj:$(date +%Y%m%d-%H%M%S)}"
+SKIP_BUILD="${SKIP_BUILD:-}"
 
 if [[ -z "$PROJECT_ID" || "$PROJECT_ID" == "(unset)" ]]; then
   echo "اضبط PROJECT_ID أولاً:  export PROJECT_ID=your-project-id" >&2
@@ -41,6 +46,8 @@ fi
 gcloud config set project "$PROJECT_ID" >/dev/null
 step() { echo; echo "── $* ────────────────────────────────"; }
 echo "المشروع: $PROJECT_ID · المنطقة: $ZONE · الخادم: $INSTANCE"
+
+META="nahj-image=$IMAGE${NAHJ_DOMAIN:+,nahj-domain=$NAHJ_DOMAIN}${NAHJ_MARKETING:+,nahj-marketing=$NAHJ_MARKETING}"
 
 step "١/٧  تفعيل الخدمات"
 gcloud services enable compute.googleapis.com artifactregistry.googleapis.com \
@@ -52,7 +59,11 @@ gcloud artifacts repositories describe "$REPO" --location "$REGION" >/dev/null 2
     --location "$REGION" --description "NAHJ" --quiet
 
 step "٣/٧  بناء الصورة ورفعها"
-gcloud builds submit --tag "$IMAGE" --quiet .
+if [[ "$SKIP_BUILD" == "1" ]]; then
+  echo "صورةٌ مبنية مسبقاً: $IMAGE"
+else
+  gcloud builds submit --tag "$IMAGE" --quiet .
+fi
 
 step "٤/٧  القرص الدائم (${DATA_DISK_GB}GB)"
 # لا يُحذف ولا يُعاد إنشاؤه أبداً: هو كل ما تملكه المنصة من حالة.
@@ -106,10 +117,28 @@ docker network inspect nahjnet >/dev/null 2>&1 || docker network create nahjnet
 # داخل الشبكة الخاصة. فلا يبقى أي مسار يصل إلى التطبيق بلا تشفير.
 # SIGTERM ثم مهلة: الخادم يلتقطها ويدفق الحالة ويغلق القاعدة. `docker rm -f`
 # يرسل SIGKILL مباشرة فيتخطّى ذلك ويضيّع حتى ٣ ثوانٍ من آخر التغييرات.
+# ملف الإعدادات على القرص الدائم: مفاتيح بوابة الدفع والبريد والذكاء وبيانات
+# التواصل. كان الخادم يُشغَّل بمتغيّرين فقط، فلا طريق لأي مفتاحٍ إليه — ولا
+# ربط دفعٍ ممكناً مهما ضُبط. والملف هنا لا في GitHub: الأسرار لا تغادر الخادم،
+# وتبقى بعد كل نشر لأن القرص لا يُمسّ. يُحرَّر بـ scripts/server-env.sh.
+ENV_FILE="$MOUNT/nahj.env"
+[[ -f "$ENV_FILE" ]] || { touch "$ENV_FILE"; }
+chmod 600 "$ENV_FILE"
+ENV_ARGS=(--env-file "$ENV_FILE")
+# العنوان العلني من النطاق — إلا إن ضبطه الملف صراحةً. بوابة الدفع تشتقّ منه
+# عنوان الإشعار وعنوان العودة، فغيابه يوقف التحصيل.
+grep -q '^NAHJ_PUBLIC_URL=' "$ENV_FILE" || ENV_ARGS+=(-e "NAHJ_PUBLIC_URL=https://${DOMAIN}")
+# خادم عميل: التسويق والعرض مطفآن ما لم يضبطهما الملف صراحةً.
+if [[ "$(md instance/attributes/nahj-marketing || true)" == "off" ]]; then
+  grep -q '^NAHJ_MARKETING=' "$ENV_FILE" || ENV_ARGS+=(-e "NAHJ_MARKETING=off")
+  grep -q '^NAHJ_DEMO_ENABLED=' "$ENV_FILE" || ENV_ARGS+=(-e "NAHJ_DEMO_ENABLED=false")
+fi
+
 docker stop -t 30 nahj 2>/dev/null || true
 docker rm nahj 2>/dev/null || true
 docker run -d --name nahj --restart always --network nahjnet \
   -v /var/nahj:/var/nahj \
+  "${ENV_ARGS[@]}" \
   -e NODE_ENV=production \
   -e NAHJ_DATABASE_PATH=/var/nahj/nahj.sqlite \
   "$IMAGE"
@@ -138,7 +167,7 @@ step "٥/٧  الخادم"
 if gcloud compute instances describe "$INSTANCE" --zone "$ZONE" >/dev/null 2>&1; then
   echo "موجود — تحديث الصورة وإعادة تشغيل الحاوية."
   gcloud compute instances add-metadata "$INSTANCE" --zone "$ZONE" --quiet \
-    --metadata "nahj-image=$IMAGE${NAHJ_DOMAIN:+,nahj-domain=$NAHJ_DOMAIN}" \
+    --metadata "$META" \
     --metadata-from-file "startup-script=/dev/stdin" <<< "$STARTUP"
   # لا `instances reset`: هو قطع تيار، يتخطّى SIGTERM الذي يدفق به الخادم حالته.
   # نُعيد تشغيل سكربت الإقلاع داخل الخادم بدل إعادة تشغيل الخادم كله.
@@ -163,7 +192,7 @@ else
     --disk "name=${DATA_DISK},device-name=nahj-data,mode=rw,auto-delete=no" \
     --scopes https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write \
     --tags nahj-web \
-    --metadata "nahj-image=$IMAGE${NAHJ_DOMAIN:+,nahj-domain=$NAHJ_DOMAIN}" \
+    --metadata "$META" \
     --metadata-from-file "startup-script=/dev/stdin" \
     --quiet <<< "$STARTUP"
 fi
@@ -240,6 +269,10 @@ cat <<EOM
 الاتصال مشفَّر بشهادة Let's Encrypt، ويتجدّد تلقائياً. طلبات http تُحوَّل إلى https.
 
 افتح المتصفح وأنشئ حساب المشغّل الأول.
+
+الإعدادات (مفاتيح الدفع، البريد، التواصل…) في ملفٍ على قرص الخادم، تُضبط بـ:
+
+  INSTANCE=${INSTANCE} ZONE=${ZONE} bash scripts/server-env.sh set NAHJ_CONTACT_EMAIL=you@example.com
 
 لمراجعة السجل في أي وقت:
 

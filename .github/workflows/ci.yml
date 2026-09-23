@@ -1,0 +1,50 @@
+# فحوص كل طلب دمج — قبل الدمج لا بعده.
+#
+# لماذا هذا الملف موجود:
+#   الفحوص (الأنواع والاختبارات) كانت تعمل في ورك-فلو النشر وحده، أي بعد الدمج
+#   في main. فطلب الدمج يظهر «أخضر» وليس عليه إلا فحص الأسرار، ويُكتشف الكسر
+#   بعد أن يصل إلى main — وهو ما وقع فعلاً: دمجٌ مرّ أخضر ثم فشل نشره باختبارين.
+#   وهنا يُمسَك الكسر حيث يُصلَح بلا كلفة: على الفرع.
+#
+# ولا نشر هنا ولا أسرار: الفحص يعمل على شيفرة الطلب وحدها، فلا صلاحية أكثر من القراءة.
+
+name: فحوص طلب الدمج
+
+on:
+  pull_request:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+# دفعةٌ جديدة على الطلب نفسه تُلغي فحص الدفعة السابقة — لا فائدة من إكماله.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: الأنواع والاختبارات والبناء
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # 22 لا أقدم: التخزين يستعمل `node:sqlite` المدمج.
+          node-version: 22
+          cache: 'npm'
+
+      - name: تثبيت الحزم
+        run: npm ci
+
+      - name: فحص الأنواع
+        run: npm run typecheck
+
+      - name: الاختبارات
+        run: npm test
+
+      # البناء يُفحص أيضاً: شيفرةٌ تجتاز الأنواع قد تفشل في حزم الواجهة أو الخادم.
+      - name: البناء
+        run: npm run build
