@@ -7,6 +7,7 @@ import { publicRouter } from "./server/publicPages.ts";
 import { bootstrapFirstAccount, ensureOwnerAccount, purgeExpiredSessions } from "./server/auth.ts";
 import { ensureSubscription, startBillingWorker, stopBillingWorker } from "./server/billing.ts";
 import { DemoSandbox, DEMO_SESSION_TTL_MS, normalizeDemoSector, persistence } from "./server/db.ts";
+import { neonMirror } from "./server/persistence.ts";
 import { startBackupWorker, stopBackupWorker } from "./server/archive.ts";
 import { startNotifyWorker, stopNotifyWorker } from "./server/notify.ts";
 import { randomBytes } from "node:crypto";
@@ -250,7 +251,10 @@ async function startServer() {
   // إيقاف نظيف: آخر لقطة تُكتب قبل الخروج فلا تضيع ثوانٍ من العمل.
   const shutdown = (signal: string) => {
     console.log(`[NAHJ] ${signal} received — flushing state.`);
-    try { persistence.flush(); stopBillingWorker(); stopBackupWorker(); stopNotifyWorker(); } finally { process.exit(0); }
+    try { persistence.flush(); stopBillingWorker(); stopBackupWorker(); stopNotifyWorker(); } catch { /* نكمل إلى مرآة Neon */ }
+    // آخر لقطة إلى Neon قبل أن تُمحى الحاوية — بمهلةٍ أقصر من مهلة Cloud Run (10 ثوانٍ).
+    Promise.race([neonMirror.syncNow(), new Promise((resolve) => setTimeout(resolve, 8_000))])
+      .finally(() => process.exit(0));
   };
   process.once("SIGINT", () => shutdown("SIGINT"));
   process.once("SIGTERM", () => shutdown("SIGTERM"));
