@@ -1,6 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
+import { restoreFromNeonSync, startNeonMirror } from "./neonMirror.ts";
 
 /*
  * التخزين الدائم للذاكرة التشغيلية.
@@ -26,6 +27,8 @@ export function resolveDatabasePath() {
 }
 
 let database: DatabaseSync | null = null;
+/** مرآة Neon — تُبدأ مع أول فتحٍ للقاعدة، وتُفرَغ عند الإيقاف (server.ts). */
+export let neonMirror: { syncNow: () => Promise<void>; stop: () => void } = { syncNow: async () => {}, stop: () => {} };
 
 /*
  * WAL يحتاج ذاكرة مشتركة (mmap) بين العمليات، وهي غير متاحة على أنظمة الملفات
@@ -63,6 +66,7 @@ export function openDatabase(): DatabaseSync {
   if (database) return database;
   const filename = resolveDatabasePath();
   if (filename !== ":memory:") fs.mkdirSync(path.dirname(filename), { recursive: true });
+  restoreFromNeonSync(filename);
   const db = new DatabaseSync(filename);
   /*
    * انتظارٌ قصير عند القفل بدل الفشل الفوري.
@@ -104,6 +108,7 @@ export function openDatabase(): DatabaseSync {
     CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
   `);
   database = db;
+  neonMirror = startNeonMirror(db, filename);
   return db;
 }
 
