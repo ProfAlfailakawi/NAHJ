@@ -7,12 +7,12 @@ import { PageHeader, SectionTitle } from "../Primitives";
 type Props={lang:"ar"|"en";proposals:LearningProposal[];onResolve:(proposalId:string,clarificationId:string,answer:string)=>void};
 
 const meta={
-  new_skill:{icon:Sparkles,tone:"moss",label:"SKILL"},
-  conflict:{icon:AlertTriangle,tone:"amber",label:"CONFLICT"},
-  process_drift:{icon:Route,tone:"rose",label:"DRIFT"},
-  improvement:{icon:Lightbulb,tone:"sky",label:"BETTER"},
-  single_person_risk:{icon:UserRoundCheck,tone:"violet",label:"RISK"},
-  outdated_source:{icon:FileClock,tone:"amber",label:"STALE"},
+  new_skill:{icon:Sparkles,tone:"moss",label:"SKILL",labelAr:"مهارة"},
+  conflict:{icon:AlertTriangle,tone:"amber",label:"CONFLICT",labelAr:"تعارض"},
+  process_drift:{icon:Route,tone:"rose",label:"DRIFT",labelAr:"انحراف"},
+  improvement:{icon:Lightbulb,tone:"sky",label:"BETTER",labelAr:"تحسين"},
+  single_person_risk:{icon:UserRoundCheck,tone:"violet",label:"RISK",labelAr:"خطر"},
+  outdated_source:{icon:FileClock,tone:"amber",label:"STALE",labelAr:"مصدر قديم"},
 } as const;
 
 export function LearnView({lang,proposals,onResolve}:Props){
@@ -24,7 +24,7 @@ export function LearnView({lang,proposals,onResolve}:Props){
   const resolvedShare=proposals.length?Math.round((proposals.filter(p=>p.status!=="pending").length/proposals.length)*100):0;
 
   return <div className="page-enter">
-    <PageHeader eyebrow="LEARN / SIGNALS" title={ar?"نهج لاحظ شيئًا.":"NAHJ noticed something."} hint={ar?"المشاهدة ليست حقيقة. أنت من يحوّلها إلى معرفة معتمدة.":"Observation becomes truth only after review."}/>
+    <PageHeader eyebrow={ar?"التعلّم / الإشارات":"LEARN / SIGNALS"} title={ar?"نهج لاحظ شيئًا.":"NAHJ noticed something."} hint={ar?"المشاهدة ليست حقيقة. أنت من يحوّلها إلى معرفة معتمدة.":"Observation becomes truth only after review."}/>
     <div className="learn-layout">
       <aside className="learn-radar surface">
         {/*
@@ -51,7 +51,7 @@ export function LearnView({lang,proposals,onResolve}:Props){
             const m=meta[p.type]; const Icon=m.icon; const q=p.clarifications?.find(c=>!c.selectedAnswer) || p.clarifications?.[0];
             const a=p.evidence.methodA?.percentage; const b=p.evidence.methodB?.percentage;
             return <article key={p.id} className={`signal-card tone-${m.tone}`}>
-              <div className="signal-head"><span className="signal-icon"><Icon/></span><div><em>{m.label}</em><strong>{p.title}</strong></div><b>{p.observedCasesCount}</b></div>
+              <div className="signal-head"><span className="signal-icon"><Icon/></span><div><em>{ar?m.labelAr:m.label}</em><strong>{p.title}</strong></div><b>{p.observedCasesCount}</b></div>
               {(a!==undefined&&b!==undefined)&&<EvidenceSplit a={a} b={b}/>} 
               {q&&<div className="clarify-block"><p>{q.question}</p><div>{q.options.map(o=><button key={o} onClick={()=>onResolve(p.id,q.id,o)}>{o}</button>)}</div></div>}
               {!q&&p.evidence.details&&<div className="signal-note">{p.evidence.details}</div>}

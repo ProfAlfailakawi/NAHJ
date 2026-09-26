@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { KeyRound, LogOut, ShieldCheck, TriangleAlert, UserPlus, Users } from "lucide-react";
+import { Eye, EyeOff, KeyRound, LogOut, ShieldCheck, TriangleAlert, UserPlus, Users } from "lucide-react";
 import { PageHeader } from "../Primitives";
 import { accountsApi, ApiError, authApi, type AccountSummary } from "../../lib/api";
 
@@ -37,6 +37,8 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "viewer" });
   const [ownPassword, setOwnPassword] = useState({ current: "", next: "" });
+  /* كلمة المرور المؤقتة مخفية افتراضاً — تُكشف بزرّ، لا تُعرض لمن يمرّ خلف الشاشة. */
+  const [showTemp, setShowTemp] = useState(false);
 
   const load = useCallback(async () => {
     if (!isAdmin) { setLoading(false); return; }
@@ -96,7 +98,7 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
   return (
     <div className="page-enter">
       <PageHeader
-        eyebrow="ACCOUNTS / الحسابات"
+        eyebrow={ar?"الحسابات":"ACCOUNTS"}
         title={ar ? "من يدخل، وبأي صلاحية." : "Who gets in, and with what authority."}
         hint={ar
           ? "لا يوجد تسجيل ذاتي ولا استعادة بالبريد — الحسابات يُنشئها المشرف، وكلمة المرور المؤقتة تُسلَّم بقناة تثق بها."
@@ -107,12 +109,17 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
       <section className="surface-strong accounts-self">
         <h3><KeyRound /> {ar ? "كلمة مروري" : "My password"}</h3>
         <form onSubmit={changeOwn}>
-          <input type="password" autoComplete="current-password" required
-            placeholder={ar ? "الحالية" : "Current"}
-            value={ownPassword.current} onChange={e => setOwnPassword(v => ({ ...v, current: e.target.value }))} />
-          <input type="password" autoComplete="new-password" required
-            placeholder={ar ? "الجديدة (12 محرفاً فأكثر)" : "New (12+ characters)"}
-            value={ownPassword.next} onChange={e => setOwnPassword(v => ({ ...v, next: e.target.value }))} />
+          <div className="field">
+            <label htmlFor="own-current">{ar ? "كلمة المرور الحالية" : "Current password"}</label>
+            <input id="own-current" type="password" autoComplete="current-password" required
+              value={ownPassword.current} onChange={e => setOwnPassword(v => ({ ...v, current: e.target.value }))} />
+          </div>
+          <div className="field">
+            <label htmlFor="own-next">{ar ? "كلمة المرور الجديدة" : "New password"}</label>
+            <input id="own-next" type="password" autoComplete="new-password" required minLength={12} aria-describedby="own-next-hint"
+              value={ownPassword.next} onChange={e => setOwnPassword(v => ({ ...v, next: e.target.value }))} />
+            <small id="own-next-hint">{ar ? "12 محرفاً فأكثر" : "12+ characters"}</small>
+          </div>
           <button type="submit" disabled={!ownPassword.current || !ownPassword.next}>
             {ar ? "تغيير" : "Change"}
           </button>
@@ -129,20 +136,36 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
           <section className="surface-strong accounts-create">
             <h3><UserPlus /> {ar ? "حساب جديد" : "New account"}</h3>
             <form onSubmit={createAccount}>
-              <input required placeholder={ar ? "الاسم" : "Name"} value={form.name}
-                onChange={e => setForm(v => ({ ...v, name: e.target.value }))} />
-              <input required type="email" placeholder={ar ? "البريد" : "Email"} value={form.email}
-                onChange={e => setForm(v => ({ ...v, email: e.target.value }))} />
-              <div className="accounts-password-row">
-                <input required type="text" placeholder={ar ? "كلمة مرور مؤقتة" : "Temporary password"} value={form.password}
-                  onChange={e => setForm(v => ({ ...v, password: e.target.value }))} />
-                <button type="button" onClick={() => setForm(v => ({ ...v, password: suggestPassword() }))}>
-                  {ar ? "توليد" : "Generate"}
-                </button>
+              <div className="field">
+                <label htmlFor="acct-name">{ar ? "الاسم" : "Name"}</label>
+                <input id="acct-name" required autoComplete="off" value={form.name}
+                  onChange={e => setForm(v => ({ ...v, name: e.target.value }))} />
               </div>
-              <select value={form.role} onChange={e => setForm(v => ({ ...v, role: e.target.value }))}>
-                {ROLES.map(role => <option key={role} value={role}>{roleLabel(role, ar)}</option>)}
-              </select>
+              <div className="field">
+                <label htmlFor="acct-email">{ar ? "البريد" : "Email"}</label>
+                <input id="acct-email" required type="email" autoComplete="off" value={form.email}
+                  onChange={e => setForm(v => ({ ...v, email: e.target.value }))} />
+              </div>
+              <div className="field accounts-password-field">
+                <label htmlFor="acct-temp">{ar ? "كلمة مرور مؤقتة" : "Temporary password"}</label>
+                <div className="accounts-password-row">
+                  <input id="acct-temp" required type={showTemp ? "text" : "password"} autoComplete="new-password" value={form.password}
+                    onChange={e => setForm(v => ({ ...v, password: e.target.value }))} />
+                  <button type="button" onClick={() => setShowTemp(v => !v)} aria-pressed={showTemp} aria-controls="acct-temp"
+                    aria-label={showTemp ? (ar ? "إخفاء كلمة المرور" : "Hide password") : (ar ? "إظهار كلمة المرور" : "Show password")}>
+                    {showTemp ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                  </button>
+                  <button type="button" onClick={() => setForm(v => ({ ...v, password: suggestPassword() }))}>
+                    {ar ? "توليد" : "Generate"}
+                  </button>
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="acct-role">{ar ? "الدور" : "Role"}</label>
+                <select id="acct-role" value={form.role} onChange={e => setForm(v => ({ ...v, role: e.target.value }))}>
+                  {ROLES.map(role => <option key={role} value={role}>{roleLabel(role, ar)}</option>)}
+                </select>
+              </div>
               <button type="submit" disabled={creating}>
                 {creating ? (ar ? "جارٍ..." : "Working...") : ar ? "إنشاء" : "Create"}
               </button>

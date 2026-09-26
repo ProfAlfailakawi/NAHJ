@@ -108,7 +108,7 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
   return (
     <div className="page-enter">
       <PageHeader
-        eyebrow="CONNECTIONS / الربط"
+        eyebrow={ar?"الربط":"CONNECTIONS"}
         title={ar ? "ما هو موصولٌ فعلاً، وما هو محاكاة." : "What is actually wired, and what is simulated."}
         hint={
           ar

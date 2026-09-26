@@ -6,11 +6,13 @@ import { paymentPublicRouter } from "./server/paymentRoutes.ts";
 import { publicRouter } from "./server/publicPages.ts";
 import { bootstrapFirstAccount, ensureOwnerAccount, purgeExpiredSessions } from "./server/auth.ts";
 import { ensureSubscription, startBillingWorker, stopBillingWorker } from "./server/billing.ts";
-import { DemoSandbox, DEMO_SESSION_TTL_MS, normalizeDemoSector, persistence } from "./server/db.ts";
+import { db, DemoSandbox, DEMO_SESSION_TTL_MS, normalizeDemoSector, persistence } from "./server/db.ts";
+import { listSectors } from "./server/packs/index.ts";
 import { neonMirror } from "./server/persistence.ts";
 import { startBackupWorker, stopBackupWorker } from "./server/archive.ts";
 import { startNotifyWorker, stopNotifyWorker } from "./server/notify.ts";
 import { randomBytes } from "node:crypto";
+import { cspMiddleware } from "./server/securityHeaders.ts";
 
 /*
  * Express 4 لا يلتقط وعداً مرفوضاً من معالجٍ غير متزامن: يبقى الطلب معلّقاً،
@@ -85,9 +87,18 @@ async function startServer() {
    */
   app.set("trust proxy", "loopback, linklocal, uniquelocal");
 
-  // Conservative security response headers. Kept intentionally minimal so they
-  // cannot break the SPA or embedding in the AI Studio applet host (no CSP /
-  // X-Frame-Options which could interfere with iframe embedding or HMR).
+  // Conservative security response headers. No X-Frame-Options / frame-ancestors
+  // so embedding in the AI Studio applet host keeps working.
+  /*
+   * سياسة أمان المحتوى (CSP).
+   *
+   * كانت غائبة عمداً خشية كسر التضمين وإعادة التحميل الحيّ. والحلّ ليس غيابها بل
+   * ضبطها: لا `frame-ancestors` (التضمين يبقى)، وتُرسل في الإنتاج وحده (خادم
+   * Vite للتطوير يحقن سكربتات مضمَّنة للتحميل الحيّ). السكربتات المضمَّنة في
+   * الصفحات العامة تُعلَّم بـnonce لكل طلب، فلا حاجة إلى 'unsafe-inline' للسكربت.
+   */
+  app.use(cspMiddleware());
+
   app.use((_req, res, next) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -154,6 +165,9 @@ async function startServer() {
       enabled: demoEnabled(),
       active: DemoSandbox.isDemoRequest(),
       ttlMs: DEMO_SESSION_TTL_MS,
+      /* القطاع الحالي في الصندوق، والقطاعات المتاحة لمبدّل شريط العرض. */
+      sector: DemoSandbox.isDemoRequest() ? db.sectorCode : null,
+      sectors: demoEnabled() ? listSectors().map(({ code, nameAr, nameEn, logo }) => ({ code, nameAr, nameEn, logo })) : [],
     });
   });
 

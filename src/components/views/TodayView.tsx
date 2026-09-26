@@ -43,7 +43,7 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
   const conflictCount = open.filter(p=>p.type==="conflict"||p.type==="process_drift").length;
   return (
     <div className="page-enter">
-      <PageHeader eyebrow="NAHJ / PULSE" title={ar ? "العقل يعمل." : "The brain is working."} hint={ar ? "ما يظهر هنا هو ما يحتاجك أنت. الباقي يمشي وحده أو ينتظر دوره." : "What appears here needs you. The rest runs or waits its turn."} action={<button className="btn-primary" onClick={()=>onNavigate("teach")}><GraduationCap/>{ar?"علّم نهج":"Teach NAHJ"}</button>}/>
+      <PageHeader eyebrow={ar?"نبض نهج":"NAHJ / PULSE"} title={ar ? "العقل يعمل." : "The brain is working."} hint={ar ? "ما يظهر هنا هو ما يحتاجك أنت. الباقي يمشي وحده أو ينتظر دوره." : "What appears here needs you. The rest runs or waits its turn."} action={<button className="btn-primary" onClick={()=>onNavigate("teach")}><GraduationCap/>{ar?"علّم نهج":"Teach NAHJ"}</button>}/>
 
       {/*
         * مؤسسةٌ بدأت للتو: لا حالات بعد، فالشاشة الأولى تقول ماذا تفعل أولاً

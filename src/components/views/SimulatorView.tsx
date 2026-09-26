@@ -12,7 +12,7 @@ export function SimulatorView({lang,state,busy,onSend,onReset,onUpload,onOpenApp
   const ladder=state.stages?.length?state.stages:(ar?["النيّة","الصف","المقعد","المستند","الزيارة","الاعتماد","تم"]:["intent","grade","seat","document","visit","approval","done"]);
   const current=state.stages?.length?(state.stage??0):stepIndex(state.step);
   return <div className="page-enter">
-    <PageHeader eyebrow="CHANNEL / SIMULATOR" title={ar?"العميل لا يرى نهج. يرى مؤسستك.":"The customer sees your organization — not NAHJ."} hint={ar?"محاكاة لقناة التواصل مع عملائك (مثل واتساب) — جرّب رسالةً وشاهد كيف يردّ ومتى يطلب موافقتك.":"A safe simulation of your customer channel (e.g. WhatsApp)."}/>
+    <PageHeader eyebrow={ar?"القناة / المحادثة":"CHANNEL / SIMULATOR"} title={ar?"العميل لا يرى نهج. يرى مؤسستك.":"The customer sees your organization — not NAHJ."} hint={ar?"محاكاة لقناة التواصل مع عملائك (مثل واتساب) — جرّب رسالةً وشاهد كيف يردّ ومتى يطلب موافقتك.":"A safe simulation of your customer channel (e.g. WhatsApp)."}/>
     <div className="sim-layout">
       <section className="phone-stage surface">
         <div className="phone-shell">

@@ -1,3 +1,7 @@
+/*
+ * مرآة Firestore — محجوبةٌ بالقواعد منذ ٢٠٢٦-٠٩-١٧ لكنها مستعملة (حالتها تُعرض
+ * في شاشة الربط). لماذا لم تُحذف وما شرط حذفها: CONNECT.md، القسم الأول.
+ */
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import {
   getFirestore,

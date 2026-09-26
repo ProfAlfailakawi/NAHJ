@@ -72,7 +72,7 @@ export function PartnersAdminView({ lang, notify }: Props) {
   );
 
   if (loading) {
-    return <div className="page-enter"><PageHeader eyebrow="PARTNERS / المسوّقون" title="جارٍ التحميل..." /></div>;
+    return <div className="page-enter"><PageHeader eyebrow={ar?"المسوّقون":"PARTNERS"} title="جارٍ التحميل..." /></div>;
   }
 
   const savePartner = () => {
@@ -110,7 +110,7 @@ export function PartnersAdminView({ lang, notify }: Props) {
   return (
     <div className="page-enter owner-view">
       <PageHeader
-        eyebrow="PARTNERS / دفتر المسوّقين"
+        eyebrow={ar?"دفتر المسوّقين":"PARTNERS"}
         title="من جلب ماذا، وبكم."
         hint="كل شركة وعقدها والمسوّق الذي جلبها واتفاقه معك. العمولة تُستحقّ عن كل دورة يبدأها العميل، وتُعلَّم مدفوعة بمرجع يُثبت الدفع."
         action={<button className="btn-secondary" onClick={() => void load()}><RefreshCw /> تحديث</button>}

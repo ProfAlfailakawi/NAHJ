@@ -63,13 +63,13 @@ export function SectorsView({ lang, canApply, isDemo, notify, onApplied }: Props
   };
 
   if (loading) {
-    return <div className="page-enter"><PageHeader eyebrow="SECTOR / النشاط" title={ar ? "جارٍ القراءة..." : "Loading..."} /></div>;
+    return <div className="page-enter"><PageHeader eyebrow={ar?"النشاط":"SECTOR"} title={ar ? "جارٍ القراءة..." : "Loading..."} /></div>;
   }
 
   return (
     <div className="page-enter">
       <PageHeader
-        eyebrow="SECTOR / النشاط"
+        eyebrow={ar?"النشاط":"SECTOR"}
         title={isDemo ? (ar ? "نهج ليس نظام مدارس." : "NAHJ is not a school system.") : (ar ? "نشاط مؤسستك." : "Your sector.")}
         hint={ar
           ? "القلب عامّ: يتعلّم كيف تعمل المؤسسة أياً كان نشاطها. والحزمة هنا عقلٌ تشغيلي كامل لقطاع — مهاراته وسياساته وأنظمته ومن يحادثه — لا ألوانٌ وأسماء."
