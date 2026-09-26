@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import { Activity, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, Building2, CreditCard, Crown, FlaskConical, HandCoins, GraduationCap, History, Languages, LayoutGrid, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
+import { Activity, UserRoundCheck, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, Building2, CreditCard, Crown, FlaskConical, HandCoins, GraduationCap, History, Languages, LayoutGrid, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
 import { BrandLockup, NahjMark } from "./Brand";
 import type { Organization, User } from "../types";
 
-export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts" | "billing" | "owner" | "sectors" | "partners" | "partnerPortal";
+export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts" | "billing" | "owner" | "sectors" | "partners" | "partnerPortal" | "people";
 
 type ShellProps = {
   section: SectionId;
@@ -45,6 +45,7 @@ const nav: { id: SectionId; ar: string; en: string; icon: React.ElementType; gro
   { id: "connections", ar: "الربط", en: "Connections", icon: PlugZap, group:"operate" },
   { id: "analytics", ar: "الأثر", en: "Impact", icon: BarChart3, group:"govern" },
   { id: "control", ar: "الحوكمة", en: "Control", icon: ShieldCheck, group:"govern" },
+  { id: "people", ar: "الأشخاص", en: "People", icon: UserRoundCheck, group:"govern" },
   { id: "audit", ar: "السجل", en: "Audit", icon: History, group:"govern" },
   { id: "accounts", ar: "الحسابات", en: "Accounts", icon: Users, group:"govern" },
   { id: "billing", ar: "الاشتراك", en: "Subscription", icon: CreditCard, group:"govern" },
@@ -81,7 +82,7 @@ export function Shell({
       <div className="ambient-canvas" aria-hidden="true"/>
       <aside className="desktop-rail">
         <div className="rail-brand"><NahjMark size={48}/><span className="rail-brand-name">{ar ? "نهج" : "NAHJ"}</span></div>
-        <nav className="rail-nav">
+        <nav className="rail-nav" aria-label={ar ? "الأقسام" : "Sections"}>
           {visibleNav.map(({ id, ar: a, en, icon: Icon, group }) => {
             const divider = lastGroup && group !== lastGroup;
             lastGroup = group;
@@ -89,14 +90,14 @@ export function Shell({
               <React.Fragment key={id}>
                 {divider && <div className="rail-divider"/>}
                 <div className="nav-item-wrap">
-                  <button className={`nav-icon ${section === id ? "active" : ""}`} onClick={() => onSection(id)} aria-label={ar ? a : en}>
-                    <Icon/>
+                  <button type="button" className={`nav-icon ${section === id ? "active" : ""}`} onClick={() => onSection(id)} aria-label={ar ? a : en} aria-current={section === id ? "page" : undefined}>
+                    <Icon aria-hidden="true"/>
                     {/* الاسم ظاهرٌ بجوار الأيقونة: كان في تلميحٍ لا يظهر إلا بمرور الفأرة،
                         فمن لا يعرف الأيقونات لا يعرف أين يذهب. */}
                     <span className="nav-label">{ar ? a : en}</span>
                     {id === "learn" && alerts > 0 && <i className="nav-signal"/>}
                   </button>
-                  <span className="nav-tooltip">{ar ? a : en}</span>
+                  <span className="nav-tooltip" aria-hidden="true">{ar ? a : en}</span>
                 </div>
               </React.Fragment>
             );
@@ -121,7 +122,7 @@ export function Shell({
                       «Firebase: <اسم المشروع>» دائماً — يزعم وصلاً سحابياً ترفضه قواعد
                       الأمان أصلاً، ويكشف اسم مشروعٍ داخلي أمام من يُعرض عليه المنتج.
                       وتفصيل حالة المرآة السحابية في شاشة الربط، مقروءاً من حالتها. */}
-                  <span className={`hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium border ${demoActive ? "bg-amber-500/15 text-amber-300 border-amber-500/30" : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"}`}>
+                  <span className={`hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px] font-medium border ${demoActive ? "bg-amber-500/15 text-amber-300 border-amber-500/30" : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"}`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${demoActive ? "bg-amber-400" : "bg-emerald-400"}`}></span>
                     {demoActive ? (ar?"بلا اتصال بأي قاعدة بيانات":"No database connection") : (ar?"مخزن المحرّك المحلي":"Local engine store")}
                   </span>
@@ -167,8 +168,8 @@ export function Shell({
                 <FlaskConical aria-hidden="true"/>
               </button>
             ) : null}
-            <button className="top-icon" onClick={onToggleLang} aria-label="Language"><Languages/></button>
-            <button className="top-icon notification" onClick={onAlert} aria-label="Alerts"><Bell/>{alerts>0&&<b>{alerts>9?"9+":alerts}</b>}</button>
+            <button type="button" className="top-icon" onClick={onToggleLang} aria-label={ar ? "English — تغيير اللغة" : "العربية — Switch language"} title={ar ? "تغيير اللغة" : "Switch language"}><Languages aria-hidden="true"/></button>
+            <button type="button" className="top-icon notification" onClick={onAlert} aria-label={ar ? `التنبيهات${alerts ? ` (${alerts})` : ""}` : `Alerts${alerts ? ` (${alerts})` : ""}`} title={ar ? "التنبيهات" : "Alerts"}><Bell aria-hidden="true"/>{alerts>0&&<b>{alerts>9?"9+":alerts}</b>}</button>
             <div className="user-chip">
               <div>{user.name.slice(0,1)}</div>
               <span><strong>{user.name.split(" ")[0]}</strong><small>{user.department}</small></span>
@@ -201,7 +202,7 @@ export function Shell({
         </header>
         <main className="content-stage">{licenceBanner}{children}</main>
         <nav className="mobile-dock" aria-label="Mobile navigation">
-          {dockItems.map(({id, icon:Icon, ar:a, en})=><button key={id} className={section===id?"active":""} onClick={()=>go(id)} aria-label={ar?a:en}><Icon/><small>{ar?a:en}</small></button>)}
+          {dockItems.map(({id, icon:Icon, ar:a, en})=><button type="button" key={id} className={section===id?"active":""} onClick={()=>go(id)} aria-current={section===id?"page":undefined}><Icon aria-hidden="true"/><small>{ar?a:en}</small></button>)}
           <button className={moreActive||moreOpen?"active":""} onClick={()=>setMoreOpen(v=>!v)} aria-expanded={moreOpen} aria-label={ar?"كل الأقسام":"All sections"}><LayoutGrid/><small>{ar?"المزيد":"More"}</small></button>
         </nav>
         {moreOpen && (

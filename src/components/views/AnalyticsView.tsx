@@ -82,7 +82,7 @@ export function AnalyticsView({ lang, data }: Props) {
   return (
     <div className="page-enter">
       <PageHeader
-        eyebrow="IMPACT / ROI"
+        eyebrow={ar?"الأثر والعائد":"IMPACT / ROI"}
         title={ar ? "الأثر، لا عدد الرسائل." : "Measure outcomes, not messages."}
         hint={ar
           ? "كل رقم هنا مشتقّ من عمل مؤسستك. وما لا يمكن اشتقاقه يُقال إنه غير مقيس — لا يُملأ برقم."

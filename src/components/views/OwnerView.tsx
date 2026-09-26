@@ -199,7 +199,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
   });
 
   if (loading) {
-    return <div className="page-enter"><PageHeader eyebrow="OWNER / المالك" title="جارٍ تحميل لوحة الترخيص..." /></div>;
+    return <div className="page-enter"><PageHeader eyebrow={ar?"المالك":"OWNER"} title="جارٍ تحميل لوحة الترخيص..." /></div>;
   }
 
   const unpaidInvoices = (snapshot?.invoices || []).filter(invoice => invoice.status !== "void" && invoice.amountPaid < invoice.total);
@@ -207,7 +207,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
   return (
     <div className="page-enter owner-view">
       <PageHeader
-        eyebrow="OWNER CONSOLE / لوحة المالك"
+        eyebrow={ar?"لوحة المالك":"OWNER CONSOLE"}
         title={ar ? "ما بعتَه، وما استُحقّ عليه." : "What you sold, and what it owes."}
         hint={ar
           ? "الباقات والتسعير، بدء الاشتراك وتمديده وتجديده، الفواتير والدفعات، والإيراد. كل إجراء هنا يُسجَّل باسمك وتاريخه."

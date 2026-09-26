@@ -59,13 +59,13 @@ export function PartnerPortalView({ lang, notify }: Props) {
   useEffect(() => { void load(); }, [load]);
 
   if (loading) {
-    return <div className="page-enter"><PageHeader eyebrow="PARTNER / المسوّق" title={ar ? "جارٍ التحميل..." : "Loading..."} /></div>;
+    return <div className="page-enter"><PageHeader eyebrow={ar?"المسوّق":"PARTNER"} title={ar ? "جارٍ التحميل..." : "Loading..."} /></div>;
   }
 
   if (error || !portal) {
     return (
       <div className="page-enter">
-        <PageHeader eyebrow="PARTNER / المسوّق" title={ar ? "لوحتك غير متاحة." : "Portal unavailable."} />
+        <PageHeader eyebrow={ar?"المسوّق":"PARTNER"} title={ar ? "لوحتك غير متاحة." : "Portal unavailable."} />
         <section className="surface-strong sub-empty">
           <AlertTriangle />
           <p>{error || (ar ? "تعذّر تحميل اللوحة." : "Could not load.")}</p>
@@ -80,7 +80,7 @@ export function PartnerPortalView({ lang, notify }: Props) {
   return (
     <div className="page-enter">
       <PageHeader
-        eyebrow="PARTNER / لوحة المسوّق"
+        eyebrow={ar?"لوحة المسوّق":"PARTNER"}
         title={`أهلاً ${portal.partner.name}.`}
         hint={ar
           ? "شركاتك، وما استُحقّ لك، وما قُبض، وما بقي. الأرقام هنا هي نفسها التي يراها مالك المنصة — لا دفتران."

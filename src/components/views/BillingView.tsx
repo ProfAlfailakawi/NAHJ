@@ -232,12 +232,12 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
   const publicPlans = useMemo(() => plans.filter(plan => plan.isPublic && !plan.archived), [plans]);
 
   if (loading && !snapshot) {
-    return <div className="page-enter"><PageHeader eyebrow="SUBSCRIPTION / الاشتراك" title={ar ? "جارٍ قراءة الترخيص..." : "Reading the licence..."} /></div>;
+    return <div className="page-enter"><PageHeader eyebrow={ar?"الاشتراك":"SUBSCRIPTION"} title={ar ? "جارٍ قراءة الترخيص..." : "Reading the licence..."} /></div>;
   }
   if (!snapshot) {
     return (
       <div className="page-enter">
-        <PageHeader eyebrow="SUBSCRIPTION / الاشتراك" title={ar ? "تعذّر قراءة الاشتراك." : "Could not read the subscription."} />
+        <PageHeader eyebrow={ar?"الاشتراك":"SUBSCRIPTION"} title={ar ? "تعذّر قراءة الاشتراك." : "Could not read the subscription."} />
         <section className="surface-strong sub-empty">
           <AlertTriangle />
           <p>{ar ? "لم يستجب الخادم لطلب حالة الترخيص. أعد المحاولة، وإن تكرّر فالخادم هو المشكلة لا حسابك." : "The server did not answer the licence request."}</p>
@@ -285,7 +285,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
   return (
     <div className="page-enter">
       <PageHeader
-        eyebrow="SUBSCRIPTION / الاشتراك"
+        eyebrow={ar?"الاشتراك":"SUBSCRIPTION"}
         title={ar ? "ترخيصك، بكل تفاصيله." : "Your licence, in full."}
         hint={ar
           ? "متى بدأ، متى ينتهي، ما الباقة وما تشمله، كم استُهلك منها، وما صدر وما سُدِّد — بلا رقم واحد مخفيّ."

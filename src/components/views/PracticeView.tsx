@@ -16,7 +16,7 @@ export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPract
   const matched=compared.filter(s=>s.matched).length;
   const skipped=shadow.length-compared.length;
   return <div className="page-enter">
-    <PageHeader eyebrow="GRADUATION / EVALS" title={ar?"قبل أن يعمل… يثبت نفسه.":"Before it works, it proves itself."} hint={ar?"اختبارات ثم ظل حقيقي. الاستقلالية تُكتسب ولا تُمنح.":"Practice first. Shadow next. Autonomy is earned."}/>
+    <PageHeader eyebrow={ar?"التخرّج والتقييم":"GRADUATION / EVALS"} title={ar?"قبل أن يعمل… يثبت نفسه.":"Before it works, it proves itself."} hint={ar?"اختبارات ثم ظل حقيقي. الاستقلالية تُكتسب ولا تُمنح.":"Practice first. Shadow next. Autonomy is earned."}/>
     <div className="graduation-grid">
       <section className="graduation-stage surface">
         <div className="graduation-track">

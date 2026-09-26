@@ -8,7 +8,7 @@ type Props={lang:"ar"|"en";items:WorkItem[];onTakeOver:(id:string)=>void;onResum
 export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWork}:Props){
   const ar=lang==="ar"; const [selectedId,setSelectedId]=useState(items[0]?.id||""); const item=useMemo(()=>items.find(w=>w.id===selectedId)||items[0],[items,selectedId]);
   return <div className="page-enter">
-    <PageHeader eyebrow="WORK / LIVE" title={ar?"العمل يتحرك أمامك.":"Watch the work move."} hint={ar?"كل حالة لها مسار، قرار، مصدر، وإنسان يستطيع الاستلام فورًا.":"Every case has a path, evidence, and a human takeover switch."}/>
+    <PageHeader eyebrow={ar?"العمل / مباشر":"WORK / LIVE"} title={ar?"العمل يتحرك أمامك.":"Watch the work move."} hint={ar?"كل حالة لها مسار، قرار، مصدر، وإنسان يستطيع الاستلام فورًا.":"Every case has a path, evidence, and a human takeover switch."}/>
     <div className="work-layout">
       <section className="work-queue surface">
         <SectionTitle title={ar?"الجاري":"Live"} meta={`${items.filter(i=>i.state!=="completed").length}`}/>
@@ -19,7 +19,7 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
         </button>)}</div>
       </section>
       {item&&<section className="work-focus surface-strong">
-        <div className="work-focus-top"><div><em>{item.code}</em><h2>{item.details?.studentName||item.contactName}</h2><span>{item.skillName}</span></div><div className={`mode-orb ${item.assignedMode}`}><span>{item.assignedMode==="ai"?<Bot/>:<UserRound/>}</span><small>{item.assignedMode==="ai"?"AI":"HUMAN"}</small></div></div>
+        <div className="work-focus-top"><div><em>{item.code}</em><h2>{item.details?.studentName||item.contactName}</h2><span>{item.skillName}</span></div><div className={`mode-orb ${item.assignedMode}`}><span>{item.assignedMode==="ai"?<Bot/>:<UserRound/>}</span><small>{item.assignedMode==="ai"?(ar?"نهج":"AI"):(ar?"موظف":"HUMAN")}</small></div></div>
         <div className="work-focus-river"><WorkRiver progress={item.progressPercent} risk={item.riskLevel}/><strong>{item.progressPercent}%</strong></div>
         <div className="work-now"><Waypoints/><span><small>{ar?"الآن":"NOW"}</small><strong>{item.currentStepTitle}</strong></span></div>
         <div className="timeline-minimal">{item.timeline.slice(0,5).map((t,i)=><div key={`${t.time}-${i}`}><span className={t.actor}><i>{t.actor==="ai"?<Bot/>:t.actor==="human"?<UserRound/>:<Waypoints/>}</i></span><section><b>{t.title}</b><small>{t.time}</small></section></div>)}</div>
