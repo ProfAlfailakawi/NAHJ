@@ -23,7 +23,11 @@ import { PartnerPortalView } from "./components/views/PartnerPortalView";
 import { HelpPanel } from "./components/Explain";
 import { CommandPalette, type CommandTarget } from "./components/CommandPalette";
 import { ApprovalModal } from "./components/ApprovalModal";
-import { apiOrNull, authApi, SubscriptionBlockedError, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
+import { EmergencyFab, EmergencyPauseDialog, type AutopilotPause } from "./components/EmergencyPause";
+import { DemoBanner, type DemoSector } from "./components/DemoBanner";
+import { PeopleView } from "./components/views/PeopleView";
+import type { PromoteOptions } from "./components/views/SkillsView";
+import { api, ApiError, apiOrNull, authApi, SubscriptionBlockedError, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
 import { LoginScreen } from "./components/LoginScreen";
 import { OrgSetupView } from "./components/OrgSetupView";
 import type { ApprovalRequest,AuditEvent,AutonomyLevel,Connector,LearningProposal,Organization,ShadowComparison,Skill,TestCase,User,WorkItem } from "./types";
@@ -52,6 +56,21 @@ type ContextResponse={organization:Organization;users:User[];currentUser:User;or
  */
 const blankOrganization:Organization={id:"",name:"",nameEn:"",industry:"",tagline:"",logo:"",verifiedSkillsCount:0,hoursSavedMonth:0};
 const blankUser:User={id:"",name:" ",email:"",role:"employee",department:"",avatar:""};
+
+/*
+ * منطقة الإشعارات — حاضرةٌ دائماً ليُعلنها قارئ الشاشة.
+ *
+ * كان الإشعار يُركَّب ويُزال بلا دور ولا aria-live، فلا يسمعه من لا يراه:
+ * «تم الاعتماد والتنفيذ» أو «تعذّرت العملية» تمرّ صامتة. المنطقة تبقى في
+ * الشجرة، والخطأ يُعلَن فوراً (assertive) والنجاح بتهذيب (polite).
+ */
+function ToastRegion({toast}:{toast:{text:string;error?:boolean}|null}){
+  return <>
+    <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{toast&&!toast.error?toast.text:""}</div>
+    <div className="sr-only" role="alert" aria-live="assertive" aria-atomic="true">{toast?.error?toast.text:""}</div>
+    {toast&&<div className={`toast ${toast.error?"error":""}`} aria-hidden="true">{toast.error?<TriangleAlert/>:<CheckCircle2/>}<span>{toast.text}</span></div>}
+  </>;
+}
 
 export default function App(){
   const [lang,setLang]=useState<"ar"|"en">("ar");
@@ -87,7 +106,13 @@ export default function App(){
   const [shadowBusy,setShadowBusy]=useState(false);
   const [simBusy,setSimBusy]=useState(false);
   const [testingConnector,setTestingConnector]=useState<string|null>(null);
-  const [paused,setPaused]=useState(false);
+  /* الإيقاف الطارئ يُقرأ من الخادم — كان علَماً في المتصفح لا يوقف شيئاً. */
+  const [autopilot,setAutopilot]=useState<{pause:AutopilotPause|null;autopilotSkills:{id:string}[]}>({pause:null,autopilotSkills:[]});
+  const [pauseOpen,setPauseOpen]=useState(false);
+  const [pauseBusy,setPauseBusy]=useState(false);
+  const paused=Boolean(autopilot.pause?.active);
+  const [demoSector,setDemoSector]=useState<string|null>(null);
+  const [demoSectors,setDemoSectors]=useState<DemoSector[]>([]);
   const [serverLive,setServerLive]=useState(false);
   const [demoEnabled,setDemoEnabled]=useState(false);
   const [demoActive,setDemoActive]=useState(false);
@@ -138,6 +163,7 @@ export default function App(){
   const refreshWork=useCallback(async()=>{const d=await apiOrNull<{workItems:WorkItem[]}>("/work");if(d?.workItems)setWork(d.workItems)},[]);
   const refreshApprovals=useCallback(async()=>{const d=await apiOrNull<{approvalRequests:ApprovalRequest[]}>("/approvals");if(d?.approvalRequests)setApprovals(d.approvalRequests)},[]);
   const refreshSkills=useCallback(async()=>{const d=await apiOrNull<{skills:Skill[]}>("/skills");if(d?.skills)setSkills(d.skills)},[]);
+  const refreshAutopilot=useCallback(async()=>{const d=await apiOrNull<{pause:AutopilotPause|null;autopilotSkills:{id:string}[]}>("/autopilot/status");if(d)setAutopilot(d)},[]);
   const refreshSimulator=useCallback(async()=>{const d=await apiOrNull<{state:SimulatorState}>("/simulator/state");if(d?.state)setSim(d.state)},[]);
   const refreshBilling=useCallback(async()=>{
     setBillingLoading(true);
@@ -210,15 +236,17 @@ export default function App(){
       if(ap?.approvalRequests)setApprovals(ap.approvalRequests); if(co?.connectors)setConnectors(co.connectors); if(au?.auditEvents)setAudit(au.auditEvents);
       if(an)setAnalytics(an); if(gv?.governance)setGovernance(gv.governance); if(td)setTodayData(td); if(si?.state)setSim(si.state);
       if(pr){setPractice(pr.testCases||[]);setShadow(pr.shadowComparisons||[])}
+      void refreshAutopilot();
     }catch(error){
       // انتهاء الجلسة أثناء التحميل يعيدنا للبوابة بدل عرض بيانات بذرة كأنها سجلّ المؤسسة.
       if(error instanceof UnauthorizedError)setAuthState("anonymous");
     }
-  },[refreshBilling]);
+  },[refreshBilling,refreshAutopilot]);
 
   const refreshDemoConfig=useCallback(async()=>{
-    const cfg=await apiOrNull<{enabled:boolean;active:boolean}>("/demo/config");
+    const cfg=await apiOrNull<{enabled:boolean;active:boolean;sector?:string|null;sectors?:DemoSector[]}>("/demo/config");
     setDemoEnabled(Boolean(cfg?.enabled)); setDemoActive(Boolean(cfg?.active));
+    setDemoSector(cfg?.sector||null); setDemoSectors(cfg?.sectors||[]);
     return cfg;
   },[]);
 
@@ -282,11 +310,22 @@ export default function App(){
     else setProposals(v=>v.map(p=>p.id===proposalId?{...p,status:"resolved",clarifications:p.clarifications?.map(c=>c.id===clarificationId?{...c,selectedAnswer:answer}:c)}:p));
     notify(lang==="ar"?"تم اعتماد القرار في عقل المؤسسة":"Decision verified in Company Brain");void refreshAudit();
   });
-  const promote=guarded(async(id:string,l:AutonomyLevel)=>{
-    const d=await apiOrNull<{success:boolean;message:string;skill?:Skill}>(`/skills/${id}/promote`,{method:"POST",body:JSON.stringify({targetLevel:l})});
+  const promote=guarded(async(id:string,l:AutonomyLevel,options:PromoteOptions={})=>{
+    /*
+     * `api` لا `apiOrNull`: رفضُ المراجعة (409) يجب أن يُقال بسببه، لا أن يُقرأ null
+     * على أنه «الخادم بعيد» فتُرفع المهارة محلياً وهي لم تُرفع.
+     */
+    let d:{success:boolean;message:string;skill?:Skill};
+    try{ d=await api(`/skills/${id}/promote`,{method:"POST",body:JSON.stringify({targetLevel:l,...options})}); }
+    catch(error){
+      if(error instanceof ApiError&&error.status===409){notify(error.message,true);return}
+      if(error instanceof ApiError&&error.status===402)throw new SubscriptionBlockedError(error.message);
+      if(error instanceof ApiError&&(error.status===401||error.status===403))throw new UnauthorizedError();
+      throw error;
+    }
     if(d?.success&&d.skill)setSkills(v=>v.map(s=>s.id===id?d.skill!:s));
-    else if(d && !d.success){notify(d.message,true);return}else setSkills(v=>v.map(s=>s.id===id?{...s,autonomyLevel:l}:s));
-    notify(lang==="ar"?"تم تحديث مستوى الاستقلالية":"Autonomy updated");void refreshAudit();
+    else{notify(d?.message||(lang==="ar"?"لم تُحدَّث الاستقلالية":"Autonomy not updated"),true);return}
+    notify(lang==="ar"?"تم تحديث مستوى الاستقلالية":"Autonomy updated");void refreshAudit();void refreshAutopilot();
   });
   const rollback=guarded(async(id:string,v:number)=>{const d=await apiOrNull<{success:boolean;message:string;skill?:Skill}>(`/skills/${id}/rollback`,{method:"POST",body:JSON.stringify({targetVersion:v})});if(d?.skill)setSkills(x=>x.map(s=>s.id===id?d.skill!:s));else setSkills(x=>x.map(s=>s.id===id?{...s,activeVersion:v}:s));notify(d?.message|| (lang==="ar"?`تم الرجوع إلى v${v}`:`Rolled back to v${v}`));void refreshAudit()});
   const toggleSkill=guarded(async(id:string)=>{const d=await apiOrNull<{skill?:Skill;active?:boolean}>(`/skills/${id}/killswitch`,{method:"POST",body:"{}"});if(d?.skill)setSkills(x=>x.map(s=>s.id===id?d.skill!:s));else setSkills(x=>x.map(s=>s.id===id?{...s,killSwitchActive:!s.killSwitchActive}:s));notify(lang==="ar"?"تم تحديث حالة المهارة":"Skill state updated");void refreshAudit()});
@@ -311,12 +350,27 @@ export default function App(){
   const simSend=guarded(async(text:string)=>{setSimBusy(true);const d=await apiOrNull<{state:SimulatorState}>("/simulator/message",{method:"POST",body:JSON.stringify({text})});if(d?.state){setSim(d.state);/* طلب الموافقة الذي فتحته المحادثة يُحمَّل ليظهر في البوابة والتنبيهات. */if(d.state.approvalStatus==="pending")await loadAll();}else setSim(v=>({...v,messages:[...v.messages,{id:`c_${Date.now()}`,sender:"customer",text,timestamp:"الآن"},{id:`a_${Date.now()}`,sender:"ai",text:lang==="ar"?"وصلت رسالتك. أتابعها وفق الإجراء المعتمد.":"Got it. I’m following the verified process.",timestamp:"الآن"}]}));setSimBusy(false)});
   const simReset=guarded(async()=>{const d=await apiOrNull<{state:SimulatorState}>("/simulator/reset",{method:"POST",body:"{}"});setSim(d?.state||fallbackSimulator)});
   const simUpload=guarded(async()=>{setSimBusy(true);const d=await apiOrNull<{state:SimulatorState}>("/simulator/upload-doc",{method:"POST",body:"{}"});if(d?.state)setSim(d.state);await Promise.all([refreshApprovals(),refreshWork()]);setSimBusy(false);notify(lang==="ar"?"تم التحقق من المستند":"Document verified")});
+  const emergency=guarded(async(reason:string)=>{
+    setPauseBusy(true);
+    const path=paused?"/autopilot/resume":"/autopilot/emergency-pause";
+    try{
+      const d=await api<{message:string;pause:AutopilotPause|null;notified?:number}>(path,{method:"POST",body:JSON.stringify({reason})});
+      setPauseOpen(false);
+      notify(paused?(lang==="ar"?`استُؤنف التنفيذ — ${d.message}`:"Execution resumed"):(lang==="ar"?`إيقاف طارئ — ${d.message}${d.notified?` وأُبلغ ${d.notified}`:""}`:"Emergency pause engaged"));
+    }catch(error){
+      if(error instanceof ApiError&&error.status===400){notify(error.message,true);return}
+      throw error;
+    }finally{setPauseBusy(false)}
+    await Promise.all([refreshAutopilot(),refreshSkills(),refreshAudit()]);
+  });
+  const switchDemoSector=async(sector:string)=>{ if(sector&&sector!==demoSector) await enterDemo(sector); };
   const codified=guarded(async()=>{await refreshSkills();const context=await apiOrNull<ContextResponse>("/context");if(context)setOrganization(context.organization);setSection("skills")});
 
   const approvalByWork=useMemo(()=>Object.fromEntries(approvals.filter(a=>a.status==="pending").map(a=>[a.workItemId,a.id])),[approvals]);
   const activeApprovalObj=approvals.find(a=>a.id===activeApproval&&a.status==="pending")||null;
   const alertCount=approvals.filter(a=>a.status==="pending").length+proposals.filter(p=>p.status==="pending").length;
   const isOwner=account?.role==="owner";
+  const canManageAutopilot=account?.role==="owner"||account?.role==="admin"||account?.role==="manager";
 
   if(authState==="checking")return <div className="boot-gate"/>;
   if(authState==="anonymous"||authState==="setup")
@@ -349,7 +403,7 @@ export default function App(){
         </div>
       </header>
       <main className="partner-stage"><OwnerView lang={lang} notify={notify} onChanged={()=>void refreshBilling()}/></main>
-      {toast&&<div className={`toast ${toast.error?"error":""}`}>{toast.error?<TriangleAlert/>:<CheckCircle2/>}<span>{toast.text}</span></div>}
+      <ToastRegion toast={toast}/>
     </div>;
 
   if(orgConfigured===false&&!demoActive&&account?.role!=="partner")
@@ -366,7 +420,7 @@ export default function App(){
           title={lang==="ar"?"تسجيل الخروج":"Sign out"} aria-label={lang==="ar"?"تسجيل الخروج":"Sign out"}><LogOut/></button>
       </header>
       <main className="partner-stage"><PartnerPortalView lang={lang} notify={notify}/></main>
-      {toast&&<div className={`toast ${toast.error?"error":""}`}>{toast.error?<TriangleAlert/>:<CheckCircle2/>}<span>{toast.text}</span></div>}
+      <ToastRegion toast={toast}/>
     </div>;
 
   let view:React.ReactNode;
@@ -374,13 +428,14 @@ export default function App(){
     case "today":view=<TodayView lang={lang} organization={organization} onNavigate={setSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval} todayMetrics={todayData?.metrics||null} memory={todayData?.institutionalMemoryCoverage||null} skills={skills} practiceCount={practice.length} canManageAccounts={account?.role==="admin"||account?.role==="owner"}/>;break;
     case "learn":view=<LearnView lang={lang} proposals={proposals} onResolve={resolve}/>;break;
     case "teach":view=<TeachView lang={lang} onSkillCodified={()=>void codified()} onNotify={notify}/>;break;
-    case "skills":view=<SkillsView lang={lang} skills={skills} onPromote={(id,l)=>void promote(id,l)} onRollback={(id,v)=>void rollback(id,v)} onToggleKill={id=>void toggleSkill(id)}/>;break;
+    case "skills":view=<SkillsView lang={lang} skills={skills} onPromote={(id,l,o)=>void promote(id,l,o)} onOpenPeople={()=>setSection("people")} onSkillUpdated={sk=>setSkills(v=>v.map(x=>x.id===sk.id?sk:x))} notify={notify} onRollback={(id,v)=>void rollback(id,v)} onToggleKill={id=>void toggleSkill(id)}/>;break;
     case "practice":view=<PracticeView lang={lang} cases={practice} shadow={shadow} running={practiceBusy} shadowRunning={shadowBusy} onRunPractice={()=>void runPractice()} onRunShadow={()=>void runShadow()}/>;break;
     case "work":view=<WorkView lang={lang} items={work} approvalByWork={approvalByWork} onTakeOver={id=>void takeOver(id)} onResume={id=>void resume(id)} onApproval={setActiveApproval}/>;break;
     case "simulator":view=<SimulatorView lang={lang} state={sim} busy={simBusy} onSend={t=>void simSend(t)} onReset={()=>void simReset()} onUpload={()=>void simUpload()} onOpenApproval={()=>{/* الطلب الذي فتحته هذه المحادثة بعينه — لا أول طلبٍ معلّق في المؤسسة. */const a=approvals.find(x=>x.id===sim.approvalId&&x.status==="pending")||approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id)}}/>;break;
     case "connections":view=<ConnectionsView lang={lang} connectors={connectors} testingId={testingConnector} onTest={id=>void testConnector(id)}/>;break;
     case "analytics":view=<AnalyticsView lang={lang} data={analytics}/>;break;
-    case "control":view=<ControlView lang={lang} governance={governance} paused={paused} onPause={()=>{setPaused(v=>!v);notify(!paused?(lang==="ar"?"تم إيقاف التنفيذ الآلي":"Execution paused"):(lang==="ar"?"تم الاستئناف":"Execution resumed"))}}/>;break;
+    case "control":view=<ControlView lang={lang} governance={governance} paused={paused} pause={autopilot.pause} onPause={()=>setPauseOpen(true)}/>;break;
+    case "people":view=<PeopleView lang={lang} canAssign={account?.role==="admin"||account?.role==="owner"||account?.role==="manager"} notify={notify} onChanged={()=>void refreshSkills()}/>;break;
     case "audit":view=<AuditView lang={lang} events={audit}/>;break;
     case "accounts":view=<AccountsView lang={lang} currentAccountId={account?.id||""} isAdmin={account?.role==="admin"||account?.role==="owner"} notify={notify}/>;break;
     case "partners":view=<PartnersAdminView lang={lang} notify={notify}/>;break;
@@ -392,12 +447,14 @@ export default function App(){
   }
 
   return <>
-    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut} onHelp={()=>setHelpOpen(true)} onSearch={()=>setPaletteOpen(true)} isOwner={isOwner} licenceBanner={<SubscriptionBanner snapshot={billing} lang={lang} onOpen={()=>setSection("billing")}/>}>{paused&&<div className="pause-banner"><TriangleAlert/>{lang==="ar"?"التنفيذ الآلي متوقف. التعلم والمراجعة يعملان.":"Autonomous execution is paused. Learning and review remain active."}</div>}{view}</Shell>
-    <ApprovalModal lang={lang} approval={activeApprovalObj} busy={approvalBusy} onClose={()=>setActiveApproval(null)} onApprove={id=>void decideApproval(id,"approved")} onReject={(id,r)=>void decideApproval(id,"rejected",r)} onTakeOver={id=>void takeOver(id)}/>
+    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut} onHelp={()=>setHelpOpen(true)} onSearch={()=>setPaletteOpen(true)} isOwner={isOwner} licenceBanner={<SubscriptionBanner snapshot={billing} lang={lang} onOpen={()=>setSection("billing")}/>}>{demoActive&&<DemoBanner lang={lang} sector={demoSector} sectors={demoSectors} busy={demoBusy} onSwitch={s=>void switchDemoSector(s)} onReset={()=>void resetDemo()} onExit={()=>void exitDemo()}/>}{paused&&<div className="pause-banner" role="status"><TriangleAlert aria-hidden="true"/><span>{lang==="ar"?`التنفيذ الآلي متوقف${autopilot.pause?.by?` — أوقفه ${autopilot.pause.by}`:""}${autopilot.pause?.reason?`: ${autopilot.pause.reason}`:""}. التعلم والمراجعة يعملان.`:"Autonomous execution is paused. Learning and review remain active."}</span></div>}{view}</Shell>
+    {(autopilot.autopilotSkills.length>0||paused)&&canManageAutopilot&&<EmergencyFab lang={lang} paused={paused} onOpen={()=>setPauseOpen(true)}/>}
+    <EmergencyPauseDialog lang={lang} open={pauseOpen} paused={paused} busy={pauseBusy} autopilotCount={autopilot.autopilotSkills.length} onClose={()=>setPauseOpen(false)} onConfirm={r=>void emergency(r)}/>
+    <ApprovalModal lang={lang} approval={activeApprovalObj} busy={approvalBusy} onClose={()=>setActiveApproval(null)} onApprove={(id,r)=>void decideApproval(id,"approved",r)} onReject={(id,r)=>void decideApproval(id,"rejected",r)} onTakeOver={id=>void takeOver(id)}/>
     <HelpPanel open={helpOpen} onClose={()=>setHelpOpen(false)}/>
     <CommandPalette open={paletteOpen} onClose={()=>setPaletteOpen(false)} lang={lang} skills={skills} workItems={work}
       approvals={approvals} audit={audit} isOwner={isOwner}
       onGo={(target:CommandTarget)=>{setSection(target.section);if(target.approvalId)setActiveApproval(target.approvalId)}}/>
-    {toast&&<div className={`toast ${toast.error?"error":""}`}>{toast.error?<TriangleAlert/>:<CheckCircle2/>}<span>{toast.text}</span></div>}
+    <ToastRegion toast={toast}/>
   </>;
 }

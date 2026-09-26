@@ -32,6 +32,8 @@ export interface GovernanceData {
 type Props = {
   lang: "ar" | "en";
   paused: boolean;
+  /** من أوقف ولماذا — يُعرض تحت حالة الإيقاف. */
+  pause?: { reason: string; by: string; at: string; skillIds: string[] } | null;
   onPause: () => void;
   governance: GovernanceData | null;
 };
@@ -65,7 +67,7 @@ function Guard({ icon, measure, label, ar, alarming = false, suffix = "" }: {
   );
 }
 
-export function ControlView({ lang, paused, onPause, governance }: Props) {
+export function ControlView({ lang, paused, pause, onPause, governance }: Props) {
   const ar = lang === "ar";
   const autonomy = governance?.autonomyDistribution || {};
   const autonomyTotal = Object.values(autonomy).reduce((sum, count) => sum + count, 0);
@@ -83,7 +85,7 @@ export function ControlView({ lang, paused, onPause, governance }: Props) {
   return (
     <div className="page-enter">
       <PageHeader
-        eyebrow="CONTROL / SAFETY"
+        eyebrow={ar?"الحوكمة والسلامة":"CONTROL / SAFETY"}
         title={ar ? "الاستقلالية لها حدود." : "Autonomy has boundaries."}
         hint={ar
           ? "الأرقام هنا مشتقّة من سياسات مؤسستك وموافقاتها وسجلّ تدقيقها — لا من إعدادات عرض."
@@ -94,10 +96,13 @@ export function ControlView({ lang, paused, onPause, governance }: Props) {
         <section className={`control-core surface ${paused ? "paused" : ""}`}>
           <GovernanceShield paused={paused} />
           <div className="control-state">
-            <em>{paused ? "PAUSED" : "PROTECTED"}</em>
+            <em>{paused ? (ar ? "متوقف" : "PAUSED") : (ar ? "محمي" : "PROTECTED")}</em>
             <strong>{paused ? (ar ? "التنفيذ متوقف" : "Execution paused") : (ar ? "ضمن الحدود" : "Within guardrails")}</strong>
+            {paused && pause && <small>{ar
+              ? `أوقفه ${pause.by} — ${pause.reason} (${pause.skillIds.length} مهارة)`
+              : `Paused by ${pause.by} — ${pause.reason} (${pause.skillIds.length} skills)`}</small>}
           </div>
-          <button className={paused ? "btn-primary" : "emergency-button"} onClick={onPause}>
+          <button type="button" className={paused ? "btn-primary" : "emergency-button"} onClick={onPause}>
             {paused ? <ShieldCheck /> : <Siren />}
             {paused ? (ar ? "استأنف بعد المراجعة" : "Resume safely") : (ar ? "إيقاف طارئ" : "Emergency pause")}
           </button>
