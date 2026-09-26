@@ -6,7 +6,8 @@ export class SkillEngine {
   public static promoteSkillAutonomy(
     skillId: string,
     targetLevel: AutonomyLevel,
-    approvedBy: string
+    approvedBy: string,
+    record?: Record<string, any>,
   ): { success: boolean; message: string; skill?: Skill } {
     const skill = db.skills.find((s) => s.id === skillId);
     if (!skill) {
@@ -36,6 +37,7 @@ export class SkillEngine {
       latencyMs: 30,
       details: `ترقية استقلالية مهارة "${skill.name}" من المستوى ${previousLevel} إلى المستوى ${targetLevel} بواسطة ${approvedBy}.`,
       status: "success",
+      ...(record ? { record } : {}),
     });
 
     return {
@@ -102,6 +104,58 @@ export class SkillEngine {
     });
 
     return { success: true, active: skill.killSwitchActive, skill };
+  }
+
+  /**
+   * إيقافٌ طارئ لكل مهارات التنفيذ (L5 الاعتماد وL6 الطيار الآلي) بضغطة واحدة.
+   *
+   * كان زرّ «إيقاف طارئ» في شاشة الحوكمة يبدّل علَماً في المتصفح وحده: يظهر
+   * شريط «التنفيذ متوقف» ولا يتوقف في الخادم شيء. صار يُفعّل قاطع كل مهارة
+   * تنفيذ، ويحفظ من أوقف ولماذا، ويُسجَّل حرجاً في التدقيق.
+   */
+  public static emergencyPause(reason: string, actorName: string): { success: boolean; message: string; pausedSkills: Skill[] } {
+    const clean = String(reason || "").trim();
+    if (clean.length < 3) return { success: false, message: "سبب الإيقاف مطلوب.", pausedSkills: [] };
+    if (db.emergencyPause?.active) return { success: false, message: "الإيقاف الطارئ مفعّل من قبل.", pausedSkills: [] };
+    const targets = db.skills.filter(skill => skill.autonomyLevel >= 5 && !skill.killSwitchActive);
+    for (const skill of targets) skill.killSwitchActive = true;
+    const at = new Date().toISOString();
+    db.emergencyPause = { active: true, reason: clean.slice(0, 500), by: actorName, at, skillIds: targets.map(skill => skill.id) };
+    db.logAudit({
+      actorType: "human",
+      actorName,
+      action: "EMERGENCY_PAUSE_AUTOPILOT",
+      provenance: "Emergency Circuit Breaker — كل المهارات",
+      risk: "critical",
+      latencyMs: 10,
+      details: `إيقاف طارئ لـ${targets.length} مهارة تنفيذ بواسطة ${actorName}. السبب: ${clean}`,
+      status: "warning",
+      record: { reason: clean, skillIds: targets.map(skill => skill.id) },
+    });
+    return { success: true, message: `أُوقفت ${targets.length} مهارة تنفيذ.`, pausedSkills: targets };
+  }
+
+  /** الاستئناف يعيد ما أوقفه الإيقاف الطارئ وحده — لا ما أوقفه أحدٌ يدوياً قبله. */
+  public static emergencyResume(reason: string, actorName: string): { success: boolean; message: string; resumedSkills: Skill[] } {
+    const clean = String(reason || "").trim();
+    if (clean.length < 3) return { success: false, message: "سبب الاستئناف مطلوب.", resumedSkills: [] };
+    const pause = db.emergencyPause;
+    if (!pause?.active) return { success: false, message: "لا إيقاف طارئ مفعّل.", resumedSkills: [] };
+    const resumed = db.skills.filter(skill => pause.skillIds.includes(skill.id) && skill.killSwitchActive);
+    for (const skill of resumed) skill.killSwitchActive = false;
+    db.emergencyPause = { ...pause, active: false, resumedBy: actorName, resumedAt: new Date().toISOString(), resumeReason: clean.slice(0, 500) };
+    db.logAudit({
+      actorType: "human",
+      actorName,
+      action: "EMERGENCY_RESUME_AUTOPILOT",
+      provenance: "Emergency Circuit Breaker — كل المهارات",
+      risk: "high",
+      latencyMs: 10,
+      details: `استئناف ${resumed.length} مهارة بعد الإيقاف الطارئ بواسطة ${actorName}. السبب: ${clean}`,
+      status: "success",
+      record: { reason: clean, skillIds: resumed.map(skill => skill.id) },
+    });
+    return { success: true, message: `استُؤنفت ${resumed.length} مهارة.`, resumedSkills: resumed };
   }
 
   /**

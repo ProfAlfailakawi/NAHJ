@@ -20,7 +20,13 @@ import {
   LEDGER_LABELS, OWNER_ONLY, backupStatus, buildFullExport, buildLedgerCsv, describeExport,
   humanBytes, listBackups, runBackup, type LedgerName,
 } from "./archive.ts";
-import { flushNotifications, listNotifications, notifyStatus } from "./notify.ts";
+import { ipBlocked, recordIpFailure } from "./loginThrottle.ts";
+import { reviewPromotion } from "./engine/promotionReview.ts";
+import { buildDecisionRecord, reasonRequiredFor } from "./engine/decisionRecord.ts";
+import { assignBackup, coverageReport, recordCoverageSnapshot } from "./engine/coverage.ts";
+import { normalizeManualOptions, renderManualHtml, signManual, verifyManual } from "./manual.ts";
+import { SECTOR_COMPLIANCE_PRESETS } from "./engine/policyEngine.ts";
+import { flushNotifications, listNotifications, notifyEmergencyPause, notifyStatus } from "./notify.ts";
 import { incrementUsage, maxAutonomyLevel } from "./billing.ts";
 import {
   AuthenticatedRequest,
@@ -112,23 +118,7 @@ authRouter.post("/setup", async (req: Request, res: Response) => {
  * قفل الحساب يحمي حساباً بعينه؛ ولا يمنع من يجرّب كلمة مرور واحدة شائعة على
  * مئات البُرُد. تُعدّ الإخفاقات وحدها، فالدخول الناجح لا يستهلك شيئاً.
  */
-const LOGIN_IP_WINDOW_MS = 15 * 60_000;
-const LOGIN_IP_MAX_FAILURES = 30;
-const loginFailuresByIp = new Map<string, { count: number; resetAt: number }>();
-function ipBlocked(ip: string): boolean {
-  const entry = loginFailuresByIp.get(ip);
-  if (!entry) return false;
-  if (entry.resetAt <= Date.now()) { loginFailuresByIp.delete(ip); return false; }
-  return entry.count >= LOGIN_IP_MAX_FAILURES;
-}
-function recordIpFailure(ip: string): void {
-  const entry = loginFailuresByIp.get(ip);
-  if (!entry || entry.resetAt <= Date.now()) loginFailuresByIp.set(ip, { count: 1, resetAt: Date.now() + LOGIN_IP_WINDOW_MS });
-  else entry.count += 1;
-  if (loginFailuresByIp.size > 10_000) {
-    for (const [key, value] of loginFailuresByIp) if (value.resetAt <= Date.now()) loginFailuresByIp.delete(key);
-  }
-}
+/* العدّ محفوظٌ في SQLite (server/loginThrottle.ts) فلا تُصفّره إعادة التشغيل. */
 
 authRouter.post("/login", async (req: Request, res: Response) => {
   const ip = req.ip || req.socket.remoteAddress || "unknown";
@@ -821,15 +811,49 @@ apiRouter.post("/skills/:id/promote", requireRole("admin", "manager"), (req: Req
       message: `باقتك الحالية تسمح حتى المستوى L${ceiling}. الترقية إلى L${targetLevel} تحتاج باقة أعلى.`,
     });
   }
+  const level = Number(targetLevel);
+  if (!Number.isInteger(level) || level < 0 || level > 6) {
+    return res.status(400).json({ success: false, message: "مستوى الاستقلالية يجب أن يكون بين 0 و6." });
+  }
+  const skill = db.skills.find((candidate) => candidate.id === req.params.id);
+  if (!skill) return res.status(404).json({ success: false, message: "المهارة غير موجودة" });
+  /*
+   * مراجعة الترقية: الصعود على السُلّم يحتاج دليلاً (تدرّب، ظل) وتوقيع المسؤول.
+   * والنزول لا يحتاج شيئاً — تخفيض الاستقلالية إجراء سلامة لا يُؤخَّر.
+   */
+  const signer = (req as AuthenticatedRequest).account?.name || db.getCurrentUser().name;
+  const review = reviewPromotion(skill, level as AutonomyLevel, db.testCases, db.shadowComparisons, {
+    signedOff: req.body?.signOff === true,
+    workItemSkill: new Map(db.workItems.map((item) => [item.id, item.skillId])),
+  });
+  if (review.blocked) {
+    return res.status(409).json({ success: false, code: "PROMOTION_REVIEW_BLOCKED", message: review.missing.join(" "), review });
+  }
+  const note = String(req.body?.note || "").trim().slice(0, 500);
   const result = SkillEngine.promoteSkillAutonomy(
     req.params.id,
-    targetLevel as AutonomyLevel,
-    db.getCurrentUser().name
+    level as AutonomyLevel,
+    signer,
+    { review: { ...review, signedOffBy: review.upward ? signer : undefined, note } },
   );
   if (!result.success) {
     return res.status(400).json(result);
   }
-  res.json(result);
+  res.json({ ...result, review });
+});
+
+/* مراجعة الترقية قبل الضغط: ما الذي تحقّق وما الذي ينقص. */
+apiRouter.get("/skills/:id/promotion-review", (req: Request, res: Response) => {
+  const skill = db.skills.find((candidate) => candidate.id === req.params.id);
+  if (!skill) return res.status(404).json({ success: false, message: "المهارة غير موجودة" });
+  const level = Math.max(0, Math.min(6, Math.round(Number(req.query.targetLevel))));
+  if (!Number.isFinite(level)) return res.status(400).json({ success: false, message: "المستوى غير صالح." });
+  const review = reviewPromotion(skill, level as AutonomyLevel, db.testCases, db.shadowComparisons, {
+    signedOff: true,
+    workItemSkill: new Map(db.workItems.map((item) => [item.id, item.skillId])),
+  });
+  /* التوقيع يُعطى عند الضغط لا هنا — فالمعروض ما ينقص سواه. */
+  res.json({ review: { ...review, requirements: review.requirements.filter((r) => r.key !== "signOff") }, ceiling: maxAutonomyLevel() });
 });
 
 apiRouter.post("/skills/:id/rollback", requireRole("admin", "manager"), (req: Request, res: Response) => {
@@ -848,6 +872,136 @@ apiRouter.post("/skills/:id/rollback", requireRole("admin", "manager"), (req: Re
 apiRouter.post("/skills/:id/killswitch", requireRole("admin", "manager"), (req: Request, res: Response) => {
   const result = SkillEngine.toggleKillSwitch(req.params.id, db.getCurrentUser().name);
   res.json(result);
+});
+
+/*
+ * الإيقاف الطارئ لكل مهارات التنفيذ — بضغطةٍ واحدة وسببٍ مكتوب، ويُبلَّغ المالك.
+ */
+apiRouter.get("/autopilot/status", (_req: Request, res: Response) => {
+  res.json({
+    pause: db.emergencyPause,
+    autopilotSkills: db.skills.filter((skill) => skill.autonomyLevel >= 5).map((skill) => ({
+      id: skill.id, name: skill.name, autonomyLevel: skill.autonomyLevel, killSwitchActive: skill.killSwitchActive,
+    })),
+  });
+});
+
+apiRouter.post("/autopilot/emergency-pause", requireRole("admin", "manager"), (req: AuthenticatedRequest, res: Response) => {
+  const actor = req.account?.name || db.getCurrentUser().name;
+  const result = SkillEngine.emergencyPause(req.body?.reason, actor);
+  if (!result.success) return res.status(400).json(result);
+  let notified = 0;
+  if (!db.isDemo) {
+    notified = notifyEmergencyPause({
+      reason: db.emergencyPause!.reason, by: actor, at: db.emergencyPause!.at,
+      skillNames: result.pausedSkills.map((skill) => skill.name),
+    });
+  }
+  res.json({ ...result, pause: db.emergencyPause, notified });
+});
+
+apiRouter.post("/autopilot/resume", requireRole("admin", "manager"), (req: AuthenticatedRequest, res: Response) => {
+  const actor = req.account?.name || db.getCurrentUser().name;
+  const result = SkillEngine.emergencyResume(req.body?.reason, actor);
+  if (!result.success) return res.status(400).json(result);
+  let notified = 0;
+  if (!db.isDemo) {
+    notified = notifyEmergencyPause({
+      reason: db.emergencyPause!.resumeReason || "", by: actor, at: db.emergencyPause!.resumedAt || new Date().toISOString(),
+      skillNames: result.resumedSkills.map((skill) => skill.name), resumed: true,
+    });
+  }
+  res.json({ ...result, pause: db.emergencyPause, notified });
+});
+
+/*
+ * نقاط الاعتماد على شخصٍ واحد: من يحمل وحده أيّ مهارة، وغطاء المعرفة عبر الزمن.
+ */
+apiRouter.get("/people/coverage", (_req: Request, res: Response) => {
+  recordCoverageSnapshot(db.coverageHistory, db.skills);
+  res.json({ coverage: coverageReport(db.skills, db.coverageHistory) });
+});
+
+apiRouter.post("/skills/:id/backup", requireRole("admin", "manager"), (req: AuthenticatedRequest, res: Response) => {
+  const skill = db.skills.find((candidate) => candidate.id === req.params.id);
+  if (!skill) return res.status(404).json({ success: false, message: "المهارة غير موجودة" });
+  const result = assignBackup(skill, req.body?.name);
+  if (!result.ok) return res.status(400).json({ success: false, message: result.message });
+  recordCoverageSnapshot(db.coverageHistory, db.skills);
+  db.logAudit({
+    actorType: "human",
+    actorName: req.account?.name || db.getCurrentUser().name,
+    action: "ASSIGN_SKILL_BACKUP",
+    provenance: "خريطة الاعتماد على الأشخاص",
+    risk: "low",
+    latencyMs: 5,
+    details: result.message,
+    status: "success",
+  });
+  res.json({ success: true, message: result.message, skill, coverage: coverageReport(db.skills, db.coverageHistory) });
+});
+
+/*
+ * دليل الإجراء المطبوع — ثنائي اللغة، بالتقويم والأرقام المختارة، وموقّع.
+ */
+apiRouter.post("/skills/:id/translation", requireRole("admin", "manager"), (req: AuthenticatedRequest, res: Response) => {
+  const skill = db.skills.find((candidate) => candidate.id === req.params.id);
+  if (!skill) return res.status(404).json({ success: false, message: "المهارة غير موجودة" });
+  const clip = (value: unknown) => String(value ?? "").trim().slice(0, 500);
+  if (req.body?.nameEn !== undefined) skill.nameEn = clip(req.body.nameEn) || skill.nameEn;
+  if (req.body?.purposeEn !== undefined) skill.purposeEn = clip(req.body.purposeEn);
+  const steps = Array.isArray(req.body?.steps) ? req.body.steps : [];
+  for (const entry of steps) {
+    const step = skill.steps.find((candidate) => candidate.id === entry?.id);
+    if (!step) continue;
+    if (entry.titleEn !== undefined) step.titleEn = clip(entry.titleEn);
+    if (entry.descriptionEn !== undefined) step.descriptionEn = clip(entry.descriptionEn);
+  }
+  db.logAudit({
+    actorType: "human",
+    actorName: req.account?.name || db.getCurrentUser().name,
+    action: "UPDATE_SKILL_TRANSLATION",
+    provenance: "دليل الإجراء ثنائي اللغة",
+    risk: "low",
+    latencyMs: 5,
+    details: `تحديث النص الإنجليزي لمهارة «${skill.name}».`,
+    status: "success",
+  });
+  res.json({ success: true, skill });
+});
+
+apiRouter.get("/skills/:id/manual", (req: AuthenticatedRequest, res: Response) => {
+  const skill = db.skills.find((candidate) => candidate.id === req.params.id);
+  if (!skill) return res.status(404).json({ success: false, message: "المهارة غير موجودة" });
+  const version = req.query.version ? Number(req.query.version) : skill.activeVersion;
+  const options = normalizeManualOptions(req.query as Record<string, unknown>);
+  const html = renderManualHtml(skill, version, options, {
+    organization: db.organization.name,
+    issuedBy: req.account?.name || db.getCurrentUser().name,
+  });
+  if (!html) return res.status(404).json({ success: false, message: "الإصدار غير موجود في سجل المهارة." });
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  res.send(html);
+});
+
+apiRouter.get("/skills/:id/manual/signature", (req: Request, res: Response) => {
+  const skill = db.skills.find((candidate) => candidate.id === req.params.id);
+  if (!skill) return res.status(404).json({ success: false, message: "المهارة غير موجودة" });
+  const signed = signManual(skill, req.query.version ? Number(req.query.version) : skill.activeVersion);
+  if (!signed) return res.status(404).json({ success: false, message: "الإصدار غير موجود في سجل المهارة." });
+  res.json({ success: true, ...signed });
+});
+
+apiRouter.post("/manuals/verify", (req: Request, res: Response) => {
+  const skill = db.skills.find((candidate) => candidate.id === req.body?.skillId);
+  if (!skill) return res.status(404).json({ valid: false, reason: "المهارة غير موجودة." });
+  res.json(verifyManual(skill, Number(req.body?.version), req.body?.signature));
+});
+
+/* حزم الامتثال لقطاع المؤسسة الحالي. */
+apiRouter.get("/compliance/presets", (_req: Request, res: Response) => {
+  res.json({ sector: db.sectorCode, presets: SECTOR_COMPLIANCE_PRESETS[db.sectorCode] || [], all: SECTOR_COMPLIANCE_PRESETS });
 });
 
 // 6. Practice & Shadow Modes
@@ -943,6 +1097,18 @@ apiRouter.get("/approvals", (req: Request, res: Response) => {
   res.json({ approvalRequests: db.approvalRequests });
 });
 
+const decisionContext = () => ({
+  workItems: db.workItems, skills: db.skills, testCases: db.testCases, shadowComparisons: db.shadowComparisons,
+  sector: db.sectorCode,
+});
+
+/* سجلّ القرار قبل القرار: الإصدار، والدليل، والقاعدة التي أوقفت التنفيذ، وما سيُكتب. */
+apiRouter.get("/approvals/:id/record", (req: Request, res: Response) => {
+  const appr = db.approvalRequests.find((a) => a.id === req.params.id);
+  if (!appr) return res.status(404).json({ success: false, message: "طلب الموافقة غير موجود" });
+  res.json({ record: appr.decisionRecord || buildDecisionRecord(appr, decisionContext()) });
+});
+
 apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (req: AuthenticatedRequest, res: Response) => {
   const { decision, comments } = req.body; // 'approved' | 'rejected'
   if (decision !== "approved" && decision !== "rejected") {
@@ -957,11 +1123,23 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
     return res.status(409).json({ success: false, message: "حُسم هذا الطلب من قبل." });
   }
 
+  /*
+   * السبب إلزاميٌّ للخطورة العالية والحرجة — اعتماداً كان أو رفضاً. قرارٌ مكلف
+   * بلا سببٍ مكتوب لا يُراجَع بعد شهر: لا يُعرف لماذا مرّ.
+   */
+  const reason = String(comments || "").trim().slice(0, 1000);
+  if (reasonRequiredFor(appr.riskLevel) && reason.length < 3) {
+    return res.status(400).json({ success: false, code: "REASON_REQUIRED", message: "اكتب سبب قرارك — مطلوبٌ للطلبات عالية الخطورة." });
+  }
+
   /* المعتمِد هو صاحب الجلسة، لا «المستخدم الحالي» المعروض — وإلا سُجّل القرار باسم غيره. */
   const currentUser = { name: req.account?.name || db.getCurrentUser().name };
+  const record = buildDecisionRecord(appr, decisionContext());
   appr.status = decision === "approved" ? "approved" : "rejected";
   appr.decidedBy = currentUser.name;
   appr.decidedAt = "الآن";
+  appr.decisionReason = reason;
+  appr.decisionRecord = { ...record, decision, reason, decidedBy: currentUser.name, decidedAtIso: new Date().toISOString() };
 
   // If approved, trigger action execution with idempotency & post-verification!
   let executionResult: Awaited<ReturnType<typeof ConnectorLayer.createApplicationRecord>> | null = null;
@@ -1011,8 +1189,9 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
       provenance: "Manager Approval Decision Gate",
       risk: appr.riskLevel,
       latencyMs: 40,
-      details: `${approved ? "اعتماد" : "رفض"} إجراء ${appr.actionName} للمعاملة ${appr.workTitle} بواسطة ${currentUser.name}.`,
+      details: `${approved ? "اعتماد" : "رفض"} إجراء ${appr.actionName} للمعاملة ${appr.workTitle} بواسطة ${currentUser.name}.${reason ? ` السبب: ${reason}` : ""}`,
       status: approved ? "success" : "warning",
+      record: appr.decisionRecord,
     });
     return res.json({ success: true, approval: appr, executionResult: null });
   }
@@ -1059,12 +1238,13 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
     actorType: "human",
     actorName: currentUser.name,
     action: decision === "approved" ? "APPROVE_ACTION_EXECUTION" : "REJECT_ACTION_EXECUTION",
-    policyCode: "POL-FIN-02",
+    policyCode: appr.reasonCode || "POL-FIN-02",
     provenance: "Manager Approval Decision Gate",
-    risk: "high",
+    risk: appr.riskLevel || "high",
     latencyMs: 55,
-    details: `${decision === "approved" ? "اعتماد" : "رفض"} إجراء ${appr.actionName} للمعاملة ${appr.workTitle} بواسطة ${currentUser.name}.`,
+    details: `${decision === "approved" ? "اعتماد" : "رفض"} إجراء ${appr.actionName} للمعاملة ${appr.workTitle} بواسطة ${currentUser.name}.${reason ? ` السبب: ${reason}` : ""}`,
     status: decision === "approved" ? "success" : "warning",
+    record: appr.decisionRecord,
   });
 
   res.json({ success: true, approval: appr, executionResult });

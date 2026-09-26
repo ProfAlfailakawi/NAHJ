@@ -58,10 +58,10 @@ test("a viewer cannot change operations; a manager decides an approval once", as
     const manager = await signIn(base, "manager@nahj.test");
     const pending = db.approvalRequests.find(a => a.status === "pending");
     assert.ok(pending, "seed carries a pending approval");
-    const first = await manager(`/approvals/${pending.id}/decide`, { decision: "approved" });
+    const first = await manager(`/approvals/${pending.id}/decide`, { decision: "approved", comments: "راجعتُ الملف والرسوم" });
     assert.equal(first.status, 200);
     assert.equal(db.approvalRequests.find(a => a.id === pending.id)?.decidedBy, "مديرة القبول", "recorded under the signed-in account");
-    assert.equal((await manager(`/approvals/${pending.id}/decide`, { decision: "approved" })).status, 409);
+    assert.equal((await manager(`/approvals/${pending.id}/decide`, { decision: "approved", comments: "راجعتُ الملف والرسوم" })).status, 409);
 
     const unknown = await manager("/mcp/tools/call", { name: "no_such_tool" });
     assert.equal(((await unknown.json()) as { success: boolean }).success, false, "an unknown tool never reports success");

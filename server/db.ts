@@ -55,6 +55,7 @@ function accountRoleToUserRole(role: string): User["role"] {
 
 const SYSTEM_USER: User = { id: "system", name: "النظام", email: "", role: "admin", department: "", avatar: "" };
 import { stampLegacyInstant } from "./engine/metricsEngine.ts";
+import type { CoverageSnapshot } from "./engine/coverage.ts";
 
 export interface SimulatorMessage {
   id: string;
@@ -109,6 +110,17 @@ const DEFAULT_CHANNEL = {
   samplePrompts: ["أبي أسجل بنتي في الصف الأول", "كم الرسوم الدراسية؟", "متى يبدأ التسجيل؟"],
 };
 
+export interface EmergencyPause {
+  active: boolean;
+  reason: string;
+  by: string;
+  at: string;
+  skillIds: string[];
+  resumedBy?: string;
+  resumedAt?: string;
+  resumeReason?: string;
+}
+
 export class Store {
   /**
    * `isDemo` is the one switch that keeps a visitor's synthetic activity out of
@@ -144,6 +156,10 @@ export class Store {
    * أنها سجلّ المؤسسة — الواجهة تعرض شاشة الإعداد بدلها.
    */
   public organizationConfigured: boolean;
+  /** الإيقاف الطارئ لكل مهارات الطيار الآلي — من أوقف ولماذا وما الذي أوقفه. */
+  public emergencyPause: EmergencyPause | null;
+  /** غطاء المعرفة يوماً بيوم — لقياس هل يقلّ الاعتماد على شخصٍ واحد. */
+  public coverageHistory: CoverageSnapshot[];
 
   constructor(seed?: DemoSandboxSeed) {
     this.isDemo = Boolean(seed);
@@ -182,6 +198,8 @@ export class Store {
     /* صندوق العرض مُعَدٌّ بطبيعته؛ والمؤسسة الحقيقية حتى تُعِدّ نفسها. */
     this.organizationConfigured = seed ? true : persisted("organizationConfigured", false);
     this.channel = seed ? DEFAULT_CHANNEL : persisted("channel", { ...DEFAULT_CHANNEL });
+    this.emergencyPause = seed ? null : persisted<EmergencyPause | null>("emergencyPause", null);
+    this.coverageHistory = seed ? [] : persisted<CoverageSnapshot[]>("coverageHistory", []);
 
     const freshSimulator: SimulatorState = {
       step: "initial",
@@ -618,6 +636,8 @@ export function snapshotState(): Record<string, unknown> {
     sectorCode: baseStore.sectorCode,
     channel: baseStore.channel,
     organizationConfigured: baseStore.organizationConfigured,
+    emergencyPause: baseStore.emergencyPause,
+    coverageHistory: baseStore.coverageHistory,
   };
 }
 

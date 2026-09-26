@@ -465,6 +465,28 @@ export function notifySuspended(): number {
   }));
 }
 
+/**
+ * إيقافٌ طارئ للطيار الآلي — يُبلَّغ المالك والإدارة فوراً بمن أوقف ولماذا.
+ * كل إيقافٍ حدثٌ مستقل (مفتاح التفرّد يحمل لحظته)، فلا يُبتلع إيقافٌ ثانٍ.
+ */
+export function notifyEmergencyPause(input: { reason: string; by: string; at: string; skillNames: string[]; resumed?: boolean }): number {
+  const kind = input.resumed ? "autopilot.resumed" : "autopilot.emergency_pause";
+  return fanOut([...institutionRecipients(), ...ownerRecipient()], recipient => ({
+    kind,
+    dedupeKey: `${kind}:${input.at}:${recipient}`,
+    recipient,
+    subject: input.resumed ? "استُؤنف التنفيذ الآلي في نهج" : "إيقاف طارئ للتنفيذ الآلي في نهج",
+    body: [
+      input.resumed ? `استأنف ${input.by} التنفيذ الآلي.` : `أوقف ${input.by} كل مهارات الطيار الآلي.`,
+      `السبب: ${input.reason}`,
+      `الوقت: ${input.at}`,
+      input.skillNames.length ? `المهارات: ${input.skillNames.join("، ")}` : "لا مهارات على الطيار الآلي وقتها.",
+      ``,
+      `التعلّم والمراجعة والاعتمادات اليدوية تعمل كالمعتاد.`,
+    ].join("\n"),
+  }));
+}
+
 /* ------------------------------------------------------------ العامل */
 
 let timer: NodeJS.Timeout | null = null;

@@ -67,6 +67,9 @@ export interface SkillStep {
   actionRequired?: string;
   decisionRule?: string;
   isAutomated: boolean;
+  /** النسخة الإنجليزية من الخطوة — لدليل الإجراء ثنائي اللغة. */
+  titleEn?: string;
+  descriptionEn?: string;
 }
 
 export interface SkillDecision {
@@ -117,6 +120,9 @@ export interface Skill {
   versions: SkillVersion[];
   allowedActions: string[];
   killSwitchActive: boolean;
+  /** من يستطيع تنفيذ المهارة غير مالكها — غيابهم يعني الاعتماد على شخص واحد. */
+  backupOwnerNames?: string[];
+  purposeEn?: string;
 }
 
 export interface LearningProposal {
@@ -203,6 +209,10 @@ export interface ApprovalRequest {
   status: 'pending' | 'approved' | 'rejected';
   decidedBy?: string;
   decidedAt?: string;
+  /** سبب القرار كما كتبه المعتمِد — إلزاميٌّ للخطورة العالية والحرجة. */
+  decisionReason?: string;
+  /** سجلّ القرار كما رآه المعتمِد لحظة قراره: الإصدار والدليل والقاعدة والمعاينة. */
+  decisionRecord?: Record<string, any>;
 }
 
 export interface AuditEvent {
@@ -226,6 +236,8 @@ export interface AuditEvent {
   latencyMs: number;
   details: string;
   status: 'success' | 'warning' | 'intercepted';
+  /** تفاصيل مهيكلة للحدث (سجلّ قرار، مراجعة ترقية) — تُحفظ مع السجل ولا تُعرض نصّاً. */
+  record?: Record<string, any>;
 }
 
 export interface Connector {
