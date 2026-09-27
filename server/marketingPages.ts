@@ -1,5 +1,6 @@
 import { listSectors, getSectorPack, EDUCATION_CODE } from "./packs/index.ts";
 import { escapeHtml, publicPlans, CUSTOM_PRICE } from "./publicPages.ts";
+import { sectorIconSvg } from "./sectorIcons.ts";
 
 /*
  * الصفحات التسويقية: الهبوط، والشروط، والخصوصية.
@@ -142,7 +143,8 @@ const LANDING_STYLE = `
   .sectors { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:16px; }
   .sector { display:flex; flex-direction:column; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:20px; padding:22px; }
   .sector .head { display:flex; align-items:center; gap:12px; }
-  .sector .logo { font-size:34px; line-height:1; }
+  .sector .logo { line-height:0; }
+  .sector .sector-icon { display:grid; place-items:center; width:52px; height:52px; border-radius:16px; color:var(--moss); }
   .sector h3 { margin:0; font-size:20px; font-weight:900; }
   .sector .org { font-size:14px; color:var(--muted); }
   .sector p { margin:0; color:var(--muted); font-size:15.5px; }
@@ -208,7 +210,7 @@ export function renderLandingPage(): string {
       : (getSectorPack(sector.code)?.skills || []).slice(0, 3).map(skill => skill.name);
     return `
     <article class="sector">
-      <div class="head"><span class="logo" aria-hidden="true">${escapeHtml(sector.logo)}</span>
+      <div class="head"><span class="logo" aria-hidden="true">${sectorIconSvg(sector.code)}</span>
         <div><h3>${escapeHtml(sector.nameAr)}</h3><div class="org">مثال: ${escapeHtml(sector.organizationName)}</div></div></div>
       <p>${escapeHtml(sector.descriptionAr)}</p>
       <ul aria-label="أمثلة على ما يتولّاه">${examples.map(example => `<li>${escapeHtml(example)}</li>`).join("")}</ul>

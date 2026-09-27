@@ -33,7 +33,7 @@ export function DemoBanner({ lang, sector, sectors, busy, onSwitch, onReset, onE
         <div className="demo-banner-switch">
           <label htmlFor={selectId}>{ar ? "القطاع" : "Sector"}</label>
           <select id={selectId} value={sector || ""} disabled={busy} onChange={event => onSwitch(event.target.value)}>
-            {sectors.map(item => <option key={item.code} value={item.code}>{item.logo ? `${item.logo} ` : ""}{ar ? item.nameAr : item.nameEn}</option>)}
+            {sectors.map(item => <option key={item.code} value={item.code}>{ar ? item.nameAr : item.nameEn}</option>)}
           </select>
         </div>
       )}

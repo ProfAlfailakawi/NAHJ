@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Copy, ExternalLink, Inbox, Presentation } from "lucide-react";
 import { SectionTitle } from "../Primitives";
 import { api } from "../../lib/api";
+import { SectorIcon } from "../SectorIcon";
 
 /*
  * البيع من لوحة المالك: طلبات العرض الواردة، وروابط العرض التجريبي.
@@ -95,7 +96,7 @@ export function OwnerSalesPanel({ notify }: { notify: (message: string, error?: 
             const url = `${origin}/try/${sector.code}`;
             return (
               <div key={sector.code} className="demo-link">
-                <span className="logo" aria-hidden="true">{sector.logo}</span>
+                <SectorIcon code={sector.code} size="sm" />
                 <strong>{sector.nameAr}</strong>
                 <a className="btn-secondary" href={`/try/${sector.code}`} target="_blank" rel="noopener"><ExternalLink /> افتح</a>
                 <button type="button" className="btn-secondary" onClick={() => void copy(url)} aria-label={`انسخ رابط عرض ${sector.nameAr}`}><Copy /> انسخ</button>

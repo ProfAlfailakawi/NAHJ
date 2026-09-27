@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Building2, CheckCircle2, Layers, MessageSquare, RefreshCw, ShieldCheck } from "lucide-react";
 import { PageHeader, SectionTitle } from "../Primitives";
 import { sectorsApi, type SectorChannel, type SectorSummary } from "../../lib/api";
+import { SectorIcon } from "../SectorIcon";
 
 /*
  * شاشة النشاط.
@@ -107,7 +108,7 @@ export function SectorsView({ lang, canApply, isDemo, notify, onApplied }: Props
             return (
               <article key={sector.code} className={`sector-card ${active ? "is-current" : ""}`}>
                 <div className="sector-head">
-                  <span className="sector-logo" aria-hidden="true">{sector.logo}</span>
+                  <SectorIcon code={sector.code} className="sector-logo" />
                   <div>
                     <strong>{ar ? sector.nameAr : sector.nameEn}</strong>
                     {/* اسم المؤسسة النموذجية يخصّ العرض؛ في مؤسسةٍ حقيقية لا معنى له. */}
