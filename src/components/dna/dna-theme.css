@@ -34,3 +34,8 @@
 .shadow-head{gap:12px}
 .shadow-head>.dna-ring{display:block;flex:none}
 .shadow-head>div:not(.dna-ring){flex:1}
+/* Skills: lifecycle, autonomy ladder, requirement icons, versions. */
+.skill-inspector .skill-lifecycle{margin:10px 0 4px}
+.skill-inspector .autonomy-steps{margin:8px 0 6px}
+.autonomy-chooser span svg,.promotion-reqs span svg{width:12px;height:12px;display:inline-block;vertical-align:-2px}
+.skill-inspector .skill-versions{margin-top:12px}
