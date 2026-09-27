@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, CheckCircle2, Clock3, Gauge, Info, ShieldCheck, TimerReset } from "lucide-react";
 import { PageHeader, SectionTitle } from "../Primitives";
-import { ImpactHalo } from "../Visuals";
+import { DnaRing } from "../dna";
 
 /*
  * شاشة الأثر.
@@ -91,11 +91,14 @@ export function AnalyticsView({ lang, data }: Props) {
 
       <div className="impact-layout">
         <section className="impact-hero surface">
-          <ImpactHalo value={data.kpis.totalHoursSaved} />
+          <DnaRing className="impact-ring" value={data.kpis.automationRatePercent} size={176} stroke={12}
+            sublabel={ar ? "أتمتة" : "automation"}
+            ariaLabel={ar ? `نسبة الأتمتة ${show(data.kpis.automationRatePercent, "%")}` : `Automation rate ${show(data.kpis.automationRatePercent, "%")}`} />
           <div className="impact-hero-copy">
             <em>{ar ? "منذ الاعتماد" : "SINCE ADOPTION"}</em>
             <strong>{data.kpis.totalTasksCompleted.toLocaleString("en-US")}</strong>
             <span>{ar ? "مرة تنفيذ موثّقة" : "recorded executions"}</span>
+            <span className="impact-hours"><Clock3 aria-hidden="true" /> {data.kpis.totalHoursSaved}h</span>
           </div>
           <div className="impact-badges">
             <span><ArrowUpRight /> {show(data.kpis.automationRatePercent, "%")}</span>

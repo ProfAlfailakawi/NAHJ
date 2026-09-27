@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Building2, CheckCircle2, Crown, LogOut, ShieldCheck, TriangleAlert } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import { BrandLockup } from "./Brand";
+import { SectorIcon } from "./SectorIcon";
 
 /*
  * إعداد المؤسسة — أول ما يراه مشرفها في نشرٍ جديد.
@@ -100,7 +101,7 @@ export function OrgSetupView({ lang, canSetup, onDone, onSignOut, onOpenOwner }:
               {sectors.map(item => (
                 <label key={item.code} className={sector === item.code ? "selected" : ""}>
                   <input type="radio" name="sector" value={item.code} checked={sector === item.code} onChange={() => setSector(item.code)} disabled={busy} />
-                  <span className="logo" aria-hidden="true">{item.logo}</span>
+                  <SectorIcon code={item.code} size="sm" />
                   <span><strong>{item.nameAr}</strong>{item.descriptionAr && <small>{item.descriptionAr}</small>}</span>
                   {sector === item.code && <CheckCircle2 className="tick" aria-hidden="true" />}
                 </label>

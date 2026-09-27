@@ -1,11 +1,12 @@
 import React from "react";
 import {
   Activity, AlertTriangle, ArrowUpLeft, BookOpenCheck, BrainCircuit, CheckCircle2, Circle, Clock3, GraduationCap,
-  Lightbulb, MessagesSquare, Route, ShieldCheck, Sparkles, Users, Waypoints
+  FileCheck2, GitBranch, Lightbulb, MessagesSquare, UserRound, Route, ShieldCheck, Sparkles, Users, Waypoints
 } from "lucide-react";
 import type { ApprovalRequest, LearningProposal, Organization, Skill, WorkItem } from "../../types";
 import type { SectionId } from "../Shell";
-import { BrainAtlas, MiniProcessGlyph, WorkRiver } from "../Visuals";
+import { workStepText, workSteps } from "./WorkView";
+import { DnaHubMap, DnaStepper } from "../dna";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
 import { Term } from "../Explain";
 import { WORK_STATE_PLAIN } from "../../lib/glossary";
@@ -34,9 +35,12 @@ type Props = {
   skills?: Skill[];
   practiceCount?: number;
   canManageAccounts?: boolean;
+  serverLive?: boolean;
+  demoActive?: boolean;
+  policiesActive?: number | null;
 };
 
-export function TodayView({ lang, organization, onNavigate, approvals, proposals, workItems, onApproval, todayMetrics, memory, skills = [], practiceCount = 0, canManageAccounts = false }: Props) {
+export function TodayView({ lang, organization, onNavigate, approvals, proposals, workItems, onApproval, todayMetrics, memory, skills = [], practiceCount = 0, canManageAccounts = false, serverLive = false, demoActive = false, policiesActive = null }: Props) {
   const ar = lang === "ar";
   const open = proposals.filter(p=>p.status==="pending");
   const active = workItems.filter(w=>w.state!=="completed").slice(0,3);
@@ -71,19 +75,30 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
 
       <section className="hero-grid">
         <article className="brain-hero">
-          <div className="hero-floating-meta top-start"><span className="status-live"><i/>{ar?"حي":"LIVE"}</span><span>{memory?.documentedSkills ?? 0}</span></div>
-          <BrainAtlas/>
-          <div className="brain-hero-caption">
-            <div><span>COMPANY BRAIN</span><strong>{ar?"ذاكرة العمل الحيّة":"Living operational memory"}</strong></div>
-            <button className="round-action" onClick={()=>onNavigate("skills")} aria-label={ar?"فتح المهارات":"Open skills"}><ArrowUpLeft/></button>
-          </div>
+          <DnaHubMap
+            ariaLabel={ar ? "خريطة ذاكرة العمل" : "Company Brain operational map"}
+            center={{ icon: <BrainCircuit/>, ariaLabel: ar ? "ذاكرة العمل" : "Company brain" }}
+            live={{ on: serverLive && !demoActive, label: demoActive ? (ar?"صندوق معزول":"Sandbox") : serverLive ? (ar?"حي":"LIVE") : (ar?"وضع العرض":"Demo mode") }}
+            count={{ value: memory?.documentedSkills ?? 0, icon: <FileCheck2/>, label: ar ? "مهارات موثقة" : "Documented skills" }}
+            nodes={[
+              { key: "knowledge", icon: <FileCheck2/>, tone: "amber", label: ar ? "المعرفة" : "Knowledge", value: memory?.documentedSkills ?? 0, onClick: () => onNavigate("skills") },
+              { key: "processes", icon: <GitBranch/>, tone: "sky", label: ar ? "العمليات" : "Processes", value: memory?.activeSkills ?? 0, onClick: () => onNavigate("work") },
+              { key: "people", icon: <UserRound/>, tone: "lilac", label: ar ? "الأشخاص" : "People", value: memory?.singlePersonDependencies ?? 0, state: (memory?.singlePersonDependencies ?? 0) > 0 ? "attention" : "ok", onClick: () => onNavigate("people") },
+              { key: "policies", icon: <ShieldCheck/>, tone: "mint", label: ar ? "السياسات" : "Policies", value: policiesActive ?? "—", state: policiesActive == null ? "dashed" : "ok", onClick: () => onNavigate("control") },
+              { key: "signals", icon: <Waypoints/>, tone: "coral", label: ar ? "الإشارات" : "Signals", value: open.length, onClick: () => onNavigate("learn") },
+            ]}
+            overline="COMPANY BRAIN"
+            title={ar?"ذاكرة العمل الحيّة":"Living operational memory"}
+            action={{ icon: <ArrowUpLeft/>, label: ar?"فتح المهارات":"Open skills", onClick: ()=>onNavigate("skills") }}
+            animate={serverLive && !demoActive}
+          />
         </article>
         <div className="pulse-stats">
           {/* «نشاط» لا «أُنجز»: العدّ يشمل كل ما سُجِّل، لا المهام المكتملة وحدها. */}
           <Stat label={ar?"نشاط اليوم":"ACTIVITY TODAY"} value={todayMetrics?.auditEventsToday ?? 0} tone="moss" icon={<Activity/>}/>
-          <Stat label={ar?"وقت مستعاد":"TIME BACK"} value={`${todayMetrics?.hoursSavedThisMonth ?? organization.hoursSavedMonth}h`} tone="sky" icon={<Clock3/>}/>
-          <Stat label={ar?"تعلّم":"LEARNING"} value={open.length} tone="amber" icon={<Sparkles/>}/>
-          <Stat label={ar?"قرارك":"NEEDS YOU"} value={approvals.filter(a=>a.status==="pending").length+conflictCount} tone="rose" icon={<ShieldCheck/>}/>
+          <Stat label={ar?"وقت مستعاد":"TIME BACK"} value={`${todayMetrics?.hoursSavedThisMonth ?? organization.hoursSavedMonth}h`} tone="moss" icon={<Clock3/>}/>
+          <Stat label={ar?"تعلّم":"LEARNING"} value={open.length} tone="moss" icon={<Sparkles/>}/>
+          <Stat label={ar?"قرارك":"NEEDS YOU"} value={approvals.filter(a=>a.status==="pending").length+conflictCount} tone="moss" icon={<ShieldCheck/>}/>
         </div>
       </section>
 
@@ -111,14 +126,13 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
         <article className="work-deck surface">
           <SectionTitle title={ar?"العمل يتحرك":"Work in motion"} meta={ar?"الآن":"NOW"} icon={<Waypoints/>}/>
           {active.length===0&&<p className="empty-note">{ar?"لا حالات عمل جارية بعد. تبدأ حين تُفعَّل أول مهارة أو تصل أول محادثة.":"No work in motion yet."}</p>}
-          {active.length>0&&<div className="work-deck-glyph"><MiniProcessGlyph/></div>}
           <div className="work-mini-grid">
             {active.map((w,i)=><button key={w.id} className="work-mini" onClick={()=>onNavigate("work")}>
               <div><span className={`risk-dot risk-${w.riskLevel}`}/><b>{w.code}</b></div>
               {/* `studentName` حقلٌ تعليمي في شاشة عامّة — يعمل في مدرسة ويختفي في عيادة. */}
               <strong>{w.contactName || w.title}</strong>
               <small className="work-mini-state">{ar ? (WORK_STATE_PLAIN[w.state] || w.state) : w.state}</small>
-              <WorkRiver progress={w.progressPercent} risk={w.riskLevel}/>
+              <DnaStepper size="xs" steps={workSteps(w.state,ar)} stateText={workStepText(ar)} ariaLabel={ar?(WORK_STATE_PLAIN[w.state]||w.state):w.state}/>
             </button>)}
           </div>
         </article>

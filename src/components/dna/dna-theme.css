@@ -1,0 +1,62 @@
+/* NAHJ theme for the DNA kit: maps --dna-* tokens to the site's palette (src/index.css :root). */
+:root {
+  --dna-canvas: var(--paper);
+  --dna-surface: var(--white);
+  --dna-surface-2: #f8f5ec;
+  --dna-ink: var(--ink);
+  --dna-muted: var(--muted);
+  --dna-line: var(--line);
+  --dna-line-2: var(--line-strong);
+  --dna-accent: var(--moss);
+  --dna-accent-soft: var(--mint);
+  --dna-on-accent: #ffffff;
+  --dna-core: #10251f;
+  --dna-on-core: #ffffff;
+  --dna-shadow: var(--shadow-1);
+  --dna-ease: var(--ease);
+}
+/* The site keeps every text at 12px or more. */
+.dna .dna-tileb, .dna .dna-bdg, .dna .dna-hubv, .dna-ringc small, .dna-segb .dna-count,
+.dna-steps[data-size='sm'] .dna-lbl, .dna .dna-over { font-size: 12px; }
+.dna svg { max-width: none; }
+/* Impact hero ring and hours line. */
+.impact-hero .impact-ring{margin:auto}
+.impact-hero .impact-ring .dna-ringc{font-size:34px;font-weight:800}
+.impact-hero .impact-ring .dna-ringc small{font-size:12px}
+.impact-hero-copy .impact-hours{display:inline-flex;align-items:center;gap:5px}
+.impact-hero-copy .impact-hours svg{width:14px;height:14px}
+/* Company brain map fills the hero card. */
+.brain-hero .dna-hub{position:relative;z-index:1}
+/* Practice: graduation stepper and rings. */
+.graduation-stage .graduation-steps{width:100%;margin-top:20px}
+.graduation-stage .graduation-ring{margin:auto}
+.graduation-stage .graduation-ring .dna-ringc{font-size:34px;font-weight:800}
+.shadow-head{gap:12px}
+.shadow-head>.dna-ring{display:inline-grid;align-items:center;flex:none}
+.shadow-head>div:not(.dna-ring){flex:1}
+/* Skills: lifecycle, autonomy ladder, requirement icons, versions. */
+.skill-inspector .skill-lifecycle{margin:10px 0 4px}
+.skill-inspector .autonomy-steps{margin:8px 0 6px}
+.autonomy-chooser span svg,.promotion-reqs span svg{width:12px;height:12px;display:inline-block;vertical-align:-2px}
+.skill-inspector .skill-versions{margin-top:12px}
+/* Work: case stages and timeline. */
+.work-focus-river{display:flex;align-items:center;gap:12px}
+.work-focus-river>.dna-steps{flex:1;min-width:0}
+.work-focus-river>strong{position:static;flex:none}
+.queue-card .dna-steps,.work-mini .dna-steps{margin-top:10px}
+.work-focus .work-timeline{margin-top:14px}
+.work-tl-badge{display:inline-block;margin-inline-start:6px;padding:0 7px;border-radius:99px;background:var(--mint);color:var(--moss-dark);font-size:12px;font-weight:700}
+/* Connections: cloud mirror card. */
+.cloud-card{margin-bottom:24px;padding:18px 20px}
+.cloud-card .dna-htitle{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.cloud-card .cloud-sync{min-height:44px}
+.cloud-card .cloud-sync svg{width:16px;height:16px}
+.cloud-facts{display:flex;flex-wrap:wrap;gap:8px}
+.cloud-facts>span{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;background:var(--paper);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.cloud-facts svg,.cloud-note svg{width:14px;height:14px;flex:none}
+.cloud-note{display:flex;align-items:flex-start;gap:6px;margin-top:8px;font-size:12px;font-weight:600}
+.cloud-note.warn{color:#8a5a12}
+.cloud-note.ok{color:var(--moss-dark)}
+.brain-hero:before{display:none}
+.brain-hero>.dna-hub{border:0;box-shadow:none;background:transparent}
+.hero-grid .brain-hero{min-height:0}

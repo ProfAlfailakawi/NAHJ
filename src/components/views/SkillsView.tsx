@@ -1,10 +1,11 @@
 import React,{useEffect,useId,useMemo,useState} from "react";
-import { AlertTriangle, ArrowDownToLine, BrainCircuit, CirclePause, FileText, History, ShieldCheck, Sparkles, UserPlus, Zap } from "lucide-react";
+import { AlertTriangle, ArrowDownToLine, BrainCircuit, Check, CircleDot, GitCommitVertical, X, CirclePause, FileText, History, ShieldCheck, Sparkles, UserPlus, Zap } from "lucide-react";
 import { api, ApiError, apiOrNull } from "../../lib/api";
 import { Dialog } from "../Dialog";
 import type { AutonomyLevel, Skill } from "../../types";
 import { PageHeader, SectionTitle } from "../Primitives";
 import { SkillRunway } from "../Visuals";
+import { DnaStepper, DnaTimeline, type DnaStepState } from "../dna";
 import { AutonomyBadge, Term } from "../Explain";
 import { ladderStep, RISK_PLAIN, SKILL_STATUS_PLAIN } from "../../lib/glossary";
 
@@ -48,7 +49,7 @@ function PromotionDialog({lang,skill,target,onClose,onConfirm}:{lang:"ar"|"en";s
         <div><dt>{ar?"الاستثناءات الموثّقة":"Documented exceptions"}</dt><dd>{review.stats.exceptions}</dd></div>
         <div><dt>{ar?"الموثوقية":"Reliability"}</dt><dd>{skill.reliabilityScore}%</dd></div>
       </dl>
-      {review.requirements.length>0&&<ul className="promotion-reqs">{review.requirements.map(r=><li key={r.key} className={r.met?"met":"unmet"}><span aria-hidden="true">{r.met?"✓":"✕"}</span>{r.label}<span className="sr-only">{r.met?(ar?" — متحقّق":" — met"):(ar?" — غير متحقّق":" — not met")}</span></li>)}</ul>}
+      {review.requirements.length>0&&<ul className="promotion-reqs">{review.requirements.map(r=><li key={r.key} className={r.met?"met":"unmet"}><span aria-hidden="true">{r.met?<Check/>:<X/>}</span>{r.label}<span className="sr-only">{r.met?(ar?" — متحقّق":" — met"):(ar?" — غير متحقّق":" — not met")}</span></li>)}</ul>}
       {review.blocked&&<p className="decision-compliance" role="alert">{ar?"الترقية ممنوعة حتى يكتمل الدليل أعلاه.":"Promotion is blocked until the evidence above is complete."}</p>}
     </>}
     <div className="signoff-row">
@@ -125,6 +126,13 @@ function ManualPanel({lang,skill,onSkillUpdated,notify}:{lang:"ar"|"en";skill:Sk
     </form>
   </section>;
 }
+const LIFECYCLE=["draft","proposed","approved","practicing","shadow","active"];
+const EN_STATE={done:"done",current:"current",pending:"upcoming",returned:"returned",blocked:"paused"};
+function lifecycleState(status:string,i:number):DnaStepState{
+  if(status==="paused")return i===LIFECYCLE.length-1?"blocked":"done";
+  const at=LIFECYCLE.indexOf(status);
+  return i<at?"done":i===at?(status==="active"?"done":"current"):"pending";
+}
 const stages=["Observe","Practice","Shadow","Suggest","Prepare","Approval","Autopilot"];
 
 export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpenPeople,onSkillUpdated,notify}:Props){
@@ -145,6 +153,8 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
       </section>
       {skill&&<aside className="skill-inspector surface-strong">
         <div className="inspector-hero"><span className={`skill-glyph large risk-${skill.riskLevel}`}><BrainCircuit/></span><div><em>{ar?(SKILL_STATUS_PLAIN[skill.status]||skill.status):skill.status.toUpperCase()}</em><strong>{ar?skill.name:skill.nameEn}</strong><small>v{skill.activeVersion} · {skill.ownerName}</small></div></div>
+        <DnaStepper className="skill-lifecycle" size="xs" ariaLabel={ar?"دورة حياة المهارة":"Skill lifecycle"} stateText={ar?undefined:EN_STATE}
+          steps={LIFECYCLE.map((st,i)=>({key:st,label:ar?(SKILL_STATUS_PLAIN[st]||st):st,state:lifecycleState(skill.status,i)}))}/>
         <div className="reliability-orb" style={{"--value":`${skill.reliabilityScore}%`} as React.CSSProperties}><strong>{skill.reliabilityScore}%</strong><span>{ar?"موثوقية":"reliability"}</span></div>
         <SectionTitle title={ar?<Term k="autonomy">مستوى الاستقلالية</Term>:"Autonomy"} meta={`${skill.autonomyLevel}/6`}/>
         {/*
@@ -155,14 +165,19 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
           <strong>{ladderStep(skill.autonomyLevel).plain}</strong>
           <small>{ladderStep(skill.autonomyLevel).yourPart}</small>
         </div>
+        <DnaStepper className="autonomy-steps" size="sm" showLabels={false} ariaLabel={ar?"سُلّم الاستقلالية":"Autonomy ladder"} stateText={ar?undefined:EN_STATE}
+          steps={stages.map((st,i)=>({key:st,icon:i<skill.autonomyLevel?undefined:<span className="dna-num">{i}</span>,label:ar?ladderStep(i).plain:st,title:ar?ladderStep(i).plain:st,state:i<skill.autonomyLevel?"done":i===skill.autonomyLevel?"current":"pending"}))}/>
         <div className="autonomy-chooser" role="group" aria-label={ar?"اختر مستوى الاستقلالية":"Choose autonomy level"}>{stages.map((st,i)=>{const label=ar?`المستوى ${i}: ${ladderStep(i).plain}${i===skill.autonomyLevel?" (الحالي)":i>skill.autonomyLevel?" — يتطلب مراجعة وتوقيعاً":""}`:`Level ${i}: ${st}${i===skill.autonomyLevel?" (current)":i>skill.autonomyLevel?" — requires review and sign-off":""}`;
           return <button key={st} type="button" className={i===skill.autonomyLevel?"active":""} aria-current={i===skill.autonomyLevel?"step":undefined} aria-label={label} title={label}
             onClick={()=>{if(i===skill.autonomyLevel)return;if(i>skill.autonomyLevel)setPromoteTo(i);else onPromote(skill.id,i as AutonomyLevel)}}>
-            {i<skill.autonomyLevel?<span aria-hidden="true">✓</span>:i===skill.autonomyLevel?<span aria-hidden="true">●</span>:<span aria-hidden="true"/>}<small aria-hidden="true">{i}</small></button>})}</div>
+            {i<skill.autonomyLevel?<span aria-hidden="true"><Check/></span>:i===skill.autonomyLevel?<span aria-hidden="true"><CircleDot/></span>:<span aria-hidden="true"/>}<small aria-hidden="true">{i}</small></button>})}</div>
         <div className="skill-risk-plain" title={skill.riskLevel}>{ar?(RISK_PLAIN[skill.riskLevel]||skill.riskLevel):skill.riskLevel}</div>
         <div className="skill-mini-metrics"><div><strong>{skill.usageCount}</strong><span>{ar?"تشغيل":"runs"}</span></div><div><strong>{skill.successRate}%</strong><span>{ar?"نجاح":"success"}</span></div><div><strong>{skill.hoursSavedTotal}h</strong><span>{ar?"وقت":"saved"}</span></div></div>
         <div className="skill-alerts">{skill.isSinglePointOfFailure&&!(skill.backupOwnerNames||[]).length&&<div><AlertTriangle aria-hidden="true"/><span>{ar?`تعتمد على شخص واحد (${skill.ownerName})`:`Single-person dependency (${skill.ownerName})`}</span>{onOpenPeople&&<button type="button" className="spof-nudge" onClick={onOpenPeople}><UserPlus aria-hidden="true"/>{ar?"أسند زميلاً بديلاً":"Assign a backup"}</button>}</div>}{skill.killSwitchActive&&<div className="danger"><CirclePause/><span>{ar?"المهارة متوقفة":"Skill paused"}</span></div>}</div>
         <div className="inspector-actions"><button onClick={()=>onToggleKill(skill.id)} className={skill.killSwitchActive?"resume":"danger"}>{skill.killSwitchActive?<Zap/>:<CirclePause/>}{skill.killSwitchActive?(ar?"استئناف":"Resume"):(ar?"إيقاف":"Pause")}</button>{skill.activeVersion>1&&<button onClick={()=>onRollback(skill.id,skill.activeVersion-1)}><History/>{ar?"رجوع":"Rollback"}</button>}</div>
+        {(skill.versions||[]).length>0&&<DnaTimeline className="skill-versions" ariaLabel={ar?"سجل النسخ":"Version history"} maxHeight={260} wrapMeta
+          items={[...(skill.versions||[])].sort((a,b)=>b.version-a.version).map(v=>({key:String(v.version),icon:<GitCommitVertical/>,tone:v.version===skill.activeVersion?"accent":"neutral",
+            title:<><b>v{v.version}</b> · {v.changeSummary}</>,date:v.createdAt?.slice(0,10),meta:v.approvedBy}))}/>}
         <ManualPanel lang={lang} skill={skill} onSkillUpdated={onSkillUpdated} notify={notify}/>
       </aside>}
     </div>
