@@ -148,3 +148,31 @@ test("صفحات الهبوط والشروط والخصوصية تُرسم — �
   assert.match(privacy, /Gemini/);
   assert.match(privacy, /Firebase/);
 });
+
+test("كل قطاعٍ في مبدّل العرض ممتلئ: أسبوعٌ من النشاط، وأشخاص بمعرّفات فريدة، وحوكمة بلا تجاوزات مُختلقة", async () => {
+  const { deriveMetrics } = await import("./engine/metricsEngine.ts");
+  const seed = createDemoSandboxSeed();
+  const stores: Array<[string, InstanceType<typeof Store>]> = [[EDUCATION_CODE, new Store(seed)]];
+  for (const pack of SECTOR_PACKS) {
+    const store = new Store(createDemoSandboxSeed());
+    store.applySector(pack.code, "اختبار");
+    stores.push([pack.code, store]);
+  }
+  for (const [code, store] of stores) {
+    for (const [label, list] of Object.entries({ users: store.users, connectors: store.connectors, sources: store.knowledgeSources, proposals: store.learningProposals, skills: store.skills })) {
+      assert.ok(list.length > 0, `${code}: ${label} فارغ`);
+      const ids = list.map((entry: { id: string }) => entry.id);
+      assert.equal(new Set(ids).size, ids.length, `${code}: معرّف مكرّر في ${label}`);
+    }
+    assert.ok(store.workItems.length >= 10, `${code}: حالات عمل قليلة`);
+    assert.ok(store.approvalRequests.some(a => a.status === "pending"), `${code}: لا موافقة تنتظر`);
+    assert.ok(store.approvalRequests.some(a => a.status !== "pending"), `${code}: لا قرار محسوم`);
+    const metrics = deriveMetrics({
+      skills: store.skills, policies: store.policies, approvalRequests: store.approvalRequests, auditEvents: store.auditEvents,
+      workItems: store.workItems, shadowComparisons: store.shadowComparisons, testCases: store.testCases, learningProposals: store.learningProposals,
+    } as never);
+    assert.equal(metrics.trend.available, true, `${code}: نبض الأسبوع فارغ — ${metrics.trend.reason}`);
+    assert.ok(metrics.trend.points.filter(point => point.events > 0).length >= 5, `${code}: أيامٌ بلا نشاط`);
+    if (code !== EDUCATION_CODE) assert.equal(metrics.governance.unapprovedHighRiskActions.value, 0, `${code}: تجاوزات مُختلقة`);
+  }
+});

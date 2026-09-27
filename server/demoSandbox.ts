@@ -250,7 +250,12 @@ function syntheticAudit(): AuditEvent[] {
     const dayOffset = Math.floor(index / 22);
     const day = dayOffset === 0 ? "اليوم" : dayOffset === 1 ? "أمس" : `قبل ${dayOffset} أيام`;
     const human = index % 9 === 0;
+    /* طابعٌ حقيقي إلى جانب نصّ العرض: «نبض الأسبوع» يقرأ `at` وحده، فكان يرى يومين من عشرة. */
+    const instant = new Date();
+    instant.setDate(instant.getDate() - dayOffset);
+    instant.setHours(hour, minute, 0, 0);
     return {
+      at: instant.toISOString(),
       id: `aud_demo_${index + 1}`,
       timestamp: `${day}، ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${hour >= 12 ? "م" : "ص"}`,
       actorType: human ? "human" : status === "intercepted" ? "system" : "ai",
