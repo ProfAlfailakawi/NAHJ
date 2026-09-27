@@ -54,6 +54,14 @@ const nav: { id: SectionId; ar: string; en: string; icon: React.ElementType; gro
   { id: "partners", ar: "المسوّقون", en: "Partners", icon: HandCoins, group:"owner" },
 ];
 
+/* الألقاب لا تُعدّ اسماً: «د. هيا ناصر» اسمها الأول «هيا». */
+const TITLE_WORDS = /^(د\.?|أ\.?|م\.?|أ\.د\.?|Dr\.?|Mr\.?|Mrs\.?|Ms\.?|Eng\.?)$/i;
+function firstName(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return parts.find(part => !TITLE_WORDS.test(part)) || parts[0] || "";
+}
+function displayInitial(name: string) { return firstName(name).slice(0, 1); }
+
 export function Shell({
   section, onSection, organization, user, lang, onToggleLang, alerts, onAlert, serverLive = false,
   demoEnabled = false, demoActive = false, demoBusy = false, onEnterDemo, onResetDemo, onExitDemo,
@@ -77,6 +85,12 @@ export function Shell({
   const dockItems = visibleNav.slice(0, 5);
   const moreActive = !dockItems.some(item => item.id === section);
   const go = (id: SectionId) => { setMoreOpen(false); onSection(id); };
+  React.useEffect(() => {
+    if (!moreOpen) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setMoreOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [moreOpen]);
   return (
     <div className="app-shell" dir={ar ? "rtl" : "ltr"}>
       <div className="ambient-canvas" aria-hidden="true"/>
@@ -170,9 +184,10 @@ export function Shell({
             ) : null}
             <button type="button" className="top-icon" onClick={onToggleLang} aria-label={ar ? "English — تغيير اللغة" : "العربية — Switch language"} title={ar ? "تغيير اللغة" : "Switch language"}><Languages aria-hidden="true"/></button>
             <button type="button" className="top-icon notification" onClick={onAlert} aria-label={ar ? `التنبيهات${alerts ? ` (${alerts})` : ""}` : `Alerts${alerts ? ` (${alerts})` : ""}`} title={ar ? "التنبيهات" : "Alerts"}><Bell aria-hidden="true"/>{alerts>0&&<b>{alerts>9?"9+":alerts}</b>}</button>
-            <div className="user-chip">
-              <div>{user.name.slice(0,1)}</div>
-              <span><strong>{user.name.split(" ")[0]}</strong><small>{user.department}</small></span>
+            {/* الاسم الأول بلا اللقب: كان «د. هيا ناصر» يُعرض «د.» وحده، فلا اسم يظهر. */}
+            <div className="user-chip" title={`${user.name}${user.department ? ` — ${user.department}` : ""}`}>
+              <div>{displayInitial(user.name)}</div>
+              <span><strong>{firstName(user.name)}</strong><small>{user.department}</small></span>
             </div>
             {/*
               * تسجيل الخروج — لم يكن له مدخل إطلاقًا.
@@ -208,6 +223,16 @@ export function Shell({
         {moreOpen && (
           <div className="mobile-sheet-backdrop" onClick={()=>setMoreOpen(false)}>
             <div className="mobile-sheet" role="dialog" aria-label={ar?"كل الأقسام":"All sections"} onClick={e=>e.stopPropagation()}>
+              {/* على الهاتف لا يتّسع الشريط العلوي لاسم المؤسسة والمستخدم ولا لحقل البحث:
+                  تُعرض هنا كاملة، مع البحث — فلا تسقط ميزةٌ من الهاتف. */}
+              <div className="mobile-sheet-head">
+                <div className="mobile-sheet-avatar" aria-hidden="true">{displayInitial(user.name)}</div>
+                <div className="mobile-sheet-who">
+                  <strong>{user.name}</strong>
+                  <small>{[user.department, ar ? organization.name : organization.nameEn].filter(Boolean).join(" · ")}</small>
+                </div>
+              </div>
+              {onSearch && <button type="button" className="mobile-sheet-search" onClick={()=>{setMoreOpen(false);onSearch()}}><Search aria-hidden="true"/><span>{ar ? "ابحث في عقل المؤسسة" : "Search the company brain"}</span></button>}
               <div className="mobile-sheet-grid">
                 {visibleNav.map(({id, icon:Icon, ar:a, en})=>(
                   <button key={id} className={section===id?"active":""} onClick={()=>go(id)}><Icon/><span>{ar?a:en}</span></button>
