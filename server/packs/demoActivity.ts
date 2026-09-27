@@ -144,6 +144,12 @@ export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now
       const stamp = displayStamp(at, dayOffset);
       const iso = at.toISOString();
       const escalated = serial % 7 === 3;
+      const gated = skill.riskLevel === "high" || skill.riskLevel === "critical";
+      /*
+       * موافقةٌ رُفضت تُوقف الحالة. كانت الحالة تُسجَّل «مكتملة 100%» بينما
+       * طلب اعتمادها مرفوض وسجلّها يقول «اعتُرض» — ثلاث روايات لحدثٍ واحد.
+       */
+      const rejected = gated && !escalated && serial % 9 === 4;
       const code = `H-${sectorCode.slice(0, 3).toUpperCase()}-${1100 + serial}`;
       const item: WorkItem = {
         id: `wi_${sectorCode}_h${serial + 1}`,
@@ -153,22 +159,25 @@ export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now
         skillName: skill.name,
         contactName: contact,
         contactPhone: "",
-        state: escalated ? "escalated" : "completed",
+        state: escalated || rejected ? "escalated" : "completed",
         riskLevel: skill.riskLevel,
-        assignedMode: escalated ? "human_takeover" : "ai",
+        assignedMode: escalated || rejected ? "human_takeover" : "ai",
         createdAt: stamp,
         updatedAt: stamp,
-        progressPercent: 100,
-        currentStepTitle: escalated ? `تولّاها ${people[serial % people.length] || manager} — حالة خارج الإجراء الموثّق` : "اكتمل الإجراء وسُجّل الأثر كاملاً",
+        progressPercent: rejected ? 80 : 100,
+        currentStepTitle: escalated ? `تولّاها ${people[serial % people.length] || manager} — حالة خارج الإجراء الموثّق`
+          : rejected ? `رفض ${manager} الاعتماد — أُوقف التنفيذ وأُعيدت الحالة للموظف` : "اكتمل الإجراء وسُجّل الأثر كاملاً",
         details: { sector: sectorCode, history: true },
-        timeline: skill.steps.slice(0, 3).map(step => ({
-          time: stamp, actor: step.isAutomated ? "ai" as const : "human" as const, title: step.title, details: step.description,
-        })).reverse(),
+        timeline: [
+          ...(rejected ? [{ time: stamp, actor: "human" as const, title: "رُفض الاعتماد", details: `رفض ${manager} الإجراء — لم يُنفَّذ.`, badge: "Rejected" }] : []),
+          ...skill.steps.slice(0, 3).map(step => ({
+            time: stamp, actor: step.isAutomated ? "ai" as const : "human" as const, title: step.title, details: step.description,
+          })).reverse(),
+        ],
       };
       workItems.push(item);
 
       const action = skill.allowedActions?.[serial % Math.max(1, skill.allowedActions.length)] || "executeStep";
-      const gated = skill.riskLevel === "high" || skill.riskLevel === "critical";
       if (gated && !escalated) {
         /* ما يمسّ الخطورة العالية نُفِّذ بعد موافقةٍ مقابلة — والسجل يشهد بالترتيب. */
         approvalRequests.push({
@@ -182,12 +191,12 @@ export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now
           riskLevel: skill.riskLevel,
           requiredRole: "manager",
           requestedAt: stamp,
-          status: serial % 9 === 4 ? "rejected" : "approved",
+          status: rejected ? "rejected" : "approved",
           decidedBy: manager,
           decidedAt: stamp,
         } as ApprovalRequest);
       }
-      const approved = gated && !escalated && serial % 9 !== 4;
+      const approved = gated && !escalated && !rejected;
       auditEvents.push({
         id: `aud_${sectorCode}_h${serial + 1}`,
         timestamp: stamp,

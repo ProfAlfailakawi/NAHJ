@@ -176,3 +176,60 @@ test("كل قطاعٍ في مبدّل العرض ممتلئ: أسبوعٌ من �
     if (code !== EDUCATION_CODE) assert.equal(metrics.governance.unapprovedHighRiskActions.value, 0, `${code}: تجاوزات مُختلقة`);
   }
 });
+
+test("الاعتراض حدثٌ له معنى: فحصٌ انتهى بلا مشكلة، أو حالةٌ اكتملت، لا تُعدّ معترَضة", async () => {
+  const { isDemoInterception } = await import("./db.ts");
+  assert.equal(isDemoInterception({ state: "completed" }, { badge: "POL-LAW-01" }), false, "«لا تعارض» في حالة مكتملة ليس اعتراضاً");
+  assert.equal(isDemoInterception({ state: "executing" }, { badge: "POL-LAW-02" }), false);
+  assert.equal(isDemoInterception({ state: "waiting_approval" }, { badge: "Approval" }), true);
+  assert.equal(isDemoInterception({ state: "waiting_approval" }, { badge: "POL-RET-01" }), true);
+  assert.equal(isDemoInterception({ state: "collecting_data" }, { badge: "POL-MED-01" }), true);
+  assert.equal(isDemoInterception({ state: "completed" }, { badge: "Approval" }), false);
+
+  const law = new Store(createDemoSandboxSeed());
+  law.applySector("law", "اختبار");
+  const conflictFree = law.auditEvents.filter(event => event.provenance === "INT-0912");
+  assert.ok(conflictFree.length > 0);
+  assert.ok(conflictFree.every(event => event.status !== "intercepted"), "فحص تعارضٍ مكتمل عُدّ اعتراضاً");
+  for (const pack of SECTOR_PACKS) {
+    const store = new Store(createDemoSandboxSeed());
+    store.applySector(pack.code, "اختبار");
+    const byCode = new Map(store.workItems.map(item => [item.code, item]));
+    for (const event of store.auditEvents.filter(e => e.status === "intercepted")) {
+      const item = byCode.get(event.provenance);
+      if (item) assert.notEqual(item.state, "completed", `${pack.code}: ${event.provenance} مكتملة ومعدودة معترَضة`);
+    }
+  }
+});
+
+test("موافقةٌ رُفضت في تاريخ العرض تُبقي حالتها موقوفة لا مكتملة", () => {
+  for (const code of ["clinic", "law"]) {
+    const store = new Store(createDemoSandboxSeed());
+    store.applySector(code, "اختبار");
+    const rejected = store.approvalRequests.filter(a => a.status === "rejected");
+    assert.ok(rejected.length > 0, `${code}: لا موافقة مرفوضة في التاريخ`);
+    for (const approval of rejected) {
+      const item = store.workItems.find(w => w.id === approval.workItemId);
+      assert.ok(item, `${code}: موافقة مرفوضة بلا حالة`);
+      assert.notEqual(item!.state, "completed", `${code}: ${item!.code} مكتملة رغم رفض اعتمادها`);
+      assert.ok(item!.progressPercent < 100);
+      const audit = store.auditEvents.find(e => e.provenance === item!.code && e.action === "APPROVAL_REJECTED");
+      assert.equal(audit?.status, "intercepted");
+    }
+  }
+});
+
+test("كلمة مرور مؤقتة في البيئة التجريبية تُنهي جلسات الحساب فعلاً", async () => {
+  const { realAdminOnly } = await import("./routes.ts");
+  const call = (method: string, path: string, id?: string) => new Promise<any>(resolve => {
+    const res: any = { statusCode: 200, status(code: number) { this.statusCode = code; return this; }, json(body: unknown) { resolve({ status: this.statusCode, body }); return this; } };
+    realAdminOnly({ account: { id: "demo" }, method, path, params: id ? { id } : {}, body: {} } as never, res, () => resolve({ next: true }));
+  });
+  const list = (await call("GET", "/accounts")).body.accounts as Array<{ id: string; activeSessions: number }>;
+  const target = list.find(account => account.activeSessions > 0);
+  assert.ok(target, "دفتر العرض بلا جلسات نشطة");
+  const reset = await call("POST", `/accounts/${target!.id}/password`, target!.id);
+  assert.equal(reset.body.sessionsRevoked, true);
+  const after = (await call("GET", "/accounts")).body.accounts.find((a: { id: string }) => a.id === target!.id);
+  assert.equal(after.activeSessions, 0, "الردّ يقول أُنهيت الجلسات والعدّاد على حاله");
+});

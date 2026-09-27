@@ -198,7 +198,7 @@ function demoAccountBook(): Array<Record<string, unknown>> {
   return book;
 }
 
-const realAdminOnly = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+export const realAdminOnly = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   if (req.account?.id !== "demo") return next();
   const book = demoAccountBook();
   const target = req.params.id ? book.find(account => account.id === req.params.id) : undefined;
@@ -220,7 +220,11 @@ const realAdminOnly = (req: AuthenticatedRequest, res: Response, next: NextFunct
     if (req.body?.status) target.status = String(req.body.status);
     return void res.json({ account: target });
   }
-  if (req.path.endsWith("/password") && target) return void res.json({ ok: true, sessionsRevoked: true });
+  if (req.path.endsWith("/password") && target) {
+    /* كلمة مرور جديدة تُنهي الجلسات — فيُصفَّر العدّاد كما يَعِد الردّ، لا يبقى على حاله. */
+    target.activeSessions = 0;
+    return void res.json({ ok: true, sessionsRevoked: true });
+  }
   if (req.path.endsWith("/revoke-sessions") && target) {
     const revoked = Number(target.activeSessions) || 0;
     target.activeSessions = 0;
