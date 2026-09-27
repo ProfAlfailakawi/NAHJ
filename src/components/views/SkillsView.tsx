@@ -166,7 +166,7 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
           <small>{ladderStep(skill.autonomyLevel).yourPart}</small>
         </div>
         <DnaStepper className="autonomy-steps" size="sm" showLabels={false} ariaLabel={ar?"سُلّم الاستقلالية":"Autonomy ladder"} stateText={ar?undefined:EN_STATE}
-          steps={stages.map((st,i)=>({key:st,label:ar?ladderStep(i).plain:st,title:ar?ladderStep(i).plain:st,state:i<skill.autonomyLevel?"done":i===skill.autonomyLevel?"current":"pending"}))}/>
+          steps={stages.map((st,i)=>({key:st,icon:i<skill.autonomyLevel?undefined:<span className="dna-num">{i}</span>,label:ar?ladderStep(i).plain:st,title:ar?ladderStep(i).plain:st,state:i<skill.autonomyLevel?"done":i===skill.autonomyLevel?"current":"pending"}))}/>
         <div className="autonomy-chooser" role="group" aria-label={ar?"اختر مستوى الاستقلالية":"Choose autonomy level"}>{stages.map((st,i)=>{const label=ar?`المستوى ${i}: ${ladderStep(i).plain}${i===skill.autonomyLevel?" (الحالي)":i>skill.autonomyLevel?" — يتطلب مراجعة وتوقيعاً":""}`:`Level ${i}: ${st}${i===skill.autonomyLevel?" (current)":i>skill.autonomyLevel?" — requires review and sign-off":""}`;
           return <button key={st} type="button" className={i===skill.autonomyLevel?"active":""} aria-current={i===skill.autonomyLevel?"step":undefined} aria-label={label} title={label}
             onClick={()=>{if(i===skill.autonomyLevel)return;if(i>skill.autonomyLevel)setPromoteTo(i);else onPromote(skill.id,i as AutonomyLevel)}}>

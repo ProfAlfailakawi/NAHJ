@@ -5,7 +5,6 @@ import {
 } from "lucide-react";
 import type { ApprovalRequest, LearningProposal, Organization, Skill, WorkItem } from "../../types";
 import type { SectionId } from "../Shell";
-import { MiniProcessGlyph } from "../Visuals";
 import { workStepText, workSteps } from "./WorkView";
 import { DnaHubMap, DnaStepper } from "../dna";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
@@ -127,7 +126,6 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
         <article className="work-deck surface">
           <SectionTitle title={ar?"العمل يتحرك":"Work in motion"} meta={ar?"الآن":"NOW"} icon={<Waypoints/>}/>
           {active.length===0&&<p className="empty-note">{ar?"لا حالات عمل جارية بعد. تبدأ حين تُفعَّل أول مهارة أو تصل أول محادثة.":"No work in motion yet."}</p>}
-          {active.length>0&&<div className="work-deck-glyph"><MiniProcessGlyph/></div>}
           <div className="work-mini-grid">
             {active.map((w,i)=><button key={w.id} className="work-mini" onClick={()=>onNavigate("work")}>
               <div><span className={`risk-dot risk-${w.riskLevel}`}/><b>{w.code}</b></div>

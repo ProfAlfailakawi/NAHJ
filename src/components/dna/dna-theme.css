@@ -32,7 +32,7 @@
 .graduation-stage .graduation-ring{margin:auto}
 .graduation-stage .graduation-ring .dna-ringc{font-size:34px;font-weight:800}
 .shadow-head{gap:12px}
-.shadow-head>.dna-ring{display:block;flex:none}
+.shadow-head>.dna-ring{display:inline-grid;align-items:center;flex:none}
 .shadow-head>div:not(.dna-ring){flex:1}
 /* Skills: lifecycle, autonomy ladder, requirement icons, versions. */
 .skill-inspector .skill-lifecycle{margin:10px 0 4px}
@@ -57,3 +57,6 @@
 .cloud-note{display:flex;align-items:flex-start;gap:6px;margin-top:8px;font-size:12px;font-weight:600}
 .cloud-note.warn{color:#8a5a12}
 .cloud-note.ok{color:var(--moss-dark)}
+.brain-hero:before{display:none}
+.brain-hero>.dna-hub{border:0;box-shadow:none;background:transparent}
+.hero-grid .brain-hero{min-height:0}
