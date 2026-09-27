@@ -1,0 +1,21 @@
+/* NAHJ theme for the DNA kit: maps --dna-* tokens to the site's palette (src/index.css :root). */
+:root {
+  --dna-canvas: var(--paper);
+  --dna-surface: var(--white);
+  --dna-surface-2: #f8f5ec;
+  --dna-ink: var(--ink);
+  --dna-muted: var(--muted);
+  --dna-line: var(--line);
+  --dna-line-2: var(--line-strong);
+  --dna-accent: var(--moss);
+  --dna-accent-soft: var(--mint);
+  --dna-on-accent: #ffffff;
+  --dna-core: #10251f;
+  --dna-on-core: #ffffff;
+  --dna-shadow: var(--shadow-1);
+  --dna-ease: var(--ease);
+}
+/* The site keeps every text at 12px or more. */
+.dna .dna-tileb, .dna .dna-bdg, .dna .dna-hubv, .dna-ringc small, .dna-segb .dna-count,
+.dna-steps[data-size='sm'] .dna-lbl, .dna .dna-over { font-size: 12px; }
+.dna svg { max-width: none; }

@@ -14,4 +14,4 @@
 ### Decision 003: Bilingual First-Class RTL & LTR Architecture
 - **Date:** 2026-09-13
 - **Context:** The prompt emphasizes Arabic language excellence, Gulf/Kuwaiti idioms, and clean infographic visual beauty without cognitive pollution.
-- **Decision:** Dual-language toggle (Arabic RTL primary, English LTR), typography powered by Cairo and Plus Jakarta Sans with crisp micro-interactions.
+- **Decision:** Dual-language toggle (Arabic RTL primary, English LTR), typography powered by IBM Plex Sans Arabic and Plus Jakarta Sans with crisp micro-interactions.
