@@ -18,6 +18,7 @@ import {
 import type { Connector } from "../../types";
 import { PageHeader, SectionTitle } from "../Primitives";
 import { ConnectionConstellation } from "../Visuals";
+import { DnaLive, DnaStatusHeader } from "../dna";
 import { apiOrNull } from "../../lib/api";
 
 /*
@@ -118,63 +119,46 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
       />
 
       {/* بطاقة المرآة السحابية — كل سطرٍ فيها يُقرأ من /firebase/status. */}
-      <div className={`mb-6 p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${cloud?.connected ? "bg-emerald-500/5 border-emerald-500/30" : "bg-slate-800/40 border-slate-700"}`}>
-        <div className="flex items-start gap-3.5">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${cloud?.connected ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-slate-700/40 text-slate-400 border-slate-600"}`}>
-            <Cloud className="w-6 h-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-bold text-white text-base tracking-wide">
-                {ar ? "المرآة السحابية (Firestore)" : "Cloud mirror (Firestore)"}
-              </h3>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border flex items-center gap-1 ${cloud?.connected ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40" : "bg-slate-700/60 text-slate-300 border-slate-600"}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${cloud?.connected ? "bg-emerald-400" : "bg-slate-400"}`} />
-                {cloud === null
-                  ? (ar ? "جارٍ قراءة الحالة" : "Reading state")
-                  : cloud.connected
-                    ? (ar ? "وصلةٌ قائمة" : "Link established")
-                    : (ar ? "غير موصولة" : "Not connected")}
-              </span>
-            </div>
-            <p className="text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
-              {ar
-                ? "مصدر الحقيقة هو مخزن المحرّك المحلي؛ وهذه نسخةٌ اختيارية تُرفع إليها. وإن لم تُضبط بيانات المشروع أو رفضت قواعد الأمان الكتابة، لا تُكتب نسخة — ويُقال ذلك هنا بدل أن يُعرض وسمٌ أخضر."
-                : "The local engine store is the source of truth; this is an optional copy. If the project is unconfigured or security rules reject the write, nothing is copied — and that is said here."}
-            </p>
-            <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-400">
-              <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">
-                {ar ? "المشروع" : "Project"}: {cloud?.projectId || (ar ? "غير مضبوط" : "unset")}
-              </span>
-              <span className="px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700">
-                {ar ? "آخر مزامنة ناجحة" : "Last successful sync"}: {cloud?.lastSyncTime ? new Date(cloud.lastSyncTime).toLocaleString("ar-KW") : (ar ? "لا شيء" : "none")}
-              </span>
-            </div>
-            {cloud?.error && (
-              <div className="mt-2 text-xs font-medium flex items-start gap-1.5 text-amber-400">
-                <TriangleAlert className="w-4 h-4 shrink-0 mt-px" />
-                <span className="break-all">{cloud.error}</span>
-              </div>
-            )}
-            {syncResult && (
-              /* اللون والأيقونة يتبعان النتيجة الحقيقية — لا أخضر دائماً مهما حدث. */
-              <div className={`mt-2 text-xs font-medium flex items-start gap-1.5 ${syncFailed ? "text-amber-400" : "text-emerald-400"}`}>
-                {syncFailed ? <TriangleAlert className="w-4 h-4 shrink-0 mt-px" /> : <CheckCircle2 className="w-4 h-4 shrink-0 mt-px" />}
-                <span>{syncResult}</span>
-              </div>
-            )}
-          </div>
+      <DnaStatusHeader
+        className="cloud-card dna-surface"
+        icon={<Cloud />}
+        tone={cloud?.connected ? "accent" : "slate"}
+        title={<>
+          {ar ? "المرآة السحابية (Firestore)" : "Cloud mirror (Firestore)"}
+          <DnaLive on={Boolean(cloud?.connected)} className="cloud-live" label={cloud === null
+            ? (ar ? "جارٍ قراءة الحالة" : "Reading state")
+            : cloud.connected
+              ? (ar ? "وصلةٌ قائمة" : "Link established")
+              : (ar ? "غير موصولة" : "Not connected")} />
+        </>}
+        subtitle={ar
+          ? "مصدر الحقيقة هو مخزن المحرّك المحلي؛ وهذه نسخةٌ اختيارية تُرفع إليها. وإن لم تُضبط بيانات المشروع أو رفضت قواعد الأمان الكتابة، لا تُكتب نسخة — ويُقال ذلك هنا بدل أن يُعرض وسمٌ أخضر."
+          : "The local engine store is the source of truth; this is an optional copy. If the project is unconfigured or security rules reject the write, nothing is copied — and that is said here."}
+        actions={
+          <button onClick={handleFirebaseSync} disabled={syncing} className="dna-btn cloud-sync">
+            <RefreshCw className={syncing ? "animate-spin" : ""} />
+            <span>{syncing ? (ar ? "جارٍ المحاولة..." : "Trying...") : (ar ? "جرّب رفع نسخة" : "Try a cloud copy")}</span>
+          </button>
+        }
+      >
+        <div className="cloud-facts">
+          <span><Server aria-hidden="true" />{ar ? "المشروع" : "Project"}: {cloud?.projectId || (ar ? "غير مضبوط" : "unset")}</span>
+          <span><RefreshCw aria-hidden="true" />{ar ? "آخر مزامنة ناجحة" : "Last successful sync"}: {cloud?.lastSyncTime ? new Date(cloud.lastSyncTime).toLocaleString("ar-KW") : (ar ? "لا شيء" : "none")}</span>
         </div>
-
-        <button
-          onClick={handleFirebaseSync}
-          disabled={syncing}
-          className="px-4 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 disabled:opacity-50 text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer"
-        >
-          <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
-          <span>{syncing ? (ar ? "جارٍ المحاولة..." : "Trying...") : (ar ? "جرّب رفع نسخة" : "Try a cloud copy")}</span>
-        </button>
-      </div>
+        {cloud?.error && (
+          <div className="cloud-note warn">
+            <TriangleAlert aria-hidden="true" />
+            <span className="break-all">{cloud.error}</span>
+          </div>
+        )}
+        {syncResult && (
+          /* اللون والأيقونة يتبعان النتيجة الحقيقية — لا أخضر دائماً مهما حدث. */
+          <div className={`cloud-note ${syncFailed ? "warn" : "ok"}`}>
+            {syncFailed ? <TriangleAlert aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
+            <span>{syncResult}</span>
+          </div>
+        )}
+      </DnaStatusHeader>
 
       <div className="connections-layout">
         <section className="connection-map surface">
