@@ -5,8 +5,9 @@ import {
 } from "lucide-react";
 import type { ApprovalRequest, LearningProposal, Organization, Skill, WorkItem } from "../../types";
 import type { SectionId } from "../Shell";
-import { MiniProcessGlyph, WorkRiver } from "../Visuals";
-import { DnaHubMap } from "../dna";
+import { MiniProcessGlyph } from "../Visuals";
+import { workStepText, workSteps } from "./WorkView";
+import { DnaHubMap, DnaStepper } from "../dna";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
 import { Term } from "../Explain";
 import { WORK_STATE_PLAIN } from "../../lib/glossary";
@@ -133,7 +134,7 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
               {/* `studentName` حقلٌ تعليمي في شاشة عامّة — يعمل في مدرسة ويختفي في عيادة. */}
               <strong>{w.contactName || w.title}</strong>
               <small className="work-mini-state">{ar ? (WORK_STATE_PLAIN[w.state] || w.state) : w.state}</small>
-              <WorkRiver progress={w.progressPercent} risk={w.riskLevel}/>
+              <DnaStepper size="xs" steps={workSteps(w.state,ar)} stateText={workStepText(ar)} ariaLabel={ar?(WORK_STATE_PLAIN[w.state]||w.state):w.state}/>
             </button>)}
           </div>
         </article>

@@ -2,7 +2,23 @@ import React,{useMemo,useState} from "react";
 import { Bot, Hand, PauseCircle, Play, ShieldAlert, UserRound, Waypoints } from "lucide-react";
 import type { WorkItem } from "../../types";
 import { PageHeader, SectionTitle } from "../Primitives";
-import { WorkRiver } from "../Visuals";
+import { DnaStepper, DnaTimeline, type DnaStep } from "../dna";
+import { WORK_STATE_PLAIN } from "../../lib/glossary";
+
+const WORK_FLOW=["queued","collecting_data","waiting_documents","waiting_approval","executing","completed"];
+const EN_STATE={done:"done",current:"current",pending:"upcoming",returned:"returned",blocked:"blocked"};
+export const workStepText=(ar:boolean)=>ar?undefined:EN_STATE;
+/** مراحل الحالة من `state` وحده؛ «رُفعت» تُرسم عقدةً مُرجَعة. */
+export function workSteps(state:string,ar:boolean):DnaStep[]{
+  const label=(st:string)=>ar?(WORK_STATE_PLAIN[st]||st):st.replace(/_/g," ");
+  if(state==="escalated")return [
+    {key:"queued",label:label("queued"),state:"done"},
+    {key:"escalated",label:label("escalated"),state:"returned"},
+    {key:"completed",label:label("completed"),state:"pending"},
+  ];
+  const at=WORK_FLOW.indexOf(state);
+  return WORK_FLOW.map((st,i)=>({key:st,label:label(st),state:i<at||(state==="completed"&&i===at)?"done":i===at?"current":"pending"}));
+}
 
 type Props={lang:"ar"|"en";items:WorkItem[];onTakeOver:(id:string)=>void;onResume:(id:string)=>void;onApproval:(id:string)=>void;approvalByWork:Record<string,string>};
 export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWork}:Props){
@@ -17,14 +33,16 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
           if(window.matchMedia("(max-width:1180px)").matches)requestAnimationFrame(()=>document.querySelector(".work-focus")?.scrollIntoView({behavior:"smooth",block:"start"}))}}>
           <div><span className={`risk-dot risk-${w.riskLevel}`}/><b>{w.code}</b><em>{w.assignedMode==="ai"?<Bot/>:<UserRound/>}</em></div>
           <strong>{w.details?.studentName||w.contactName}</strong><small>{w.currentStepTitle}</small>
-          <WorkRiver progress={w.progressPercent} risk={w.riskLevel}/>
+          <DnaStepper size="xs" steps={workSteps(w.state,ar)} stateText={workStepText(ar)} ariaLabel={ar?(WORK_STATE_PLAIN[w.state]||w.state):w.state}/>
         </button>)}</div>
       </section>
       {item&&<section className="work-focus surface-strong">
         <div className="work-focus-top"><div><em>{item.code}</em><h2>{item.details?.studentName||item.contactName}</h2><span>{item.skillName}</span></div><div className={`mode-orb ${item.assignedMode}`}><span>{item.assignedMode==="ai"?<Bot/>:<UserRound/>}</span><small>{item.assignedMode==="ai"?(ar?"نهج":"AI"):(ar?"موظف":"HUMAN")}</small></div></div>
-        <div className="work-focus-river"><WorkRiver progress={item.progressPercent} risk={item.riskLevel}/><strong>{item.progressPercent}%</strong></div>
+        <div className="work-focus-river"><DnaStepper size="sm" steps={workSteps(item.state,ar)} stateText={workStepText(ar)} ariaLabel={ar?"مراحل الحالة":"Case stages"}/><strong>{item.progressPercent}%</strong></div>
         <div className="work-now"><Waypoints/><span><small>{ar?"الآن":"NOW"}</small><strong>{item.currentStepTitle}</strong></span></div>
-        <div className="timeline-minimal">{item.timeline.slice(0,5).map((t,i)=><div key={`${t.time}-${i}`}><span className={t.actor}><i>{t.actor==="ai"?<Bot/>:t.actor==="human"?<UserRound/>:<Waypoints/>}</i></span><section><b>{t.title}</b><small>{t.time}</small></section></div>)}</div>
+        <DnaTimeline className="work-timeline" ariaLabel={ar?"سجل الحالة":"Case timeline"} wrapMeta items={item.timeline.slice(0,5).map((t,i)=>({key:`${t.time}-${i}`,
+          icon:t.actor==="ai"?<Bot/>:t.actor==="human"?<UserRound/>:<Waypoints/>,tone:t.actor==="ai"?"accent":t.actor==="human"?"sky":"neutral",
+          title:<>{t.title}{t.badge&&<span className="work-tl-badge">{t.badge}</span>}</>,date:t.time,meta:t.details||undefined}))}/>
         <div className="work-actions">
           {approvalByWork[item.id]&&<button className="approval-cta" onClick={()=>onApproval(approvalByWork[item.id])}><ShieldAlert/>{ar?"قرار مطلوب":"Decision required"}</button>}
           {item.assignedMode==="ai"?<button className="human-cta" onClick={()=>onTakeOver(item.id)}><Hand/>{ar?"استلم":"Take over"}</button>:<button className="ai-cta" onClick={()=>onResume(item.id)}><Play/>{ar?"أعد نهج":"Resume AI"}</button>}

@@ -39,3 +39,10 @@
 .skill-inspector .autonomy-steps{margin:8px 0 6px}
 .autonomy-chooser span svg,.promotion-reqs span svg{width:12px;height:12px;display:inline-block;vertical-align:-2px}
 .skill-inspector .skill-versions{margin-top:12px}
+/* Work: case stages and timeline. */
+.work-focus-river{display:flex;align-items:center;gap:12px}
+.work-focus-river>.dna-steps{flex:1;min-width:0}
+.work-focus-river>strong{position:static;flex:none}
+.queue-card .dna-steps,.work-mini .dna-steps{margin-top:10px}
+.work-focus .work-timeline{margin-top:14px}
+.work-tl-badge{display:inline-block;margin-inline-start:6px;padding:0 7px;border-radius:99px;background:var(--mint);color:var(--moss-dark);font-size:12px;font-weight:700}

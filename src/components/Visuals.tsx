@@ -70,17 +70,6 @@ export function SkillRunway({ level, reliability }: { level: number; reliability
   );
 }
 
-export function WorkRiver({ progress = 64, risk = "medium" }: { progress?: number; risk?: "low"|"medium"|"high"|"critical" }) {
-  const tone = risk === "high" || risk === "critical" ? "#e46f61" : risk === "medium" ? "#e0a04b" : "#2f7d65";
-  return (
-    <svg className="work-river" viewBox="0 0 420 80" fill="none" aria-hidden="true">
-      <path d="M20 39H92c21 0 22-22 44-22h58c24 0 24 45 48 45h60c22 0 22-25 44-25h55" stroke="rgba(16,37,31,.09)" strokeWidth="9" strokeLinecap="round"/>
-      <path d="M20 39H92c21 0 22-22 44-22h58c24 0 24 45 48 45h60c22 0 22-25 44-25h55" stroke={tone} strokeOpacity=".88" strokeWidth="3" strokeLinecap="round" pathLength="100" strokeDasharray={`${progress} 100`}/>
-      {[20,92,136,194,242,302,346,401].map((x,i)=><circle key={x} cx={x} cy={[39,39,17,17,62,62,37,37][i]} r={i===Math.min(7,Math.floor(progress/14))?6:4.2} fill={i*14<=progress?tone:"#fffdf7"} stroke={i*14<=progress?tone:"rgba(16,37,31,.16)"} strokeWidth="2"/>)}
-    </svg>
-  );
-}
-
 export function ConnectionConstellation({ statuses }: { statuses: {healthy:number; degraded:number; disconnected:number} }) {
   const nodes = [
     {x:66,y:58,icon:<CalendarDays/>,tone:"sky" as Tone,label:"Calendar"},
