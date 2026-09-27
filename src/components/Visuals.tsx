@@ -24,44 +24,6 @@ function VisualNode({ className, icon, tone, label }: { className: string; icon:
   );
 }
 
-export function BrainAtlas({ compact = false }: { compact?: boolean }) {
-  return (
-    <div className={`brain-atlas ${compact ? "compact" : ""}`} aria-label="Company Brain operational map">
-      <svg className="brain-atlas-lines" viewBox="0 0 780 430" fill="none" aria-hidden="true">
-        <defs>
-          <linearGradient id="gA" x1="70" y1="70" x2="710" y2="360" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#E0A04B"/><stop offset=".42" stopColor="#2F7D65"/><stop offset="1" stopColor="#5E79E6"/>
-          </linearGradient>
-          <filter id="softGlow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        </defs>
-        <path className="brain-route route-a" d="M98 94C178 50 245 87 298 153C334 198 381 211 425 194C485 171 497 91 579 91C632 91 673 124 699 166" stroke="url(#gA)" strokeWidth="2.2" strokeLinecap="round"/>
-        <path className="brain-route route-b" d="M83 314C155 332 210 327 259 285C305 246 336 225 390 232C455 241 473 337 550 337C608 337 649 306 696 265" stroke="rgba(94,121,230,.34)" strokeWidth="2" strokeLinecap="round"/>
-        <path className="brain-route route-c" d="M112 203C166 204 208 187 249 162C297 132 344 117 398 127C447 137 462 193 506 208C558 225 614 204 674 202" stroke="rgba(47,125,101,.28)" strokeWidth="1.8" strokeLinecap="round"/>
-        <circle cx="390" cy="215" r="126" stroke="rgba(16,37,31,.06)"/>
-        <circle cx="390" cy="215" r="96" stroke="rgba(47,125,101,.13)" strokeDasharray="4 9" className="brain-orbit"/>
-        <circle cx="390" cy="215" r="67" fill="rgba(224,240,231,.88)" stroke="rgba(47,125,101,.20)"/>
-        <circle cx="390" cy="215" r="45" fill="#10251f" filter="url(#softGlow)"/>
-        <circle cx="98" cy="94" r="5" fill="#E0A04B"/>
-        <circle cx="699" cy="166" r="5" fill="#5E79E6"/>
-        <circle cx="83" cy="314" r="5" fill="#8C6FE0"/>
-        <circle cx="696" cy="265" r="5" fill="#2F7D65"/>
-        <circle cx="112" cy="203" r="4.5" fill="#E46F61"/>
-        <circle cx="674" cy="202" r="4.5" fill="#2F7D65"/>
-        {[
-          [172,72],[256,118],[318,316],[473,72],[570,150],[587,292],[222,254],[510,244]
-        ].map(([x,y],i)=><circle key={i} cx={x} cy={y} r="3.5" fill="#fffdf7" stroke="rgba(16,37,31,.22)" strokeWidth="1.4"/>)}
-      </svg>
-      <div className="brain-core"><BrainCircuit/></div>
-      <VisualNode className="node-a" tone="amber" label="Knowledge" icon={<FileCheck2/>}/>
-      <VisualNode className="node-b" tone="sky" label="Processes" icon={<GitBranch/>}/>
-      <VisualNode className="node-c" tone="violet" label="People" icon={<UserRound/>}/>
-      <VisualNode className="node-d" tone="moss" label="Policies" icon={<ShieldCheck/>}/>
-      <VisualNode className="node-e" tone="rose" label="Signals" icon={<Waypoints/>}/>
-      <div className="brain-spark" aria-hidden="true"><Sparkles/></div>
-    </div>
-  );
-}
-
 export function LearningLens({ progress = 76 }: { progress?: number }) {
   const circumference = 2 * Math.PI * 42;
   const dash = Math.max(0, Math.min(100, progress)) / 100 * circumference;
@@ -141,20 +103,6 @@ export function ConnectionConstellation({ statuses }: { statuses: {healthy:numbe
   );
 }
 
-export function ImpactHalo({ value = 84.5, label = "h" }: { value?: number; label?: string }) {
-  return (
-    <div className="impact-halo">
-      <svg viewBox="0 0 220 220" aria-hidden="true">
-        <defs><linearGradient id="impactG" x1="30" y1="20" x2="190" y2="200"><stop stopColor="#2f7d65"/><stop offset=".5" stopColor="#5e79e6"/><stop offset="1" stopColor="#8c6fe0"/></linearGradient></defs>
-        <circle cx="110" cy="110" r="91" fill="none" stroke="rgba(16,37,31,.055)" strokeWidth="18"/>
-        <circle cx="110" cy="110" r="91" fill="none" stroke="url(#impactG)" strokeWidth="18" strokeLinecap="round" strokeDasharray="430 572" transform="rotate(-90 110 110)"/>
-        <circle cx="110" cy="110" r="65" fill="#fffdf7" stroke="rgba(16,37,31,.06)"/>
-      </svg>
-      <div><strong>{value}</strong><span>{label}</span></div>
-    </div>
-  );
-}
-
 export function GovernanceShield({ paused = false }: { paused?: boolean }) {
   return (
     <div className={`governance-shield ${paused ? "paused" : ""}`}>
@@ -185,5 +133,4 @@ export function EvidenceSplit({ a = 78, b = 22 }: { a?: number; b?: number }) {
 }
 
 export function FlowGlyph() { return <MiniProcessGlyph/>; }
-export function CompanyBrainVisual(props:{compact?:boolean}) { return <BrainAtlas {...props}/>; }
 export function LearningOrbit({progress=72}:{progress?:number}) { return <LearningLens progress={progress}/>; }

@@ -19,3 +19,11 @@
 .dna .dna-tileb, .dna .dna-bdg, .dna .dna-hubv, .dna-ringc small, .dna-segb .dna-count,
 .dna-steps[data-size='sm'] .dna-lbl, .dna .dna-over { font-size: 12px; }
 .dna svg { max-width: none; }
+/* Impact hero ring and hours line. */
+.impact-hero .impact-ring{margin:auto}
+.impact-hero .impact-ring .dna-ringc{font-size:34px;font-weight:800}
+.impact-hero .impact-ring .dna-ringc small{font-size:12px}
+.impact-hero-copy .impact-hours{display:inline-flex;align-items:center;gap:5px}
+.impact-hero-copy .impact-hours svg{width:14px;height:14px}
+/* Company brain map fills the hero card. */
+.brain-hero .dna-hub{position:relative;z-index:1}

@@ -425,7 +425,7 @@ export default function App(){
 
   let view:React.ReactNode;
   switch(section){
-    case "today":view=<TodayView lang={lang} organization={organization} onNavigate={setSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval} todayMetrics={todayData?.metrics||null} memory={todayData?.institutionalMemoryCoverage||null} skills={skills} practiceCount={practice.length} canManageAccounts={account?.role==="admin"||account?.role==="owner"}/>;break;
+    case "today":view=<TodayView lang={lang} organization={organization} onNavigate={setSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval} todayMetrics={todayData?.metrics||null} memory={todayData?.institutionalMemoryCoverage||null} skills={skills} practiceCount={practice.length} canManageAccounts={account?.role==="admin"||account?.role==="owner"} serverLive={serverLive} demoActive={demoActive} policiesActive={governance?.policiesActive?.value ?? null}/>;break;
     case "learn":view=<LearnView lang={lang} proposals={proposals} onResolve={resolve}/>;break;
     case "teach":view=<TeachView lang={lang} onSkillCodified={()=>void codified()} onNotify={notify}/>;break;
     case "skills":view=<SkillsView lang={lang} skills={skills} onPromote={(id,l,o)=>void promote(id,l,o)} onOpenPeople={()=>setSection("people")} onSkillUpdated={sk=>setSkills(v=>v.map(x=>x.id===sk.id?sk:x))} notify={notify} onRollback={(id,v)=>void rollback(id,v)} onToggleKill={id=>void toggleSkill(id)}/>;break;
