@@ -3,6 +3,8 @@ import { CheckCircle2, FlaskConical, GitCompareArrows, Play, ShieldCheck, XCircl
 import type { ShadowComparison, TestCase } from "../../types";
 import { PageHeader, SectionTitle } from "../Primitives";
 import { DnaRing, DnaStepper } from "../dna";
+/* عتبتا بوّابة الترقية نفسها — ملفٌّ بلا تبعيات خادم، يُستورد هنا ولا يُنسخ. */
+import { MIN_PASS_RATE, MIN_SHADOW_AGREEMENT } from "../../../server/engine/promotionReview";
 
 type Props={lang:"ar"|"en";cases:TestCase[];shadow:ShadowComparison[];running:boolean;shadowRunning:boolean;onRunPractice:()=>void;onRunShadow:()=>void};
 export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPractice,onRunShadow}:Props){
@@ -16,8 +18,17 @@ export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPract
   const compared=shadow.filter(s=>s.evaluated!==false);
   const matched=compared.filter(s=>s.matched).length;
   const skipped=shadow.length-compared.length;
-  const practiceDone=cases.length>0&&passed===cases.length;
-  const shadowDone=compared.length>0&&matched===compared.length;
+  /*
+   * مراحل المسار تتبع بوّابة الترقية (reviewPromotion): نسبة النجاح على الحالات
+   * التي شُغّلت، والتطابق على ما قورن فعلاً، كلٌّ ≥ عتبته — لا «الكل أو لا شيء».
+   * والحلقتان تبقيان على النسبتين الحقيقيتين.
+   */
+  const ran=cases.filter(c=>c.resultStatus);
+  const passRate=ran.length?Math.round(ran.filter(c=>c.resultStatus==="pass").length/ran.length*100):null;
+  const measured=shadow.filter(s=>s.evaluated===true);
+  const agreement=measured.length?Math.round(measured.filter(s=>s.matched).length/measured.length*100):null;
+  const practiceDone=passRate!==null&&passRate>=MIN_PASS_RATE;
+  const shadowDone=agreement!==null&&agreement>=MIN_SHADOW_AGREEMENT;
   return <div className="page-enter">
     <PageHeader eyebrow={ar?"التخرّج والتقييم":"GRADUATION / EVALS"} title={ar?"قبل أن يعمل… يثبت نفسه.":"Before it works, it proves itself."} hint={ar?"اختبارات ثم ظل حقيقي. الاستقلالية تُكتسب ولا تُمنح.":"Practice first. Shadow next. Autonomy is earned."}/>
     <div className="graduation-grid">
