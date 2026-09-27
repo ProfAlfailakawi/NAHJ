@@ -166,11 +166,71 @@ authRouter.post("/change-password", requireAuth, async (req: AuthenticatedReques
  * صراحةً هنا: صندوقه في الذاكرة لا يحوي حسابات، لكن هذه المسارات تكتب في قاعدة
  * البيانات الحقيقية مباشرة لا عبر الصندوق.
  */
-const realAdminOnly = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  if (req.account?.id === "demo") {
-    return void res.status(403).json({ error: "إدارة الحسابات غير متاحة في البيئة التجريبية.", code: "DEMO_READONLY" });
+/*
+ * حسابات الصندوق.
+ *
+ * كانت الشاشة في العرض ترفض بـ403 وتقول «لا حسابات» مع تنبيه خطأ — أي أن زائر
+ * العرض يرى شاشةً مكسورة. فصار للصندوق حساباته في الذاكرة، مشتقّةً من فريق
+ * المؤسسة المعروضة، تُنشأ وتُعدَّل فيها ولا تمسّ جدول الحسابات الحقيقي أبداً.
+ * والمفتاح مصفوفة الأشخاص نفسها: تبديل القطاع يبدّلها فتتبدّل الحسابات معها.
+ */
+const demoAccountBooks = new WeakMap<object, Array<Record<string, unknown>>>();
+const DEMO_ROLE: Record<string, string> = { admin: "admin", manager: "manager", employee: "operator", auditor: "viewer", viewer: "viewer" };
+function demoAccountBook(): Array<Record<string, unknown>> {
+  const key = db.users as unknown as object;
+  let book = demoAccountBooks.get(key);
+  if (!book) {
+    const domain = (db.sectorCode && db.sectorCode !== EDUCATION_CODE ? db.sectorCode : "academy") + ".demo";
+    const day = (back: number) => new Date(Date.now() - back * 86_400_000).toISOString();
+    book = db.users.map((user, index) => ({
+      id: `demo_acc_${index + 1}`,
+      email: `user${index + 1}@${domain}`,
+      name: user.name,
+      role: index === 0 ? "admin" : DEMO_ROLE[String(user.role)] || "operator",
+      status: "ACTIVE",
+      createdAt: day(120 - index * 11),
+      lastLoginAt: day(index % 3),
+      lockedUntil: null,
+      activeSessions: index === 0 ? 2 : index % 2,
+    }));
+    demoAccountBooks.set(key, book);
   }
-  next();
+  return book;
+}
+
+export const realAdminOnly = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (req.account?.id !== "demo") return next();
+  const book = demoAccountBook();
+  const target = req.params.id ? book.find(account => account.id === req.params.id) : undefined;
+  if (req.params.id && !target) return void res.status(404).json({ error: "الحساب غير موجود." });
+  if (req.method === "GET") return void res.json({ accounts: book });
+  if (req.method === "POST" && !req.params.id) {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const name = String(req.body?.name || "").trim();
+    if (!name || !/^[^@\s]+@[^@\s]+$/.test(email)) return void res.status(400).json({ error: "الاسم والبريد مطلوبان." });
+    if (String(req.body?.password || "").length < 12) return void res.status(400).json({ error: "كلمة المرور 12 حرفاً فأكثر." });
+    if (book.some(account => account.email === email)) return void res.status(409).json({ error: "البريد مستعمل." });
+    const account = { id: `demo_acc_${book.length + 1}_${Date.now()}`, email, name, role: String(req.body?.role || "viewer"), status: "ACTIVE",
+      createdAt: new Date().toISOString(), lastLoginAt: null, lockedUntil: null, activeSessions: 0 };
+    book.push(account);
+    return void res.status(201).json({ account });
+  }
+  if (req.method === "PATCH" && target) {
+    if (req.body?.role) target.role = String(req.body.role);
+    if (req.body?.status) target.status = String(req.body.status);
+    return void res.json({ account: target });
+  }
+  if (req.path.endsWith("/password") && target) {
+    /* كلمة مرور جديدة تُنهي الجلسات — فيُصفَّر العدّاد كما يَعِد الردّ، لا يبقى على حاله. */
+    target.activeSessions = 0;
+    return void res.json({ ok: true, sessionsRevoked: true });
+  }
+  if (req.path.endsWith("/revoke-sessions") && target) {
+    const revoked = Number(target.activeSessions) || 0;
+    target.activeSessions = 0;
+    return void res.json({ ok: true, revoked });
+  }
+  return void res.status(400).json({ error: "طلب غير مدعوم في البيئة التجريبية." });
 };
 
 /*

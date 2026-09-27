@@ -32,7 +32,7 @@ import { AUDIT_RETENTION, readState, startPersistenceWorker } from "./persistenc
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createDemoSandboxSeed, type DemoSandboxSeed } from "./demoSandbox.ts";
 import { buildSector, EDUCATION_CODE, getSectorPack } from "./packs/index.ts";
-import { buildDemoActivity } from "./packs/demoActivity.ts";
+import { buildDemoActivity, buildDemoHistory } from "./packs/demoActivity.ts";
 import { buildCleanStart, type CleanStart } from "./packs/cleanStart.ts";
 
 /*
@@ -400,13 +400,24 @@ export class Store {
             actorName: entry.actor === "ai" ? "نهج" : entry.actor === "human" ? (humanNames[0] || "موظف") : "النظام",
             action: entry.badge ? entry.badge.toUpperCase().replace(/[^A-Z0-9]+/g, "_") || "WORK_EVENT" : "WORK_EVENT",
             provenance: item.code,
-            risk: item.riskLevel,
+            /*
+             * خطوات الحالة فحوصٌ وتوقّفات لا تنفيذٌ لإجراءٍ عالي الخطورة: كانت
+             * تُسجَّل «نجاحاً عالي الخطورة» فتعدّها الحوكمة تجاوزاتٍ بلا موافقة.
+             * ما يحمل رمز سياسة أو طلب اعتماد هو إيقافٌ عند الحدّ، ويُسجَّل كذلك.
+             */
+            risk: entry.actor === "ai" && (item.riskLevel === "high" || item.riskLevel === "critical") ? "medium" : item.riskLevel,
+            policyCode: entry.badge && /^POL-/.test(entry.badge) ? entry.badge : undefined,
             latencyMs: 0,
             details: `${item.title}: ${entry.title} — ${entry.details}`,
-            status: item.state === "escalated" ? "warning" : "success",
+            status: item.state === "escalated" ? "warning" : isDemoInterception(item, entry) ? "intercepted" : "success",
           });
         }
       }
+      /* أسبوعٌ مضى: حالاتٌ مكتملة، وموافقاتٌ حُسمت، وسجلٌّ مؤرَّخ — في الصندوق وحده. */
+      const history = buildDemoHistory(built, code);
+      this.workItems = [...this.workItems, ...history.workItems];
+      this.approvalRequests = [...this.approvalRequests, ...history.approvalRequests];
+      this.auditEvents = [...this.auditEvents, ...history.auditEvents];
       this.organization = {
         ...this.organization,
         verifiedSkillsCount: built.skills.filter(skill => skill.status === "active").length,
@@ -540,6 +551,22 @@ function sandboxStore(sector: string): Store {
 }
 
 /** قطاعٌ معروف أو التعليم — لا يُركَّب صندوقٌ على رمزٍ مجهول. */
+/*
+ * متى تكون خطوةُ حالةٍ اعتراضاً؟
+ *
+ * كان كل ما يحمل وسماً يبدأ بـ«POL-» يُعدّ معترَضاً — ففحص تعارضٍ انتهى بـ«لا
+ * تعارض» (POL-LAW-01) وحالةٌ مكتملة كانا يُحسبان في «إجراءات اعترضتها السياسات».
+ * الاعتراض حدثٌ له معنى: طلبُ اعتمادٍ رُفع فعلاً، أو سياسةٌ أوقفت الحالة فبقيت
+ * متوقّفة عندها. حالةٌ اكتملت أو ما تزال تُنفَّذ لم يعترضها شيء، وإن ذُكرت
+ * سياستها في خطوة.
+ */
+export function isDemoInterception(item: Pick<WorkItem, "state">, entry: { badge?: string }): boolean {
+  const badge = entry.badge || "";
+  if (item.state === "completed" || item.state === "executing") return false;
+  if (badge === "Approval") return item.state === "waiting_approval";
+  return /^POL-/.test(badge);
+}
+
 export function normalizeDemoSector(value: unknown): string {
   const code = String(value || "").trim();
   return code && getSectorPack(code) ? code : EDUCATION_CODE;

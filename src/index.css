@@ -926,3 +926,104 @@
 .accounts-password-row button svg{width:15px;height:15px}
 .control-state small{display:block;margin-top:4px;font-size:12.5px;color:var(--muted);line-height:1.5}
 .audit-record{margin:4px 0 0;font-size:12.5px;color:var(--moss-dark);font-weight:800}
+
+/* ==== الهاتف واللوحي — تمريرة شاملة ======================================
+ * كل ما هنا مقيّد بعرضٍ أقل من 900px إلا إصلاحين لعيبين ظاهرين على كل
+ * الأحجام (حقول الحسابات وبطاقات الأشخاص). الهوية والألوان كما هي.
+ */
+/* حقول الحسابات: كانت `flex:1 1 180px` على حقلٍ داخل عمودٍ مرن، فيصير ارتفاعه
+   180px بلا إطار ظاهر — مربعات فارغة عملاقة على كل الشاشات. */
+.accounts-self .field input,.accounts-create .field input,.accounts-create .field select{flex:0 0 auto;height:42px;border:1px solid var(--line-strong);background:#fff}
+.accounts-password-row{flex:0 0 auto}
+.accounts-password-row input{flex:1 1 auto}
+.accounts-self form>button,.accounts-create form>button{align-self:flex-end;height:42px}
+/* بطاقات الأشخاص كانت بلا حشوة ولا حواف — النص يلتصق بالحدّ. */
+.people-layout>section,.people-list{padding:18px;border-radius:24px}
+.people-layout{margin-top:16px}
+.people-list{margin-top:0}
+
+@media(max-width:1180px){
+  /* عمود الشبكة `1fr` يتّسع لأطول نص لا يلتفّ فيدفع الصفحة جانباً (العمل، التدرّب). */
+  .learn-layout,.teach-layout,.skills-layout,.work-layout,.connections-layout,.control-layout,.graduation-grid{grid-template-columns:minmax(0,1fr)}
+  .eval-row{grid-template-columns:30px minmax(0,1fr) auto}
+  .eval-row>div{min-width:0}
+  .shadow-pairs>div{grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr)}
+}
+
+@media(max-width:900px){
+  html,body{overflow-x:clip}
+  .shell-body{min-width:0}
+  .content-stage{padding-bottom:calc(104px + env(safe-area-inset-bottom));padding-inline:max(16px,env(safe-area-inset-left)) max(16px,env(safe-area-inset-right))}
+  .topbar{padding-inline:max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-left));gap:8px;padding-top:env(safe-area-inset-top);height:calc(64px + env(safe-area-inset-top))}
+  .top-actions{gap:2px;min-width:0}
+  .mobile-dock{bottom:calc(10px + env(safe-area-inset-bottom));overflow:hidden}
+  .mobile-sheet{bottom:calc(84px + env(safe-area-inset-bottom));max-height:calc(100dvh - 120px)}
+  .emergency-fab{bottom:calc(88px + env(safe-area-inset-bottom))}
+  .toast{bottom:calc(88px + env(safe-area-inset-bottom))}
+
+  /* رأس القائمة: من أنا وأين أنا — الاسم كاملاً، والبحث الذي لا يتّسع له الشريط. */
+  .mobile-sheet-head{display:flex;align-items:center;gap:10px;padding:4px 4px 12px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+  .mobile-sheet-avatar{width:40px;height:40px;flex:none;border-radius:13px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:950;font-size:15px}
+  .mobile-sheet-who{min-width:0;display:flex;flex-direction:column;gap:2px}
+  .mobile-sheet-who strong{font-size:15px;font-weight:950;line-height:1.35;overflow-wrap:anywhere}
+  .mobile-sheet-who small{font-size:12.5px;color:var(--muted);font-weight:750;line-height:1.45;overflow-wrap:anywhere}
+  .mobile-sheet-search{width:100%;min-height:46px;margin-bottom:10px;display:flex;align-items:center;gap:9px;padding:0 14px;border:1px solid var(--line);border-radius:15px;background:rgba(255,255,255,.7);color:var(--muted);font:inherit;font-size:14px;font-weight:800;cursor:pointer}
+  .mobile-sheet-search svg{width:17px;flex:none}
+  .mobile-sheet-grid button{min-height:64px;font-size:13px}
+
+  /* أهداف اللمس ≥ 44px. */
+  .demo-chip{height:44px}
+  .demo-chip button{min-width:36px;min-height:36px;display:grid;place-items:center}
+  .top-icon{width:42px;height:44px}
+  .round-action{width:44px;height:44px}
+  .modal-close{width:44px;height:44px}
+  .metric-basis-toggle{position:relative;min-width:32px;min-height:32px;display:inline-grid;place-items:center}
+  .accounts-rows article{border-color:var(--line);background:rgba(255,255,255,.6)}
+  .metric-basis-toggle::after{content:"";position:absolute;inset:-6px}
+  .content-stage button:not(.term):not(.metric-basis-toggle),.approval-sheet button:not(.term),.help-panel button{min-height:44px;min-width:44px}
+  .demo-banner button,.demo-banner select{height:44px}
+  .backup-form input,.backup-form button{height:44px}
+  .term{min-height:0}
+  .teach-controls{grid-template-columns:44px minmax(0,1fr)}
+  .teach-input{min-width:0}
+  .autonomy-chooser button{min-width:0}
+  .accounts-password-row{flex-wrap:wrap}
+  .accounts-password-row input{flex:1 1 160px;min-width:0}
+  .accounts-list h3 small{font-size:12px}
+  .palette input{min-height:40px}
+  .demo-chip button{position:relative}
+  .demo-chip button::after{content:"";position:absolute;inset:-4px}
+
+  /* الحقول: 16px يمنع تكبير iOS عند التركيز، و44px للمس. */
+  .content-stage input:not([type=checkbox]):not([type=radio]),.content-stage select,.content-stage textarea,.palette input,.approval-sheet textarea,.approval-sheet input{font-size:16px}
+  .content-stage input:not([type=checkbox]):not([type=radio]):not([type=range]),.content-stage select{min-height:44px}
+  input,textarea,select{scroll-margin-block:96px 120px}
+
+  /* نصوصٌ كانت تُقصّ بنقاط بلا وسيلة لرؤيتها: تلتفّ على الهاتف. */
+  .eval-row small,.shadow-pairs small,.user-chip small,.queue-card small,.queue-card strong{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+
+  /* السجل: الإجراء ثم تفاصيله تحته، لا عمودان ضيّقان متزاحمان. */
+  .audit-head{flex-direction:column;align-items:flex-start;gap:2px}
+
+  /* النوافذ: تتّسع للشاشة وتبقى أزرار القرار في متناول الإبهام. */
+  .modal-backdrop{padding:10px;padding-bottom:max(10px,env(safe-area-inset-bottom))}
+  .approval-sheet{max-height:calc(100dvh - 20px);overflow:auto;overscroll-behavior:contain}
+  .approval-actions{position:sticky;bottom:-1px;z-index:2;background:inherit;padding-block:10px;margin-inline:-4px;padding-inline:4px;background:linear-gradient(to bottom,rgba(255,253,247,.0),#fffdf7 30%)}
+  .approval-actions button{min-height:48px}
+}
+@media(max-width:620px){
+  .page-heading p{font-size:13.5px;line-height:1.6}
+  .accounts-self,.accounts-create,.accounts-list{padding:16px}
+  .accounts-self form>button,.accounts-create form>button{width:100%}
+  .accounts-rows article{flex-direction:column;align-items:stretch}
+  .accounts-rows article>*{flex:0 0 auto}
+  .accounts-password-row input{flex:1 1 100%}
+  .accounts-password-row button{flex:1 1 0}
+  .autonomy-chooser{gap:3px}
+  .accounts-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .accounts-controls select{grid-column:1/-1;width:100%}
+  .people-layout>section,.people-list{padding:16px}
+  .spof-list li{flex-direction:column;align-items:stretch}
+  .backup-form{display:grid;grid-template-columns:auto 1fr auto}
+  .backup-form input{width:100%}
+}

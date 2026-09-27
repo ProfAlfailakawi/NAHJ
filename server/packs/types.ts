@@ -208,8 +208,15 @@ export interface ExpandedPack {
   channel: PackChannel;
 }
 
-const slugId = (prefix: string, value: string, index: number) =>
-  `${prefix}_${value.replace(/[^a-z0-9]+/gi, "_").toLowerCase().slice(0, 28) || index}`;
+/*
+ * الأسماء العربية لا تحمل حرفاً لاتينياً، فكان كل اسمٍ منها يصير «_» — وكل
+ * موصلات الحزمة وأشخاصها ومصادرها بمعرّفٍ واحد («conn__»). فتتصادم مفاتيح
+ * الواجهة ويُصاب بالتبديل غيرُ المقصود. الرقم التسلسلي يفصل ما لا يفصله الاسم.
+ */
+const slugId = (prefix: string, value: string, index: number) => {
+  const slug = value.replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "").toLowerCase().slice(0, 28);
+  return slug ? `${prefix}_${slug}` : `${prefix}_${index + 1}`;
+};
 
 const today = () => new Date().toISOString().slice(0, 10);
 

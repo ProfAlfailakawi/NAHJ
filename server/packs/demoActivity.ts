@@ -1,4 +1,4 @@
-import type { ApprovalRequest, ShadowComparison, TestCase, WorkItem } from "../../src/types/index.ts";
+import type { ApprovalRequest, AuditEvent, ShadowComparison, TestCase, WorkItem } from "../../src/types/index.ts";
 import type { ExpandedPack, PackDemo } from "./types.ts";
 
 /*
@@ -90,4 +90,146 @@ export function buildDemoActivity(demo: PackDemo, expanded: ExpandedPack, sector
   }));
 
   return { workItems, approvalRequests, testCases, shadowComparisons };
+}
+
+/* ============================================================ تاريخ العرض */
+
+/*
+ * أسبوعٌ مضى في مؤسسة العرض.
+ *
+ * نشاط الحزمة أربع حالاتٍ اليوم؛ فكان «نبض الأسبوع» يقول «النشاط كلّه في يوم
+ * واحد»، و«الأشخاص» و«السجل» يوحيان بمؤسسةٍ فتحت أبوابها هذا الصباح. هذا
+ * التاريخ يملأ الأيام الستة الماضية بحالاتٍ مكتملة بأسماء عملاء القطاع،
+ * وبموافقاتٍ حُسمت، وبسجلّ تدقيقٍ مؤرَّخٍ فعلاً (`at`) — في الصندوق وحده.
+ */
+const HISTORY_CONTACTS: Record<string, string[]> = {
+  clinic: ["سلمى عادل", "خالد جاسم", "نوف مبارك", "حمد سالم", "دلال يوسف", "فهد ناصر", "شيخة بدر", "مشعل حمد", "العنود فيصل", "راشد طلال", "بشاير سعد", "يعقوب عيسى"],
+  law: ["شركة الرمال للمقاولات", "بدر عبدالله", "مؤسسة الواحة التجارية", "منيرة خالد", "سعود فهد", "شركة النخيل العقارية", "هند جاسم", "ناصر مبارك", "أمل سالم", "مجموعة الصفاة", "عبدالرحمن يوسف", "لطيفة حمد"],
+  retail: ["غدير سالم", "محمد العتيبي", "ريم فيصل", "علي حسين", "نورة بدر", "جراح ناصر", "مريم عادل", "عبدالعزيز فهد", "دانة جاسم", "طلال سعد", "حصة مبارك", "يوسف خالد"],
+  logistics: ["شركة الخليج للأغذية", "مؤسسة البحر للتجارة", "فيصل حمد", "شركة الجهراء للمواد", "سارة ناصر", "مصنع الشويخ", "بدر سالم", "شركة الأحمدي للتوريد", "هيا عبدالله", "مخازن الري", "خالد مبارك", "متجر الفحيحيل"],
+  realestate: ["عبدالله جاسم", "شركة المروج العقارية", "منى فهد", "سالم بدر", "نورة يوسف", "مؤسسة السالمية", "حمد ناصر", "دلال سعد", "فيصل عادل", "شيماء خالد", "مبارك طلال", "أسرار حمد"],
+};
+
+const pad2 = (value: number) => String(value).padStart(2, "0");
+const displayStamp = (date: Date, dayOffset: number) => {
+  const day = dayOffset === 0 ? "اليوم" : dayOffset === 1 ? "أمس" : dayOffset === 2 ? "قبل يومين" : `قبل ${dayOffset} أيام`;
+  const hours = date.getHours();
+  return `${day}، ${pad2(hours)}:${pad2(date.getMinutes())} ${hours >= 12 ? "م" : "ص"}`;
+};
+
+export interface DemoHistory {
+  workItems: WorkItem[];
+  approvalRequests: ApprovalRequest[];
+  auditEvents: AuditEvent[];
+}
+
+export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now: Date = new Date()): DemoHistory {
+  const contacts = HISTORY_CONTACTS[sectorCode] || HISTORY_CONTACTS.retail;
+  const skills = expanded.skills;
+  const people = expanded.users.map(user => user.name);
+  const manager = expanded.users.find(user => user.role === "manager" || user.role === "admin")?.name || people[0] || "المدير";
+  const workItems: WorkItem[] = [];
+  const approvalRequests: ApprovalRequest[] = [];
+  const auditEvents: AuditEvent[] = [];
+  let serial = 0;
+
+  for (let dayOffset = 6; dayOffset >= 1; dayOffset--) {
+    const perDay = 2 + ((dayOffset * 7) % 3);
+    for (let slot = 0; slot < perDay; slot++) {
+      const skill = skills[(serial + dayOffset) % skills.length];
+      const contact = contacts[serial % contacts.length];
+      const at = new Date(now);
+      at.setDate(at.getDate() - dayOffset);
+      at.setHours(8 + ((slot * 3 + dayOffset) % 9), (serial * 17) % 60, 0, 0);
+      const stamp = displayStamp(at, dayOffset);
+      const iso = at.toISOString();
+      const escalated = serial % 7 === 3;
+      const gated = skill.riskLevel === "high" || skill.riskLevel === "critical";
+      /*
+       * موافقةٌ رُفضت تُوقف الحالة. كانت الحالة تُسجَّل «مكتملة 100%» بينما
+       * طلب اعتمادها مرفوض وسجلّها يقول «اعتُرض» — ثلاث روايات لحدثٍ واحد.
+       */
+      const rejected = gated && !escalated && serial % 9 === 4;
+      const code = `H-${sectorCode.slice(0, 3).toUpperCase()}-${1100 + serial}`;
+      const item: WorkItem = {
+        id: `wi_${sectorCode}_h${serial + 1}`,
+        code,
+        title: `${skill.name} — ${contact}`,
+        skillId: skill.id,
+        skillName: skill.name,
+        contactName: contact,
+        contactPhone: "",
+        state: escalated || rejected ? "escalated" : "completed",
+        riskLevel: skill.riskLevel,
+        assignedMode: escalated || rejected ? "human_takeover" : "ai",
+        createdAt: stamp,
+        updatedAt: stamp,
+        progressPercent: rejected ? 80 : 100,
+        currentStepTitle: escalated ? `تولّاها ${people[serial % people.length] || manager} — حالة خارج الإجراء الموثّق`
+          : rejected ? `رفض ${manager} الاعتماد — أُوقف التنفيذ وأُعيدت الحالة للموظف` : "اكتمل الإجراء وسُجّل الأثر كاملاً",
+        details: { sector: sectorCode, history: true },
+        timeline: [
+          ...(rejected ? [{ time: stamp, actor: "human" as const, title: "رُفض الاعتماد", details: `رفض ${manager} الإجراء — لم يُنفَّذ.`, badge: "Rejected" }] : []),
+          ...skill.steps.slice(0, 3).map(step => ({
+            time: stamp, actor: step.isAutomated ? "ai" as const : "human" as const, title: step.title, details: step.description,
+          })).reverse(),
+        ],
+      };
+      workItems.push(item);
+
+      const action = skill.allowedActions?.[serial % Math.max(1, skill.allowedActions.length)] || "executeStep";
+      if (gated && !escalated) {
+        /* ما يمسّ الخطورة العالية نُفِّذ بعد موافقةٍ مقابلة — والسجل يشهد بالترتيب. */
+        approvalRequests.push({
+          id: `appr_${sectorCode}_h${serial + 1}`,
+          workItemId: item.id,
+          workTitle: item.title,
+          actionName: action,
+          payload: { sector: sectorCode, contact },
+          reasonCode: expanded.policies[serial % Math.max(1, expanded.policies.length)]?.code || "POL",
+          reasonDescription: `إجراء عالي الخطورة في «${skill.name}» يحتاج اعتماداً بشرياً قبل التنفيذ.`,
+          riskLevel: skill.riskLevel,
+          requiredRole: "manager",
+          requestedAt: stamp,
+          status: rejected ? "rejected" : "approved",
+          decidedBy: manager,
+          decidedAt: stamp,
+        } as ApprovalRequest);
+      }
+      const approved = gated && !escalated && !rejected;
+      auditEvents.push({
+        id: `aud_${sectorCode}_h${serial + 1}`,
+        timestamp: stamp,
+        at: iso,
+        actorType: escalated ? "human" : "ai",
+        actorName: escalated ? (people[serial % people.length] || manager) : "نهج",
+        action: escalated ? "HUMAN_TAKEOVER" : approved || !gated ? action : "APPROVAL_REJECTED",
+        provenance: code,
+        risk: escalated ? "medium" : approved || !gated ? skill.riskLevel : "medium",
+        latencyMs: 300 + ((serial * 137) % 2200),
+        details: `${item.title}: ${item.currentStepTitle}`,
+        status: escalated ? "warning" : approved || !gated ? "success" : "intercepted",
+      } as AuditEvent);
+      if (serial % 5 === 2) {
+        const policy = expanded.policies[serial % Math.max(1, expanded.policies.length)];
+        auditEvents.push({
+          id: `aud_${sectorCode}_hp${serial + 1}`,
+          timestamp: stamp,
+          at: new Date(at.getTime() - 60_000).toISOString(),
+          actorType: "system",
+          actorName: "محرك السياسات",
+          action: "POLICY_INTERCEPT",
+          policyCode: policy?.code,
+          provenance: "Policy Engine Interception",
+          risk: "high",
+          latencyMs: 40,
+          details: `أُوقف طلبٌ خارج «${policy?.title || "السياسة المعتمدة"}» قبل التنفيذ — ${contact}.`,
+          status: "intercepted",
+        } as AuditEvent);
+      }
+      serial++;
+    }
+  }
+  /* الأحدث أولاً، كما يعرضه السجل. */
+  return { workItems: workItems.reverse(), approvalRequests: approvalRequests.reverse(), auditEvents: auditEvents.sort((a, b) => String(b.at).localeCompare(String(a.at))) };
 }

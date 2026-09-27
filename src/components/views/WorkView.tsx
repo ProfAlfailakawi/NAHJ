@@ -12,7 +12,9 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
     <div className="work-layout">
       <section className="work-queue surface">
         <SectionTitle title={ar?"الجاري":"Live"} meta={`${items.filter(i=>i.state!=="completed").length}`}/>
-        <div className="work-queue-list">{items.map(w=><button key={w.id} className={`queue-card ${item?.id===w.id?"selected":""}`} onClick={()=>setSelectedId(w.id)}>
+        <div className="work-queue-list">{items.map(w=><button key={w.id} className={`queue-card ${item?.id===w.id?"selected":""}`} onClick={()=>{setSelectedId(w.id);
+          /* على الهاتف تقع اللوحة تحت قائمةٍ طويلة: يُنقل إليها المستخدم بدل أن يبحث عنها. */
+          if(window.matchMedia("(max-width:1180px)").matches)requestAnimationFrame(()=>document.querySelector(".work-focus")?.scrollIntoView({behavior:"smooth",block:"start"}))}}>
           <div><span className={`risk-dot risk-${w.riskLevel}`}/><b>{w.code}</b><em>{w.assignedMode==="ai"?<Bot/>:<UserRound/>}</em></div>
           <strong>{w.details?.studentName||w.contactName}</strong><small>{w.currentStepTitle}</small>
           <WorkRiver progress={w.progressPercent} risk={w.riskLevel}/>

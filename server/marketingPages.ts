@@ -67,8 +67,9 @@ const BASE_STYLE = `
     .top nav a:not(.cta):not(.keep) { display:none; }
     .top .wrap { gap:10px; }
     .top nav { gap:2px; }
-    .top nav a { padding:7px 9px; font-size:14px; }
+    .top nav a { padding:7px 9px; font-size:14px; min-height:44px; display:inline-flex; align-items:center; }
   }
+  @media (max-width:900px) { footer nav { gap:4px 8px; } footer nav a { display:inline-flex; align-items:center; min-height:44px; padding:0 6px; } }
   @media (max-width:380px) { .top nav a.keep[href="/pricing"] { display:none; } }
 `;
 
