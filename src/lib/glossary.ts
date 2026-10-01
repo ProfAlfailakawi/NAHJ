@@ -206,3 +206,18 @@ export const RISK_PLAIN: Record<string, string> = {
   high: "خطورة عالية — الخطأ مكلف",
   critical: "حرجة — الخطأ قد لا يُصحَّح",
 };
+
+/* English wording for the autonomy ladder (English UI). */
+const LADDER_EN: Record<number, { plain: string; yourPart: string }> = {
+  0: { plain: "Watches and learns only", yourPart: "Nothing — it produces no output and you do not see it." },
+  1: { plain: "Practises on past cases", yourPart: "Nothing — practice runs on past data with no effect on real work." },
+  2: { plain: "Decides silently beside you", yourPart: "Work as usual. Its decision is compared with yours and is not executed." },
+  3: { plain: "Suggests to you", yourPart: "You get a suggestion; take it or leave it, both are fine." },
+  4: { plain: "Prepares the work, you press approve", yourPart: "You review what it prepared and press one button, or edit it." },
+  5: { plain: "Executes after the authorised person approves", yourPart: "It stops at the approval gate until the person with authority agrees." },
+  6: { plain: "Executes on its own within limits", yourPart: "You receive nothing while it stays within limits; it stops and alerts you when it exceeds them." },
+};
+export const ladderPlain = (level: number, ar: boolean): string =>
+  ar ? ladderStep(level).plain : LADDER_EN[ladderStep(level).level]?.plain || ladderStep(level).code;
+export const ladderYourPart = (level: number, ar: boolean): string =>
+  ar ? ladderStep(level).yourPart : LADDER_EN[ladderStep(level).level]?.yourPart || "";

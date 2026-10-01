@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, CheckCircle2, Clock3, Gauge, Info, ShieldCheck, TimerReset } from "lucide-react";
 import { PageHeader, SectionTitle } from "../Primitives";
 import { DnaRing } from "../dna";
+import { measureBasis, trendReason, weekdayLabel } from "../../lib/labels";
 
 /*
  * شاشة الأثر.
@@ -63,7 +64,7 @@ function Metric({ icon, value, label, measure, ar }: { icon: React.ReactNode; va
       )}
       {measure && open && (
         <div className="metric-basis" role="note">
-          <p>{measure.basis}</p>
+          <p>{measureBasis(measure.basis, ar)}</p>
           <small>{ar ? "حجم العيّنة" : "Sample"}: {measure.sampleSize}</small>
         </div>
       )}
@@ -131,14 +132,14 @@ export function AnalyticsView({ lang, data }: Props) {
                 <div key={point.day}>
                   <span style={{ height: `${Math.max(6, (point.events / max) * 100)}%` }} />
                   <b>{point.events}</b>
-                  <small title={point.label}>{point.label}</small>
+                  <small title={weekdayLabel(point.day, point.label, ar)}>{weekdayLabel(point.day, point.label, ar)}</small>
                 </div>
               ))}
             </div>
           ) : (
             <div className="metric-unavailable">
               <Info />
-              <p>{trend?.reason || (ar ? "لا بيانات كافية بعد." : "Not enough data yet.")}</p>
+              <p>{trendReason(trend?.reason || "", ar) || (ar ? "لا بيانات كافية بعد." : "Not enough data yet.")}</p>
             </div>
           )}
         </section>

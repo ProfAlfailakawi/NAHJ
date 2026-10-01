@@ -7,7 +7,7 @@ import { PageHeader, SectionTitle } from "../Primitives";
 import { SkillRunway } from "../Visuals";
 import { DnaStepper, DnaTimeline, type DnaStepState } from "../dna";
 import { AutonomyBadge, Term } from "../Explain";
-import { ladderStep, RISK_PLAIN, SKILL_STATUS_PLAIN } from "../../lib/glossary";
+import { ladderStep, ladderPlain, ladderYourPart, RISK_PLAIN, SKILL_STATUS_PLAIN } from "../../lib/glossary";
 
 export type PromoteOptions={signOff?:boolean;note?:string};
 type Props={lang:"ar"|"en";skills:Skill[];onPromote:(id:string,l:AutonomyLevel,options?:PromoteOptions)=>void;onRollback:(id:string,v:number)=>void;onToggleKill:(id:string)=>void;onOpenPeople?:()=>void;onSkillUpdated?:(skill:Skill)=>void;notify?:(text:string,error?:boolean)=>void};
@@ -40,7 +40,7 @@ function PromotionDialog({lang,skill,target,onClose,onConfirm}:{lang:"ar"|"en";s
   return <Dialog open onClose={onClose} closeLabel={ar?"إغلاق مراجعة الترقية":"Close promotion review"} icon={<ShieldCheck/>}
     eyebrow={ar?"مراجعة الترقية":"Promotion review"}
     title={ar?`ترقية «${skill.name}» إلى L${target} — ${ladderStep(target).plain}`:`Promote “${skill.nameEn||skill.name}” to L${target}`}>
-    <p className="decision-muted">{ladderStep(target).yourPart}</p>
+    <p className="decision-muted">{ladderYourPart(target,ar)}</p>
     {loading&&<p className="decision-muted">{ar?"تُحمَّل بيانات التقييم…":"Loading evaluation data…"}</p>}
     {review&&<>
       <dl className="promotion-stats">
@@ -162,8 +162,8 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
           * وماذا يبقى عليه هو — وهو الفرق الذي لا يُفهم من الاسمين إطلاقاً.
         */}
         <div className="autonomy-plain">
-          <strong>{ladderStep(skill.autonomyLevel).plain}</strong>
-          <small>{ladderStep(skill.autonomyLevel).yourPart}</small>
+          <strong>{ladderPlain(skill.autonomyLevel,ar)}</strong>
+          <small>{ladderYourPart(skill.autonomyLevel,ar)}</small>
         </div>
         <DnaStepper className="autonomy-steps" size="sm" showLabels={false} ariaLabel={ar?"سُلّم الاستقلالية":"Autonomy ladder"} stateText={ar?undefined:EN_STATE}
           steps={stages.map((st,i)=>({key:st,icon:i<skill.autonomyLevel?undefined:<span className="dna-num">{i}</span>,label:ar?ladderStep(i).plain:st,title:ar?ladderStep(i).plain:st,state:i<skill.autonomyLevel?"done":i===skill.autonomyLevel?"current":"pending"}))}/>

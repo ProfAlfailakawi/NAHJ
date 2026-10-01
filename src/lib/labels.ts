@@ -281,3 +281,54 @@ export const ACTOR_AR: Record<string, string> = {
   "Skill Executor": "منفّذ المهارات",
 };
 export const actorLabel = lookup(ACTOR_AR);
+
+/*
+ * أساس القياس بالإنجليزية.
+ *
+ * يكتب المحرّك أساس كل رقم جملةً عربية ثابتة. في الواجهة الإنجليزية كانت تظهر عربيةً بين
+ * أرقامٍ إنجليزية، فيُترجَم هنا بمطابقة النص كما هو. ما لا يُعرف يبقى كما جاء — لا يُخترع.
+ */
+export const MEASURE_BASIS_EN: Record<string, string> = {
+  "مجموع مرات تنفيذ كل مهارة موثّقة منذ اعتمادها.": "Total executions of every documented skill since it was approved.",
+  "مجموع الساعات المستعادة المسجَّلة على المهارات.": "Sum of recovered hours recorded on the skills.",
+  "نسبة النجاح مرجَّحة بعدد مرات التنفيذ لا بعدد المهارات.": "Success rate weighted by number of executions, not number of skills.",
+  "المتمّم لنسبة النجاح المرجَّحة.": "The complement of the weighted success rate.",
+  "نسبة الحالات التي استلمها موظف، مرجَّحة بالتنفيذ.": "Share of cases a staff member took over, weighted by executions.",
+  "متوسط مدّة العملية بالدقائق، مرجَّحاً بالتنفيذ.": "Average process duration in minutes, weighted by executions.",
+  "حصّة التنفيذ الذي تحمله مهارات عند مستوى التحضير (L4) فما فوق.": "Share of executions carried by skills at Prepare level (L4) or above.",
+  "نسبة تطابق قرار نهج مع قرار الموظف في جلسات الظل.": "How often NAHJ's decision matched the employee's in shadow sessions.",
+  "نسبة اجتياز حالات الاختبار التي نُفّذت فعلاً.": "Pass rate of the test cases that were actually run.",
+  "حصّة المهارات الموثّقة التي بلغت التشغيل الحيّ.": "Share of documented skills that reached live operation.",
+  "سياسات سارية المفعول في تاريخ اليوم.": "Policies in force as of today.",
+  "الأدوار البشرية المتمايزة التي يتوقّف عندها التنفيذ.": "Distinct human roles at which execution stops.",
+  "طلبات موافقة تنتظر قراراً.": "Approval requests awaiting a decision.",
+  "طلبات بُتّ فيها اعتماداً أو رفضاً.": "Requests decided by approval or rejection.",
+  "مهارات موقوفة بمفتاح إيقاف.": "Skills stopped by a kill switch.",
+  "إجراءات اعترضتها السياسات قبل التنفيذ.": "Actions intercepted by policies before execution.",
+  "إجراءات عالية الخطورة نفّذها الذكاء بلا موافقة مقابلة. كل موافقة معتمدة تُجيز تنفيذاً واحداً وتُستهلك — لا تُجيز ما بعده.":
+    "High-risk actions the AI executed without a matching approval. Each approved request authorises one execution and is consumed; it does not authorise what follows.",
+  "حصّة حالات العمل التي تحمل أثراً زمنياً قابلاً للمراجعة.": "Share of work cases that carry a reviewable time trail.",
+  "مهارات موثّقة في عقل المؤسسة.": "Skills documented in the organisation's brain.",
+  "مهارات تعمل حيّاً.": "Skills running live.",
+  "مهارات يعتمد تنفيذها على شخص واحد.": "Skills whose execution depends on a single person.",
+  "مهارات بلغت موثوقية 90% فأكثر ولم تُرقَّ بعد إلى مستوى التحضير.": "Skills with 90% reliability or more not yet promoted to Prepare level.",
+  "غير مقيس — النظام لا يعرف ما لم يُعرض عليه. يحتاج اكتشافاً من الموصلات.": "Not measured: the system cannot know what it was never shown. It needs discovery from the connectors.",
+  "أحداث مسجَّلة في سجلّ التدقيق بتاريخ اليوم — نشاطٌ لا إنجاز.": "Events recorded in the audit log today: activity, not accomplishment.",
+};
+export const measureBasis = (basis: string, ar: boolean): string =>
+  ar ? basis : MEASURE_BASIS_EN[basis] || basis;
+
+/** سبب غياب المنحنى: جملتان ثابتتان وثالثةٌ فيها تاريخ. */
+export function trendReason(reason: string, ar: boolean): string {
+  if (ar || !reason) return reason;
+  if (reason.startsWith("لا سجلّ تدقيق بعد")) return "No audit log yet: the curve appears with the first activity.";
+  const day = /\(([^)]+)\)/.exec(reason);
+  return `All activity falls on a single day (${day ? day[1] : "—"}): the curve needs at least two days.`;
+}
+
+/** اسم اليوم بلغة الواجهة: الخادم يرسل التسمية بالعربية دائماً، والتاريخ نفسه (YYYY-MM-DD) هو الأصل. */
+export function weekdayLabel(day: string, fallback: string, ar: boolean): string {
+  if (ar) return fallback;
+  const date = new Date(`${day}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? fallback : date.toLocaleDateString("en-GB", { weekday: "long" });
+}

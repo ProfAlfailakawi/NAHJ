@@ -3,6 +3,7 @@ import { FileCheck2, Info, KeyRound, PauseCircle, ShieldAlert, ShieldCheck, Sire
 import { PageHeader, SectionTitle } from "../Primitives";
 import { GovernanceShield } from "../Visuals";
 import type { Measure } from "./AnalyticsView";
+import { measureBasis } from "../../lib/labels";
 
 /*
  * شاشة الحوكمة.
@@ -59,7 +60,7 @@ function Guard({ icon, measure, label, ar, alarming = false, suffix = "" }: {
       )}
       {measure && open && (
         <div className="metric-basis" role="note">
-          <p>{measure.basis}</p>
+          <p>{measureBasis(measure.basis, ar)}</p>
           <small>{ar ? "حجم العيّنة" : "Sample"}: {measure.sampleSize}</small>
         </div>
       )}
@@ -133,7 +134,7 @@ export function ControlView({ lang, paused, pause, onPause, governance }: Props)
                     : ar ? "لم يُقَس" : "Not measured"}
               </strong>
               <p>{measured
-                ? bypasses!.basis
+                ? measureBasis(bypasses!.basis, ar)
                 : ar ? "تعذّرت قراءة أرقام الحوكمة — فلا يُقال إن لا تجاوزات، لأن البحث لم يجرِ." : "Governance figures could not be read, so no claim is made."}</p>
             </div>
           </div>
