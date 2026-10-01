@@ -87,7 +87,7 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
               { key: "policies", icon: <ShieldCheck/>, tone: "mint", label: ar ? "السياسات" : "Policies", value: policiesActive ?? "—", state: policiesActive == null ? "dashed" : "ok", onClick: () => onNavigate("control") },
               { key: "signals", icon: <Waypoints/>, tone: "coral", label: ar ? "الإشارات" : "Signals", value: open.length, onClick: () => onNavigate("learn") },
             ]}
-            overline="COMPANY BRAIN"
+            overline={ar ? "ذاكرة العمل" : "COMPANY BRAIN"}
             title={ar?"ذاكرة العمل الحيّة":"Living operational memory"}
             action={{ icon: <ArrowUpLeft/>, label: ar?"فتح المهارات":"Open skills", onClick: ()=>onNavigate("skills") }}
             animate={serverLive && !demoActive}
