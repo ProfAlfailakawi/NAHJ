@@ -326,7 +326,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
         <Stat label={ar ? "التجديد القادم" : "Next renewal"} value={snapshot.formatted.nextRenewalAmount || (ar ? "لا تجديد" : "None")} tone="sky" icon={<CalendarClock />} />
         <Stat label={ar ? "مستحق غير مسدَّد" : "Outstanding"} value={snapshot.formatted.outstanding} tone={snapshot.outstanding.amount > 0 ? "rose" : "moss"} icon={<Wallet />} />
         <Stat label={ar ? "إجمالي ما سُدِّد" : "Paid to date"} value={snapshot.formatted.lifetimePaid} tone="violet" icon={<Receipt />} />
-        <Stat label={ar ? "سقف الاستقلالية" : "Autonomy ceiling"} value={`L${limits?.maxAutonomyLevel ?? 6}`} tone="amber" icon={<ShieldCheck />} />
+        <Stat label={ar ? "سقف الاستقلالية" : "Autonomy ceiling"} value={`L${limits?.maxAutonomyLevel ?? 6}`} tone="moss" icon={<ShieldCheck />} />
       </div>
 
       <section className="surface-strong sub-block">

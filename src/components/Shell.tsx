@@ -137,7 +137,7 @@ export function Shell({
                       «Firebase: <اسم المشروع>» دائماً — يزعم وصلاً سحابياً ترفضه قواعد
                       الأمان أصلاً، ويكشف اسم مشروعٍ داخلي أمام من يُعرض عليه المنتج.
                       وتفصيل حالة المرآة السحابية في شاشة الربط، مقروءاً من حالتها. */}
-                  <span className={`hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px] font-medium border ${demoActive ? "bg-amber-500/15 text-amber-800 border-amber-500/30" : "bg-emerald-500/15 text-emerald-800 border-emerald-500/30"}`}>
+                  <span className={`org-pill ${demoActive ? "is-demo" : "is-live"} hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px] font-medium border`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${demoActive ? "bg-amber-400" : "bg-emerald-400"}`}></span>
                     {demoActive ? (ar?"بلا اتصال بأي قاعدة بيانات":"No database connection") : (ar?"مخزن المحرّك المحلي":"Local engine store")}
                   </span>
@@ -184,7 +184,7 @@ export function Shell({
               </button>
             ) : null}
             <button type="button" className="top-icon" onClick={onToggleLang} aria-label={ar ? "English — تغيير اللغة" : "العربية — Switch language"} title={ar ? "تغيير اللغة" : "Switch language"}><Languages aria-hidden="true"/></button>
-            <button type="button" className="top-icon notification" onClick={onAlert} aria-label={ar ? `التنبيهات${alerts ? ` (${alerts})` : ""}` : `Alerts${alerts ? ` (${alerts})` : ""}`} title={ar ? "التنبيهات" : "Alerts"}><Bell aria-hidden="true"/>{alerts>0&&<b>{alerts>9?"9+":alerts}</b>}</button>
+            <button type="button" className="top-icon notification" onClick={onAlert} aria-label={ar ? `التنبيهات${alerts ? ` (${alerts})` : ""}` : `Alerts${alerts ? ` (${alerts})` : ""}`} title={ar ? "التنبيهات" : "Alerts"}><Bell aria-hidden="true"/>{alerts>0&&<b dir="ltr">{alerts>9?"9+":alerts}</b>}</button>
             {/* الاسم الأول بلا اللقب: كان «د. هيا ناصر» يُعرض «د.» وحده، فلا اسم يظهر. */}
             <div className="user-chip" title={`${user.name}${user.department ? ` — ${user.department}` : ""}`}>
               <div>{displayInitial(user.name)}</div>
