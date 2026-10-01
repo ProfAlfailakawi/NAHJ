@@ -1027,3 +1027,7 @@
   .backup-form{display:grid;grid-template-columns:auto 1fr auto}
   .backup-form input{width:100%}
 }
+
+/* Arabic is a joined script: positive tracking pulls letters apart and breaks
+   their connections. Keep the Latin tracking, drop it when the UI is Arabic. */
+[dir="rtl"] :is(.eyebrow,.page-heading .eyebrow,.stat-top,.signal-head em,.capture-head span,.approval-eyebrow,.demo-enter,.demo-chip,.sub-life-heads small,.ledger-head,.owner-summary small,.help-panel header em,.gs-head em){letter-spacing:0}
