@@ -74,7 +74,8 @@ export function Shell({
    * المالك عمّن ليس مالكاً: قائمةٌ فيها بابٌ مقفل تدعو إلى طرقه.
    */
   const ownerOnly = new Set<SectionId>(["owner", "partners"]);
-  const visibleNav = nav.filter(item => !ownerOnly.has(item.id) || isOwner);
+  /* في العرض التجريبي تظهر معاينةٌ مُختلَقة للقراءة فقط، لا اللوحة الحقيقية. */
+  const visibleNav = nav.filter(item => !ownerOnly.has(item.id) || isOwner || demoActive);
   let lastGroup: string | undefined;
   /*
    * على الهاتف: كان الشريط السفلي يقصّ القائمة عند ثمانية مداخل، فالحوكمة

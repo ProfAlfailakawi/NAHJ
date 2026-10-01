@@ -100,6 +100,9 @@ const EXTRA_SKILLS: ReadonlyArray<readonly [string, string, string, string, numb
   ["field-trip-consent", "جمع موافقات الرحلات المدرسية", "Field Trip Consent Collection", "الأنشطة الطلابية", 6, 98.9],
 ];
 
+/** عدد مهارات مدرسة العرض: ما في البذرة ومعه العائلات الإضافية. */
+export const demoEducationSkillCount = (): number => initialSkills.length + EXTRA_SKILLS.length;
+
 function syntheticSkills(): Skill[] {
   const random = makeRandom(0x5a1e);
   const base = clone(initialSkills);

@@ -1,3 +1,4 @@
+import { sectorDescription, sectorOrganization } from "../../lib/labels";
 import React, { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Building2, CheckCircle2, Layers, MessageSquare, RefreshCw, ShieldCheck } from "lucide-react";
 import { PageHeader, SectionTitle } from "../Primitives";
@@ -112,11 +113,11 @@ export function SectorsView({ lang, canApply, isDemo, notify, onApplied }: Props
                   <div>
                     <strong>{ar ? sector.nameAr : sector.nameEn}</strong>
                     {/* اسم المؤسسة النموذجية يخصّ العرض؛ في مؤسسةٍ حقيقية لا معنى له. */}
-                    {isDemo && <small>{sector.organizationName}</small>}
+                    {isDemo && <small>{sectorOrganization(sector.code, sector.organizationName, ar)}</small>}
                   </div>
                   {active && <i className="sector-flag"><CheckCircle2 /> {ar ? "الحالي" : "Current"}</i>}
                 </div>
-                <p>{sector.descriptionAr}</p>
+                <p>{sectorDescription(sector.code, sector.descriptionAr, ar)}</p>
                 <div className="sector-counts">
                   <span><b>{sector.skills}</b> {ar ? "مهارة" : "skills"}</span>
                   <span><b>{sector.policies}</b> {ar ? "سياسة" : "policies"}</span>

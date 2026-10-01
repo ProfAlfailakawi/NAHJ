@@ -24,6 +24,7 @@ import { HelpPanel } from "./components/Explain";
 import { CommandPalette, type CommandTarget } from "./components/CommandPalette";
 import { ApprovalModal } from "./components/ApprovalModal";
 import { EmergencyFab, EmergencyPauseDialog, type AutopilotPause } from "./components/EmergencyPause";
+import { DemoOwnerPreview } from "./components/views/DemoOwnerPreview";
 import { DemoBanner, type DemoSector } from "./components/DemoBanner";
 import { PeopleView } from "./components/views/PeopleView";
 import type { PromoteOptions } from "./components/views/SkillsView";
@@ -438,12 +439,12 @@ export default function App(){
     case "people":view=<PeopleView lang={lang} canAssign={account?.role==="admin"||account?.role==="owner"||account?.role==="manager"} notify={notify} onChanged={()=>void refreshSkills()}/>;break;
     case "audit":view=<AuditView lang={lang} events={audit}/>;break;
     case "accounts":view=<AccountsView lang={lang} currentAccountId={account?.id||""} isAdmin={account?.role==="admin"||account?.role==="owner"} notify={notify}/>;break;
-    case "partners":view=<PartnersAdminView lang={lang} notify={notify}/>;break;
+    case "partners":view=demoActive?<DemoOwnerPreview lang={lang} kind="partners"/>:<PartnersAdminView lang={lang} notify={notify}/>;break;
     case "partnerPortal":view=<PartnerPortalView lang={lang} notify={notify}/>;break;
     case "sectors":view=<SectorsView lang={lang} isDemo={demoActive} canApply={account?.role==="admin"||account?.role==="owner"} notify={notify} onApplied={()=>void loadAll()}/>;break;
     case "billing":view=<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={account?.role==="admin"||account?.role==="manager"} canPay={account?.role==="admin"||account?.role==="manager"||account?.role==="owner"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
     /* لوحة المالك لا تُركَّب أصلاً لغير المالك — والخادم يرفضها أيضاً، فالحجب في الطبقتين. */
-    case "owner":view=isOwner?<OwnerView lang={lang} notify={notify} onChanged={()=>void refreshBilling()}/>:<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={false} canPay={account?.role==="owner"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
+    case "owner":view=demoActive?<DemoOwnerPreview lang={lang} kind="owner"/>:isOwner?<OwnerView lang={lang} notify={notify} onChanged={()=>void refreshBilling()}/>:<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={false} canPay={account?.role==="owner"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
   }
 
   return <>

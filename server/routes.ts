@@ -7,6 +7,8 @@ import { SkillEngine } from "./engine/skillEngine.ts";
 import { ConnectorLayer } from "./engine/connectors.ts";
 import { McpEngine } from "./engine/mcpEngine.ts";
 import { deriveMetrics, type MetricsInput } from "./engine/metricsEngine.ts";
+import { EXTRA_DEMO_SKILLS } from "./packs/demoSkills.ts";
+import { demoEducationSkillCount } from "./demoSandbox.ts";
 import { listSectors, EDUCATION_CODE, getSectorPack } from "./packs/index.ts";
 import { synthesize } from "./engine/teachEngine.ts";
 import { generateAiResponse } from "./gemini.ts";
@@ -17,7 +19,7 @@ import { billingRouter, enforceSubscription } from "./billingRoutes.ts";
 import { confinePartners, partnerRouter } from "./partnerRoutes.ts";
 import { paymentRouter } from "./paymentRoutes.ts";
 import {
-  LEDGER_LABELS, OWNER_ONLY, backupStatus, buildFullExport, buildLedgerCsv, describeExport,
+  LEDGER_LABELS, OWNER_ONLY, backupStatus, buildFullExport, buildLedgerCsv, describeExport, buildDemoExport, describeDemoExport, DEMO_LEDGERS,
   humanBytes, listBackups, runBackup, type LedgerName,
 } from "./archive.ts";
 import { ipBlocked, recordIpFailure } from "./loginThrottle.ts";
@@ -356,6 +358,14 @@ apiRouter.use("/payments", paymentRouter);
 const exportGuard = [requireAuth, requireRole("admin", "manager")] as const;
 
 apiRouter.get("/export/summary", ...exportGuard, (req: AuthenticatedRequest, res: Response) => {
+  if (DemoSandbox.isDemoRequest()) {
+    return res.json({
+      demo: true,
+      counts: describeDemoExport(),
+      ledgers: DEMO_LEDGERS.map(name => ({ name, label: LEDGER_LABELS[name] })),
+      backup: null,
+    });
+  }
   const isOwner = req.account?.role === "owner";
   res.json({
     counts: describeExport(),
@@ -369,7 +379,10 @@ apiRouter.get("/export/summary", ...exportGuard, (req: AuthenticatedRequest, res
 /** نسخةٌ كاملة بصيغة JSON — كل ما جمعته المؤسسة في ملفٍ واحد. */
 apiRouter.get("/export/full.json", ...exportGuard, (req: AuthenticatedRequest, res: Response) => {
   if (DemoSandbox.isDemoRequest()) {
-    return res.status(403).json({ error: "التصدير غير متاح في البيئة التجريبية.", code: "DEMO_READONLY" });
+    /* نسخة صندوق الزائر وحده — لا فوترة ولا مسوّقين (انظر buildDemoExport). */
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="nahj-demo-export-${new Date().toISOString().slice(0, 10)}.json"`);
+    return res.send(JSON.stringify(buildDemoExport(), null, 2));
   }
   const payload = buildFullExport({ includeOwnerLedgers: req.account?.role === "owner" });
 
@@ -401,7 +414,14 @@ apiRouter.get("/export/:ledger.csv", ...exportGuard, (req: AuthenticatedRequest,
     return res.status(403).json({ error: "هذا الدفتر لمالك المنصة وحده.", code: "OWNER_ONLY" });
   }
   if (DemoSandbox.isDemoRequest()) {
-    return res.status(403).json({ error: "التصدير غير متاح في البيئة التجريبية.", code: "DEMO_READONLY" });
+    /* دفاتر الفوترة والدفعات من القاعدة الحقيقية: لا يخرج منها شيء إلى زائر. */
+    if (!DEMO_LEDGERS.includes(ledger)) {
+      return res.status(403).json({ error: "هذا الدفتر غير متاح في البيئة التجريبية.", code: "DEMO_READONLY" });
+    }
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="nahj-demo-${ledger}-${stamp}.csv"`);
+    return res.send(buildLedgerCsv(ledger));
   }
 
   db.logAudit({
@@ -1709,7 +1729,12 @@ apiRouter.get("/analytics", (req: Request, res: Response) => {
  * كاملاً — مهاراته وسياساته وأنظمته والشخصية التي تحادثه — لا الألوان والأسماء.
  */
 apiRouter.get("/sectors", (req: Request, res: Response) => {
-  res.json({ sectors: listSectors(), current: db.sectorCode || EDUCATION_CODE, channel: db.channel });
+  /* في العرض تُحصى مهارات المكتبة الموسَّعة التي يراها الزائر فعلاً، لا قوالب الحزمة وحدها. */
+  const sectors = listSectors().map(sector => !db.isDemo ? sector : {
+    ...sector,
+    skills: sector.isSeeded ? demoEducationSkillCount() : sector.skills + (EXTRA_DEMO_SKILLS[sector.code]?.length || 0),
+  });
+  res.json({ sectors, current: db.sectorCode || EDUCATION_CODE, channel: db.channel });
 });
 
 /*

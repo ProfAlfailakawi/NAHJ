@@ -410,3 +410,51 @@ export const describeExport = () => {
     outstanding: formatMoney(outstanding.amount, outstanding.currency),
   };
 };
+
+/* ----------------------------------------------- تصدير صندوق العرض */
+
+/*
+ * تصدير العرض التجريبي.
+ *
+ * التصدير الحقيقي يجمع الحالة التشغيلية مع دفاتر الفوترة والمسوّقين من القاعدة الحقيقية، فبقي
+ * محجوباً عن الزائر. لكن من يُعرض عليه النظام يريد أن يرى «بياناتك لك» تعمل: ملفاً يخرج
+ * فعلاً. فهذا مسارٌ منفصل يقرأ صندوق الزائر وحده — `db` هنا وكيلٌ إلى مخزنه — ولا يستدعي
+ * دالة فوترة ولا مسوّقين إطلاقاً. فلا طريق لدفتر حقيقي إلى الملف.
+ */
+export const DEMO_LEDGERS: LedgerName[] = ["audit", "skills", "workItems"];
+
+export const describeDemoExport = () => ({
+  skills: db.skills.length,
+  workItems: db.workItems.length,
+  auditEvents: db.auditEvents.length,
+  invoices: 0,
+  payments: 0,
+  outstanding: "—",
+});
+
+export function buildDemoExport() {
+  return {
+    meta: {
+      product: "NAHJ / نهج",
+      demo: true,
+      exportedAt: new Date().toISOString(),
+      schemaVersion: 1,
+      organization: db.organization,
+      sectorCode: db.sectorCode,
+      note: "نسخة من بيانات العرض التجريبي المختلقة. لا تحوي فواتير ولا دفعات ولا دفتر مسوّقين، ولا كلمات مرور ولا مفاتيح.",
+    },
+    operations: {
+      knowledgeSources: db.knowledgeSources,
+      policies: db.policies,
+      skills: db.skills,
+      learningProposals: db.learningProposals,
+      workItems: db.workItems,
+      approvalRequests: db.approvalRequests,
+      auditEvents: db.auditEvents,
+      testCases: db.testCases,
+      shadowComparisons: db.shadowComparisons,
+      connectors: db.connectors.map(connector => ({ ...connector, mode: "simulated" as const })),
+      channel: db.channel,
+    },
+  };
+}
