@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { LogIn, ShieldCheck, TriangleAlert } from "lucide-react";
+import { FlaskConical, LogIn, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ApiError, authApi } from "../lib/api";
 
 interface Props {
@@ -7,13 +7,16 @@ interface Props {
   /** true عند أول تشغيل: لا يوجد أي حساب بعد، فنُنشئ حساب المشغّل بدل طلب الدخول. */
   needsSetup: boolean;
   onAuthenticated: () => void;
+  demoEnabled: boolean;
+  demoBusy: boolean;
+  onEnterDemo: () => void;
 }
 
 /**
  * بوابة الدخول. لا يُعرض أي سطح تشغيلي قبلها — المنصة تدير مفاتيح إيقاف وموافقات
  * ومستويات استقلالية، ولا معنى لأي منها على سطح مفتوح.
  */
-export function LoginScreen({ lang, needsSetup, onAuthenticated }: Props) {
+export function LoginScreen({ lang, needsSetup, onAuthenticated, demoEnabled, demoBusy, onEnterDemo }: Props) {
   const ar = lang === "ar";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -124,16 +127,8 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated }: Props) {
               : ar ? "تسجيل الدخول" : "Sign in"}
         </button>
 
-        {/*
-          * مدخل البيئة التجريبية. بدونه لا يستطيع زائر بلا حساب أن يراها إطلاقاً —
-          * وزائر بلا حساب هو بالضبط من بُنيت له.
-          */}
-        {/*
-          * لا مدخل للعرض التجريبي هنا: شاشة الدخول لأصحاب الحسابات. العرض أداةٌ
-          * يعرضها مالك المنصة بروابط /try من لوحته، والزائر يطلبه من الصفحة الرئيسية.
-          */}
         {!needsSetup && marketing && (
-          <div className="login-demo-row">
+          <div className="login-links-row">
             <div className="login-links">
               <a href="/">{ar ? "عن نهج" : "About NAHJ"}</a>
               <a href="/pricing">{ar ? "الباقات والأسعار" : "Plans & pricing"}</a>
@@ -142,6 +137,15 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated }: Props) {
           </div>
         )}
       </form>
+      {demoEnabled && (
+        <div className="login-demo-outside">
+          <button type="button" className="demo-enter" onClick={onEnterDemo} disabled={demoBusy}>
+            <FlaskConical aria-hidden="true" />
+            <span>{demoBusy ? (ar ? "جارٍ تجهيز التجربة..." : "Preparing demo...") : (ar ? "جرّب نهج بدون تسجيل" : "Try NAHJ without signing in")}</span>
+          </button>
+          <small>{ar ? "بيئة تجريبية معزولة ببيانات افتراضية" : "An isolated sandbox with sample data"}</small>
+        </div>
+      )}
     </div>
   );
 }

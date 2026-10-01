@@ -382,7 +382,8 @@ export default function App(){
 
   if(authState==="checking")return <div className="boot-gate"/>;
   if(authState==="anonymous"||authState==="setup")
-    return <LoginScreen lang={lang} needsSetup={authState==="setup"} onAuthenticated={()=>void checkAuth()}/>;
+    return <LoginScreen lang={lang} needsSetup={authState==="setup"} onAuthenticated={()=>void checkAuth()}
+      demoEnabled={demoEnabled} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()}/>;
 
   /*
    * حساب المسوّق سطحٌ واحد.
