@@ -2,7 +2,7 @@ import React from "react";
 import {
   BrainCircuit, BookOpenCheck, CalendarDays, CircleDollarSign, FileCheck2, Fingerprint,
   GitBranch, GraduationCap, MessageCircleMore, Orbit, Route, ShieldCheck, Sparkles, UserRound,
-  Waypoints, Zap
+  Waypoints
 } from "lucide-react";
 
 const nodeTones = {
@@ -24,7 +24,7 @@ function VisualNode({ className, icon, tone, label }: { className: string; icon:
   );
 }
 
-export function LearningLens({ progress = 76 }: { progress?: number }) {
+export function LearningLens({ progress = 76, label }: { progress?: number; label?: string }) {
   const circumference = 2 * Math.PI * 42;
   const dash = Math.max(0, Math.min(100, progress)) / 100 * circumference;
   return (
@@ -33,11 +33,9 @@ export function LearningLens({ progress = 76 }: { progress?: number }) {
         <circle cx="60" cy="60" r="47" fill="none" stroke="rgba(16,37,31,.055)" strokeWidth="1"/>
         <circle cx="60" cy="60" r="42" fill="none" stroke="rgba(16,37,31,.08)" strokeWidth="5"/>
         <circle cx="60" cy="60" r="42" fill="none" stroke="#2f7d65" strokeWidth="5" strokeLinecap="round" strokeDasharray={`${dash} ${circumference}`} transform="rotate(-90 60 60)" className="lens-progress"/>
-        <path d="M19 72c16 12 29 11 40 2 16-13 24-18 42-8" fill="none" stroke="rgba(94,121,230,.35)" strokeWidth="1.5" strokeDasharray="4 5"/>
-        <circle cx="24" cy="70" r="4" fill="#e0a04b"/><circle cx="53" cy="76" r="4" fill="#8c6fe0"/><circle cx="97" cy="65" r="4" fill="#5e79e6"/>
       </svg>
-      <div className="learning-lens-core"><Zap/></div>
-      <strong>{progress}%</strong>
+      {/* الرقم يظهر مرة واحدة: داخل الحلقة، لا فوق قوسها ولا مكرَّراً تحتها. */}
+      <div className="learning-lens-core"><strong>{label ?? `${progress}%`}</strong></div>
     </div>
   );
 }
@@ -123,3 +121,13 @@ export function EvidenceSplit({ a = 78, b = 22 }: { a?: number; b?: number }) {
 
 export function FlowGlyph() { return <MiniProcessGlyph/>; }
 export function LearningOrbit({progress=72}:{progress?:number}) { return <LearningLens progress={progress}/>; }
+
+/* شريط نقاط: خليّة لكل حالة معروضة أصلاً في القائمة — اللون للحالة وحدها. */
+export type DotState = "ok" | "bad" | "warn" | "none";
+export function DotMatrix({ cells, label, className = "" }: { cells: { state: DotState; title?: string }[]; label: string; className?: string }) {
+  return (
+    <div className={`dot-matrix ${className}`} role="img" aria-label={label}>
+      {cells.map((c, i) => <i key={i} className={`dm-${c.state}`} title={c.title}/>)}
+    </div>
+  );
+}

@@ -21,6 +21,19 @@ export function AuditView({ lang, events }: Props) {
   const [shown, setShown] = useState(40);
   const filtered = useMemo(() => events.filter(e =>
     `${e.action} ${actionLabel(e.action, true)} ${e.actorName} ${actorLabel(e.actorName, true)} ${e.provenance} ${provenanceLabel(e.provenance, true)} ${e.details}`.toLowerCase().includes(q.toLowerCase())), [events, q]);
+  /* اليوم من نصّ العرض نفسه («اليوم، 21:13 م»): تُجمع الأحداث المتجاورة بيومها، والعدّ على كل المطابِق لا المعروض وحده. */
+  const dayRuns = useMemo(() => {
+    const dayOf = (x: AuditEvent) => stampLabel(x.timestamp, ar).match(/^(.*?)\s*[،,]\s*\d/)?.[1] || "";
+    const runs = new Map<string, { day: string; events: AuditEvent[] }>();
+    let cur: { day: string; events: AuditEvent[] } | null = null;
+    for (const x of filtered) {
+      const d = dayOf(x);
+      if (d && cur && cur.day === d) cur.events.push(x);
+      else if (d) { cur = { day: d, events: [x] }; runs.set(x.id, cur); }
+      else cur = null;
+    }
+    return runs;
+  }, [filtered, ar]);
   return (
     <div className="page-enter">
       <PageHeader eyebrow={ar ? "السجل والأدلة" : "AUDIT / EVIDENCE"} title={ar ? "كل خطوة لها أثر." : "Every step leaves evidence."}
@@ -31,10 +44,22 @@ export function AuditView({ lang, events }: Props) {
           <input value={q} onChange={e => { setQ(e.target.value); setShown(40); }} aria-label={ar ? "ابحث في السجل" : "Search the audit trail"} placeholder={ar ? "ابحث في الأثر..." : "Search evidence..."} />
         </div>
         <div className="audit-timeline">
-          {filtered.slice(0, shown).map(e => {
+          {filtered.slice(0, shown).map((e, idx, list) => {
+            const run = dayRuns.get(e.id);
+            const day = run?.day || "";
+            const startsDay = !!run;
+            const dayEvents = run?.events || [];
             const record = e.record as { skill?: { name: string; version: number } | null; reason?: string; review?: { stats?: { passRate: number | null; shadowAgreement: number | null }; signedOffBy?: string } } | undefined;
             return (
-              <article key={e.id}>
+              <React.Fragment key={e.id}>
+              {startsDay && (
+                <div className="audit-day" role="presentation">
+                  <strong>{day}</strong>
+                  <span className="audit-day-dots" aria-hidden="true">{dayEvents.map(x => <i key={x.id} data-risk={x.risk} />)}</span>
+                  <small>{dayEvents.length}</small>
+                </div>
+              )}
+              <article className="audit-item" data-risk={e.risk}>
                 <span className={`audit-actor ${e.actorType} risk-${e.risk}`} aria-hidden="true">
                   {e.actorType === "ai" ? <Bot /> : e.actorType === "human" ? <UserRound /> : e.risk === "high" || e.risk === "critical" ? <ShieldAlert /> : <Waypoints />}
                 </span>
@@ -51,6 +76,7 @@ export function AuditView({ lang, events }: Props) {
                   </div>
                 </div>
               </article>
+              </React.Fragment>
             );
           })}
         </div>

@@ -1087,3 +1087,94 @@
   .demo-banner-switch select{flex:1}
 }
 @media(max-width:620px){.work-filters button{min-height:40px}.work-more,.audit-more{min-height:44px}}
+
+/* =====================================================================
+   جولة الهدوء البصري — لوحة واحدة هادئة، واللون للحالة وحدها.
+   أيقونات خطّية بلون الطحلب على بلاطات كريمية؛ الكهرمان والوردي للتحذير
+   والخطر فقط، والأزرق والبنفسجي لا يحملان معنى فلا يُستعملان للزينة.
+   ===================================================================== */
+:root{--cream-tile:#f1ecdd;--cream-edge:rgba(16,37,31,.07)}
+
+/* بلاطات الأيقونات: طحلب على كريمي، ما عدا tone الحالة (warn/danger). */
+.dna-tile[data-dna-tone]:not([data-dna-tone='warn']):not([data-dna-tone='danger']){--t-fg:var(--moss);--t-bgl:var(--cream-tile)}
+
+/* مؤشرات Stat: القيمة بالحبر دائماً، واللون على الأيقونة وللحالة فقط. */
+.stat-tile>strong{color:var(--ink)}
+.stat-tile.tone-moss,.stat-tile.tone-sky,.stat-tile.tone-violet{color:var(--moss)}
+.stat-tile.tone-moss .stat-icon,.stat-tile.tone-sky .stat-icon,.stat-tile.tone-violet .stat-icon{background:var(--cream-tile);box-shadow:inset 0 0 0 1px var(--cream-edge)}
+.stat-tile.tone-moss .stat-icon:before,.stat-tile.tone-sky .stat-icon:before,.stat-tile.tone-violet .stat-icon:before{background:transparent}
+.stat-tile.tone-amber{color:#b57a24}
+/* الحالة وحدها تُلوَّن قيمتها: تحذير كهرماني وخطر وردي داكنان للقراءة. */
+.stat-tile.tone-amber>strong{color:#9a6a1c}
+.stat-tile.tone-rose>strong{color:#b4493c}
+
+/* التعلّم: نص البطاقة بالحبر، واللون حافة رفيعة وأيقونة لتعارض/انحراف فقط. */
+.signal-card,.signal-card[class*="tone-"]{color:var(--ink)}
+.signal-card.tone-sky,.signal-card.tone-violet,.signal-card.tone-moss{box-shadow:inset 3px 0 0 rgba(47,125,101,.35)}
+[dir="rtl"] .signal-card.tone-sky,[dir="rtl"] .signal-card.tone-violet,[dir="rtl"] .signal-card.tone-moss{box-shadow:inset -3px 0 0 rgba(47,125,101,.35)}
+.signal-icon{background:var(--cream-tile);color:var(--moss);box-shadow:inset 0 0 0 1px var(--cream-edge)}
+.signal-card.tone-amber .signal-icon{color:#b57a24}
+.signal-card.tone-rose .signal-icon{color:#c4574a}
+.signal-head strong,.clarify-block p,.clarify-block button{color:var(--ink)}
+.signal-head strong{font-weight:800}
+.learning-lens-core strong{font-size:22px;font-weight:800;color:#fff;letter-spacing:0;line-height:1}
+.learn-radar-caption{margin-top:2px}
+.learn-radar-caption span{font-size:13px}
+@media(min-width:1181px){.learn-radar{align-self:start;position:sticky;top:96px}}
+
+/* الحسابات والعمل: أزرار هادئة بدل الأزرق والبنفسجي. */
+.accounts-self button,.accounts-create button,.accounts-controls button,.accounts-issued button{background:rgba(16,37,31,.04);border-color:var(--line-strong);color:var(--ink)}
+.accounts-self button:hover:not(:disabled),.accounts-create button:hover:not(:disabled),.accounts-controls button:hover:not(:disabled),.accounts-issued button:hover:not(:disabled){background:var(--mint);border-color:rgba(47,125,101,.35)}
+.accounts-self button[type="submit"],.accounts-create button[type="submit"]{background:var(--mint);border-color:rgba(47,125,101,.35);color:var(--moss-dark)}
+.accounts-create select{min-width:150px}
+.human-cta{background:var(--cream-tile);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line-strong)}
+
+/* لافتات العرض التجريبي: الأولى واضحة، والمكرَّرات أخفّ لوناً وحجماً (كلها باقية). */
+.demo-chip{background:rgba(16,37,31,.035);border-color:var(--line-strong);color:var(--muted)}
+.demo-chip>svg{color:#b8892f}
+.org-pill{color:var(--muted);background:transparent;border-color:var(--line);font-weight:500}
+.org-pill.is-live{color:var(--moss-dark);background:rgba(47,125,101,.06);border-color:rgba(47,125,101,.18)}
+.demo-banner{background:rgba(247,234,213,.5);border-color:rgba(224,160,75,.22);padding:8px 12px}
+.demo-banner[role="note"],.sub-demo-note{background:rgba(247,234,213,.28);border:1px dashed rgba(224,160,75,.3);color:var(--muted);font-weight:600;padding:6px 10px;font-size:12px}
+.demo-banner[role="note"]{border-radius:12px}
+.demo-banner[role="note"]>svg,.sub-demo-note svg{color:#b8892f}
+
+/* نقاط النتائج: خليّة لكل حالة معروضة في القائمة تحتها. */
+.dot-matrix{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px;padding:10px 12px;border-radius:14px;background:rgba(16,37,31,.03)}
+.dot-matrix i{display:block;width:12px;height:12px;border-radius:50%;box-shadow:inset 0 0 0 1.5px rgba(16,37,31,.22)}
+.dot-matrix i.dm-ok{background:var(--moss);box-shadow:none}
+.dot-matrix i.dm-bad{background:var(--rose);box-shadow:none}
+.dot-matrix i.dm-warn{background:var(--amber);box-shadow:none}
+.shadow-matrix{margin-top:12px;margin-bottom:0}
+.eval-row>b{font-weight:600;font-variant-numeric:tabular-nums;opacity:.65}
+.eval-row>span{background:var(--cream-tile)}
+.shadow-head em{color:var(--muted)}
+.shadow-pairs i{background:var(--cream-tile);color:var(--moss)}
+.shadow-pairs i svg,.shadow-pairs>b svg{width:13px;height:13px}
+.shadow-pairs>b{display:grid;place-items:center}
+.shadow-pairs>div.drift>b{color:#b57a24}
+
+/* السجل: أيام، وسكّة بلون الخطورة. */
+.audit-timeline:before{display:none}
+.audit-day{display:flex;align-items:center;gap:10px;margin:16px 0 4px;padding-inline-start:48px}
+.audit-day:first-child{margin-top:4px}
+.audit-day strong{font-size:13px;font-weight:800}
+.audit-day small{font-size:12px;color:var(--muted)}
+.audit-day-dots{display:flex;flex-wrap:wrap;gap:3px;flex:1;min-width:0}
+.audit-day-dots i{width:8px;height:8px;border-radius:50%;background:rgba(47,125,101,.5)}
+.audit-day-dots i[data-risk="medium"]{background:var(--amber)}
+.audit-day-dots i[data-risk="high"],.audit-day-dots i[data-risk="critical"]{background:var(--rose)}
+.audit-item:before{content:"";position:absolute;inset-block:0;inset-inline-start:17px;width:3px;border-radius:2px;background:rgba(47,125,101,.26)}
+.audit-item[data-risk="medium"]:before{background:var(--amber)}
+.audit-item[data-risk="high"]:before,.audit-item[data-risk="critical"]:before{background:var(--rose)}
+.audit-actor,.audit-actor.human{background:var(--cream-tile);color:var(--moss)}
+.audit-actor.risk-high,.audit-actor.risk-critical{color:#c4574a}
+.audit-head{flex-direction:column;align-items:flex-start;gap:1px}
+.audit-tags span:last-child{background:transparent;color:var(--muted);font-weight:600;padding-inline:0}
+.audit-tags span:first-child:not(:last-child){background:rgba(16,37,31,.035)}
+
+/* الأشخاص: الغطاء مرة واحدة كحلقة. */
+.people-score .people-ring .dna-ringc{font-size:30px;font-weight:800}
+
+/* المهارات: لوحة المفتّش تبقى ظاهرة أثناء تمرير القائمة الطويلة. */
+@media(min-width:1181px){.skills-layout>.skill-inspector{position:sticky;top:96px;align-self:start;max-height:calc(100vh - 112px);overflow:auto}}

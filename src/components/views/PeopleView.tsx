@@ -67,14 +67,14 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
       <div className="people-layout">
         <section className="surface-strong people-score">
           <Users aria-hidden="true" />
-          <strong>{coverage?.score == null ? "—" : `${coverage.score}%`}</strong>
+          {/* المقياس مرة واحدة: حلقةٌ بنسبتها في وسطها، وتحتها العدّ بالكلام. */}
+          {coverage && coverage.total > 0
+            ? <DnaRing className="people-ring" value={coverage.covered} max={coverage.total} size={150} stroke={10}
+                label={coverage.score == null ? "—" : `${coverage.score}%`}
+                ariaLabel={ar ? `${coverage.covered} من ${coverage.total} مهارة لها أكثر من شخص` : `${coverage.covered} of ${coverage.total} skills covered`} />
+            : <strong>{coverage?.score == null ? "—" : `${coverage.score}%`}</strong>}
           <span>{ar ? "غطاء المعرفة" : "Knowledge coverage"}</span>
           <small>{coverage ? (ar ? `${coverage.covered} من ${coverage.total} مهارة لها أكثر من شخص` : `${coverage.covered} of ${coverage.total} skills have more than one person`) : ""}</small>
-          {coverage && coverage.total > 0 && (
-            <DnaRing className="people-ring" value={coverage.covered} max={coverage.total} size={132} stroke={9}
-              label={`${coverage.covered}/${coverage.total}`}
-              ariaLabel={ar ? `${coverage.covered} من ${coverage.total} مهارة لها أكثر من شخص` : `${coverage.covered} of ${coverage.total} skills covered`} />
-          )}
           {history.length > 1 && (
             <figure className="coverage-trend">
               <svg viewBox={`0 0 ${Math.max(history.length - 1, 1) * 20} 60`} preserveAspectRatio="none" role="img"

@@ -35,8 +35,8 @@ export function LearnView({lang,proposals,onResolve}:Props){
           * و«حصّة المحسوم» هي ما بُتّ فيه من مجموع ما رُصد — لا «كم من العمل
           * معروف»، فتلك لا يعرفها النظام: لا يعلم ما لم يُعرض عليه.
         */}
-        <LearningLens progress={resolvedShare}/>
-        <div className="learn-radar-caption"><strong>{proposals.length?`${resolvedShare}%`:"—"}</strong><span>{ar?"من الإشارات محسوم":"signals resolved"}</span></div>
+        <LearningLens progress={resolvedShare} label={proposals.length?undefined:"—"}/>
+        <div className="learn-radar-caption"><span>{ar?"من الإشارات محسوم":"signals resolved"}</span></div>
         <div className="signal-quads">
           <Mini value={open.length} label={ar?"بانتظارك":"OPEN"}/>
           <Mini value={observedCases} label={ar?"حالة مرصودة":"OBSERVED"}/>
