@@ -3,6 +3,7 @@ import { ArrowLeft, BrainCircuit, History, Search, ShieldCheck, Workflow } from 
 import type { SectionId } from "./Shell";
 import type { AuditEvent, Skill, WorkItem, ApprovalRequest } from "../types";
 import { SKILL_STATUS_PLAIN, WORK_STATE_PLAIN, ladderStep } from "../lib/glossary";
+import { actionLabel, actorLabel } from "../lib/labels";
 
 /*
  * لوحة الأوامر.
@@ -109,11 +110,11 @@ export function CommandPalette({ open, onClose, lang, skills, workItems, approva
       }));
 
     const auditHits: CommandTarget[] = audit
-      .filter(event => matches(event.action || "", q) || matches(event.details || "", q) || matches(event.actorName || "", q))
+      .filter(event => matches(event.action || "", q) || matches(actionLabel(event.action || "", true), q) || matches(event.details || "", q) || matches(event.actorName || "", q))
       .slice(0, 5)
       .map(event => ({
-        id: `aud_${event.id}`, kind: "audit", title: event.action,
-        subtitle: `${event.actorName} · ${event.timestamp}`, section: "audit",
+        id: `aud_${event.id}`, kind: "audit", title: actionLabel(event.action, ar),
+        subtitle: `${actorLabel(event.actorName, ar)} · ${event.timestamp}`, section: "audit",
       }));
 
     return [...approvalHits, ...skillHits, ...workHits, ...nav.slice(0, 3), ...auditHits];

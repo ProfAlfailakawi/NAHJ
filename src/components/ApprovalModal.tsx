@@ -2,7 +2,7 @@ import React, { useEffect, useId, useState } from "react";
 import { Check, FileCheck2, Hand, ShieldCheck, X } from "lucide-react";
 import type { ApprovalRequest } from "../types";
 import { apiOrNull } from "../lib/api";
-import { reasonLabel, riskLabel, ROLE_LABEL_AR } from "../lib/labels";
+import { fieldLabel, provenanceLabel, reasonLabel, riskLabel, ROLE_LABEL_AR } from "../lib/labels";
 import { Dialog } from "./Dialog";
 import { WORK_STATE_PLAIN } from "../lib/glossary";
 
@@ -96,7 +96,7 @@ export function ApprovalModal({ lang, approval, busy = false, onClose, onApprove
           <section>
             <h3>{ar ? "القاعدة التي أوقفت التنفيذ" : "Policy rule that fired"}</h3>
             <p>{reasonLabel(record.policy.code, ar)} <code className="decision-code">{record.policy.code}</code></p>
-            <p className="decision-muted">{record.policy.provenance}</p>
+            <p className="decision-muted">{provenanceLabel(record.policy.provenance, ar)}</p>
           </section>
           {record.evidence.length > 0 && <section>
             <h3>{ar ? "الدليل" : "Evidence"}</h3>
@@ -106,10 +106,10 @@ export function ApprovalModal({ lang, approval, busy = false, onClose, onApprove
             <h3>{ar ? "ما سيُنفَّذ عند الاعتماد" : "What executes on approval"}</h3>
             <table className="decision-preview">
               <thead><tr><th scope="col">{ar ? "الحقل" : "Field"}</th><th scope="col">{ar ? "قبل" : "Before"}</th><th scope="col">{ar ? "بعد" : "After"}</th></tr></thead>
-              <tbody>{record.preview.map((line, index) => <tr key={index}><th scope="row">{line.field}</th><td>{plainValue(line.before)}</td><td><ins>{plainValue(line.after)}</ins></td></tr>)}</tbody>
+              <tbody>{record.preview.map((line, index) => <tr key={index}><th scope="row" title={line.field}>{fieldLabel(line.field, ar)}</th><td>{plainValue(line.before)}</td><td><ins>{plainValue(line.after)}</ins></td></tr>)}</tbody>
             </table>
           </section>}
-          {record.compliance?.redactedFields?.length ? <p className="decision-compliance">{ar ? `حُجبت بيانات المريض في المعاينة: ${record.compliance.redactedFields.join("، ")}` : `Patient data redacted in preview: ${record.compliance.redactedFields.join(", ")}`}</p> : null}
+          {record.compliance?.redactedFields?.length ? <p className="decision-compliance">{ar ? `حُجبت بيانات المريض في المعاينة: ${record.compliance.redactedFields.map(f => fieldLabel(f)).join("، ")}` : `Patient data redacted in preview: ${record.compliance.redactedFields.join(", ")}`}</p> : null}
         </>}
       </div>
 

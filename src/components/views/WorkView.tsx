@@ -4,6 +4,7 @@ import type { WorkItem } from "../../types";
 import { PageHeader, SectionTitle } from "../Primitives";
 import { DnaStepper, DnaTimeline, type DnaStep } from "../dna";
 import { WORK_STATE_PLAIN } from "../../lib/glossary";
+import { timelineBadgeLabel } from "../../lib/labels";
 
 const WORK_FLOW=["queued","collecting_data","waiting_documents","waiting_approval","executing","completed"];
 const EN_STATE={done:"done",current:"current",pending:"upcoming",returned:"returned",blocked:"blocked"};
@@ -42,7 +43,7 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
         <div className="work-now"><Waypoints/><span><small>{ar?"الآن":"NOW"}</small><strong>{item.currentStepTitle}</strong></span></div>
         <DnaTimeline className="work-timeline" ariaLabel={ar?"سجل الحالة":"Case timeline"} wrapMeta items={item.timeline.slice(0,5).map((t,i)=>({key:`${t.time}-${i}`,
           icon:t.actor==="ai"?<Bot/>:t.actor==="human"?<UserRound/>:<Waypoints/>,tone:t.actor==="ai"?"accent":t.actor==="human"?"sky":"neutral",
-          title:<>{t.title}{t.badge&&<span className="work-tl-badge">{t.badge}</span>}</>,date:t.time,meta:t.details||undefined}))}/>
+          title:<>{t.title}{t.badge&&<span className="work-tl-badge" title={t.badge}>{timelineBadgeLabel(t.badge,ar)}</span>}</>,date:t.time,meta:t.details||undefined}))}/>
         <div className="work-actions">
           {approvalByWork[item.id]&&<button className="approval-cta" onClick={()=>onApproval(approvalByWork[item.id])}><ShieldAlert/>{ar?"قرار مطلوب":"Decision required"}</button>}
           {item.assignedMode==="ai"?<button className="human-cta" onClick={()=>onTakeOver(item.id)}><Hand/>{ar?"استلم":"Take over"}</button>:<button className="ai-cta" onClick={()=>onResume(item.id)}><Play/>{ar?"أعد نهج":"Resume AI"}</button>}
