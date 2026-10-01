@@ -4,6 +4,7 @@ import type { ApprovalRequest } from "../types";
 import { apiOrNull } from "../lib/api";
 import { reasonLabel, riskLabel, ROLE_LABEL_AR } from "../lib/labels";
 import { Dialog } from "./Dialog";
+import { WORK_STATE_PLAIN } from "../lib/glossary";
 
 /*
  * بوابة الاعتماد — سجلّ قرار لا زرّ موافقة.
@@ -34,6 +35,8 @@ type Props = {
 
 export function ApprovalModal({ lang, approval, busy = false, onClose, onApprove, onReject, onTakeOver }: Props) {
   const ar = lang === "ar";
+  /* قيمة حالةٍ خام («waiting_approval») تُعرض بتسميتها العربية الموجودة؛ وما سواها كما هو. */
+  const plainValue = (value: string) => (ar && WORK_STATE_PLAIN[value]) || value;
   const [reason, setReason] = useState("");
   const [record, setRecord] = useState<DecisionRecordView | null>(null);
   const [loading, setLoading] = useState(false);
@@ -103,7 +106,7 @@ export function ApprovalModal({ lang, approval, busy = false, onClose, onApprove
             <h3>{ar ? "ما سيُنفَّذ عند الاعتماد" : "What executes on approval"}</h3>
             <table className="decision-preview">
               <thead><tr><th scope="col">{ar ? "الحقل" : "Field"}</th><th scope="col">{ar ? "قبل" : "Before"}</th><th scope="col">{ar ? "بعد" : "After"}</th></tr></thead>
-              <tbody>{record.preview.map((line, index) => <tr key={index}><th scope="row">{line.field}</th><td>{line.before}</td><td><ins>{line.after}</ins></td></tr>)}</tbody>
+              <tbody>{record.preview.map((line, index) => <tr key={index}><th scope="row">{line.field}</th><td>{plainValue(line.before)}</td><td><ins>{plainValue(line.after)}</ins></td></tr>)}</tbody>
             </table>
           </section>}
           {record.compliance?.redactedFields?.length ? <p className="decision-compliance">{ar ? `حُجبت بيانات المريض في المعاينة: ${record.compliance.redactedFields.join("، ")}` : `Patient data redacted in preview: ${record.compliance.redactedFields.join(", ")}`}</p> : null}
