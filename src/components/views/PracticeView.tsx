@@ -2,6 +2,7 @@ import React from "react";
 import { CheckCircle2, FlaskConical, GitCompareArrows, Play, ShieldCheck, XCircle } from "lucide-react";
 import type { ShadowComparison, TestCase } from "../../types";
 import { PageHeader, SectionTitle } from "../Primitives";
+import { decisionLabel } from "../../lib/labels";
 import { DnaRing, DnaStepper } from "../dna";
 /* عتبتا بوّابة الترقية نفسها — ملفٌّ بلا تبعيات خادم، يُستورد هنا ولا يُنسخ. */
 import { MIN_PASS_RATE, MIN_SHADOW_AGREEMENT } from "../../../server/engine/promotionReview";
@@ -55,7 +56,7 @@ export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPract
         <div className="shadow-pairs">{shadow.map(s=>{
           /* حالةٌ لم تُقارَن بعد ليست انحرافاً: تُعرض «بانتظار المقارنة» حتى يُشغَّل الظل. */
           const pending=s.evaluated===undefined&&!(s.aiAction||s.aiDecision);
-          return <div key={s.id} className={pending||s.evaluated===false?"unmeasured":s.matched?"match":"drift"} title={pending?(ar?"لم تُقارَن بعد — اضغط تشغيل الظل":"Not compared yet"):s.evaluated===false?(ar?"لا وقائع مسجَّلة لهذه الحالة — لم يُشتق لها قرار":"No recorded facts"):s.divergenceReason||""}><span><i>H</i><small>{s.humanAction||s.humanDecision}</small></span><b>{pending?"…":s.evaluated===false?"?":s.matched?"=":"≠"}</b><span><i>AI</i><small>{pending?(ar?"بانتظار المقارنة":"pending"):(s.aiAction||s.aiDecision)}</small></span></div>})}</div>
+          return <div key={s.id} className={pending||s.evaluated===false?"unmeasured":s.matched?"match":"drift"} title={pending?(ar?"لم تُقارَن بعد — اضغط تشغيل الظل":"Not compared yet"):s.evaluated===false?(ar?"لا وقائع مسجَّلة لهذه الحالة — لم يُشتق لها قرار":"No recorded facts"):s.divergenceReason||""}><span><i>H</i><small>{s.humanAction||s.humanDecision}</small></span><b>{pending?"…":s.evaluated===false?"?":s.matched?"=":"≠"}</b><span><i>AI</i><small title={s.aiAction||s.aiDecision||""}>{pending?(ar?"بانتظار المقارنة":"pending"):decisionLabel(s.aiAction||s.aiDecision,ar)}</small></span></div>})}</div>
       </section>
     </div>
   </div>

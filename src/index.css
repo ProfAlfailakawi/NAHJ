@@ -1057,3 +1057,33 @@
 .demo-ledger table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:480px}
 .demo-ledger th,.demo-ledger td{padding:9px 10px;text-align:start;border-bottom:1px solid var(--line,rgba(120,120,120,.2));white-space:nowrap}
 .demo-ledger th{font-weight:900;color:var(--muted,inherit);font-size:12.5px}
+.work-filters{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 10px}
+.work-filters button{border:1px solid var(--line);background:rgba(255,253,247,.7);border-radius:999px;padding:5px 11px;font:inherit;font-size:12.5px;font-weight:800;color:var(--ink-2);display:inline-flex;align-items:center;gap:6px;cursor:pointer;min-height:32px}
+.work-filters button b{font-size:12px;color:var(--muted);font-weight:900}
+.work-filters button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.work-filters button.active b{color:rgba(255,255,255,.75)}
+.work-more{width:100%;margin-top:10px;justify-content:center}
+/* قرارٌ بعنوانٍ طويل كان يخرج من بطاقته؛ والبطاقات الأقصر لا تُمطّ لتساوي جارتها فتبقى فارغةً من أسفلها. */
+.decision-deck,.decision-stack{min-width:0}
+.decision-card>span:not(.decision-icon){min-width:0;flex:1}
+.decision-card strong,.decision-card small{overflow-wrap:anywhere;white-space:normal}
+.today-lower-grid{align-items:start}
+.risk-legend{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:8px}
+.risk-legend li{display:grid;grid-template-columns:14px 1fr auto 44px;align-items:center;gap:10px;font-size:13.5px;font-weight:800;color:var(--ink-2)}
+.risk-legend i{min-width:0;width:12px;height:12px;border-radius:5px;display:block}
+.risk-legend b{font-size:14px}
+.risk-legend small{color:var(--muted);font-weight:800;text-align:end}
+.audit-more{width:100%;margin-top:14px;justify-content:center}
+/* عمود الطابور كان يتّسع لأوسع بطاقاتٍ فيه فتخرج من حدّه تحت لوحة الحالة. */
+.work-queue,.work-queue-list,.queue-card{min-width:0}
+.queue-card{max-width:100%}
+.queue-card strong,.queue-card small{overflow-wrap:anywhere}
+/* على الهاتف: زرّ الإيقاف الطارئ أيقونةً مدمجة — بالنص كان يغطّي أسماء العقد والبطاقات خلفه. */
+@media(max-width:620px){
+  .emergency-fab{height:46px;min-width:46px;width:46px;padding:0;border-radius:16px;justify-content:center;bottom:calc(86px + env(safe-area-inset-bottom))}
+  .emergency-fab span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .demo-banner select{max-width:100%;min-width:0;width:100%}
+  .demo-banner-switch{flex:1 1 100%}
+  .demo-banner-switch select{flex:1}
+}
+@media(max-width:620px){.work-filters button{min-height:40px}.work-more,.audit-more{min-height:44px}}

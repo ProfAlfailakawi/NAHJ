@@ -236,7 +236,8 @@ export const ACTION_LABEL_AR: Record<string, string> = {
 /* «POL_MED_02» حدثٌ سُمّي برمز قاعدته: يُعرض الرمز بصيغته المعتادة بعد كلمة «قاعدة». */
 export function actionLabel(action: string, ar: boolean): string {
   const raw = String(action || "");
-  if (!ar) return raw;
+  /* الإنجليزية: «RUN_SHADOW_COMPARISON» → «Run shadow comparison» — لا رمزٌ خام على شاشة قارئ. */
+  if (!ar) return /^[A-Z][A-Z0-9_]+$/.test(raw) ? raw.charAt(0) + raw.slice(1).toLowerCase().replace(/_/g, " ") : raw;
   if (ACTION_LABEL_AR[raw]) return ACTION_LABEL_AR[raw];
   if (/^POL_[A-Z]+_\d+$/.test(raw)) return `قاعدة ${raw.replace(/_/g, "-")}`;
   return raw;
@@ -265,9 +266,19 @@ export const PROVENANCE_AR: Record<string, string> = {
   "Learn Feed Resolution Gate": "بوابة حسم المقترحات",
   "Explicit Demonstration Mode (Authorized)": "وضع العرض (مصرَّح)",
 };
+const PROVENANCE_EN: Record<string, string> = {
+  "محرّك التقييم + محرّك السياسات": "Evaluation engine + policy engine",
+  "محرّك التقييم + قرارات الموظفين المسجَّلة": "Evaluation engine + recorded staff decisions",
+  "تصدير البيانات": "Data export", "نسخة احتياطية": "Backup", "خريطة الاعتماد على الأشخاص": "People dependency map",
+  "دليل الإجراء ثنائي اللغة": "Bilingual procedure manual",
+};
 export function provenanceLabel(value: string, ar: boolean): string {
   const raw = String(value || "");
-  if (!ar) return raw;
+  if (!ar) {
+    if (PROVENANCE_EN[raw]) return PROVENANCE_EN[raw];
+    const sector = /^حزمة القطاع: (\w+)$/.exec(raw);
+    return sector ? `Sector pack: ${sector[1]}` : raw;
+  }
   if (PROVENANCE_AR[raw]) return PROVENANCE_AR[raw];
   const pack = /^حزمة القطاع: (\w+)$/.exec(raw);
   if (pack && SECTOR_NAME_AR[pack[1]]) return `حزمة القطاع: ${SECTOR_NAME_AR[pack[1]]}`;
@@ -388,3 +399,29 @@ const SECTOR_ORG_EN: Record<string, string> = {
 };
 export const sectorDescription = (code: string, arabic: string, ar: boolean): string => (ar ? arabic : SECTOR_DESC_EN[code] || arabic);
 export const sectorOrganization = (code: string, arabic: string, ar: boolean): string => (ar ? arabic : SECTOR_ORG_EN[code] || arabic);
+
+
+/*
+ * قرارات المحرّك بلغةٍ تُقرأ.
+ *
+ * يخرج المحرّك برمزٍ ثابت (REQUEST_DOCUMENT_BEFORE_BOOKING) لأن الرمز هو ما يُقارَن بقرار الموظف. أما
+ * العرض فجملةٌ؛ والرمز يبقى في التلميح لمن يحتاجه. وعلى الهاتف كان الرمز الطويل يتقطّع في منتصف كلماته.
+ */
+export const DECISION_LABEL: Record<string, [string, string]> = {
+  ANSWER_FROM_VERIFIED_SOURCES: ["إجابة من المصادر المعتمدة", "Answer from verified sources"],
+  TREAT_AS_UNTRUSTED_DATA_ENFORCE_POLICY: ["معاملة النص بيانات غير موثوقة وتطبيق السياسة", "Treat as untrusted data, enforce policy"],
+  REQUEST_DOCUMENT_BEFORE_BOOKING: ["طلب المستند قبل الحجز", "Request the document before booking"],
+  REJECT_AUTOMATIC_REFUND_ESCALATE: ["رفض الاسترداد الآلي والرفع للاعتماد", "Reject automatic refund, escalate"],
+  REQUEST_APPROVAL_REFUND: ["طلب اعتماد الاسترداد", "Request refund approval"],
+  REJECT_OR_REDIRECT_NURSERY: ["رفض أو تحويل إلى الحضانة", "Reject or redirect to nursery"],
+  ISSUE_REFUND: ["تنفيذ الاسترداد", "Issue the refund"],
+  UNDECIDABLE: ["تعذّر القرار — وقائع غير كافية", "Undecidable: not enough facts"],
+  MANUAL_EXCEPTION_OVERRIDE: ["استثناء يدوي خارج السياسة", "Manual exception outside policy"],
+  MANUAL_BOOKING_OVERRIDE: ["حجز يدوي متجاوِز", "Manual booking override"],
+  "bookCampusTour & requestApproval": ["حجز الجولة ورفع الرسم للاعتماد", "Book the tour and request approval"],
+};
+export const decisionLabel = (code: string | undefined | null, ar: boolean): string => {
+  const raw = String(code ?? "");
+  const hit = DECISION_LABEL[raw];
+  return hit ? hit[ar ? 0 : 1] : raw;
+};

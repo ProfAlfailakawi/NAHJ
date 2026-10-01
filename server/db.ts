@@ -32,6 +32,7 @@ import { AUDIT_RETENTION, readState, startPersistenceWorker } from "./persistenc
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createDemoSandboxSeed, type DemoSandboxSeed } from "./demoSandbox.ts";
 import { buildSector, EDUCATION_CODE, getSectorPack } from "./packs/index.ts";
+import { displayStampLang, localizeActor, localizeAuditDetails, normalizeLang, pick, type DemoLang } from "./demoLocale.ts";
 import { buildExtraDemoCases } from "./packs/demoExtraCases.ts";
 import { buildExtraDemoSkills } from "./packs/demoSkills.ts";
 import { expandSkill } from "./packs/types.ts";
@@ -164,8 +165,12 @@ export class Store {
   /** غطاء المعرفة يوماً بيوم — لقياس هل يقلّ الاعتماد على شخصٍ واحد. */
   public coverageHistory: CoverageSnapshot[];
 
-  constructor(seed?: DemoSandboxSeed) {
+  /** لغة زائر العرض — تُولَّد بها نصوص التاريخ. المؤسسة الحقيقية تبقى `ar` ولا تُقرأ منها. */
+  public lang: DemoLang = "ar";
+
+  constructor(seed?: DemoSandboxSeed, lang: DemoLang = "ar") {
     this.isDemo = Boolean(seed);
+    this.lang = this.isDemo ? lang : "ar";
     const persisted = <T>(key: string, value: T): T => (seed ? value : hydrate(key, value));
 
     this.organization = seed ? seed.organization : persisted("organization", { ...initialOrganization });
@@ -260,14 +265,18 @@ export class Store {
 
   public logAudit(event: Omit<AuditEvent, "id" | "timestamp">): AuditEvent {
     const now = new Date();
-    const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")} ${now.getHours() >= 12 ? "م" : "ص"}`;
+    const en = this.isDemo && this.lang === "en";
+    const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")} ${en ? (now.getHours() >= 12 ? "PM" : "AM") : (now.getHours() >= 12 ? "م" : "ص")}`;
     const newEvent: AuditEvent = {
       id: `aud_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
-      timestamp: `اليوم، ${timeStr}`,
+      timestamp: en ? `Today, ${timeStr}` : `اليوم، ${timeStr}`,
       // الطابع الحقيقي إلى جانب نصّ العرض: القياس يحتاج الأول، والقارئ الثاني.
       at: now.toISOString(),
       ...event,
+      /* في صندوق إنجليزي: قوالب المحرّكات تُكتب بالإنجليزية، والفاعل بلغته. وفي الإنتاج لا يتغيّر شيء. */
+      ...(en ? { details: localizeAuditDetails(event.details, "en"), actorName: localizeActor(event.actorName, "en") } : {}),
     };
+    if (this.isDemo) this.auditOriginals.set(newEvent.id, { details: event.details, actorName: event.actorName });
     this.auditEvents.unshift(newEvent);
     // سجل التدقيق يُقصّ عند حدّ ثابت وإلا نما بلا سقف في الذاكرة وفي الملف معاً.
     if (this.auditEvents.length > AUDIT_RETENTION) this.auditEvents.length = AUDIT_RETENTION;
@@ -428,11 +437,11 @@ export class Store {
         }
       }
       /* أسبوعٌ مضى: حالاتٌ مكتملة، وموافقاتٌ حُسمت، وسجلٌّ مؤرَّخ — في الصندوق وحده. */
-      const history = buildDemoHistory(built, code);
+      const history = buildDemoHistory(built, code, new Date(), this.lang);
       this.workItems = [...this.workItems, ...history.workItems];
       this.approvalRequests = [...this.approvalRequests, ...history.approvalRequests];
       this.auditEvents = [...this.auditEvents, ...history.auditEvents];
-      this.learningProposals = [...this.learningProposals, ...buildResolvedProposals(built.skills.map(skill => skill.name), code)];
+      this.learningProposals = [...this.learningProposals, ...buildResolvedProposals(built.skills.map(skill => (this.lang === "en" ? skill.nameEn || skill.name : skill.name)), code, this.lang)];
       this.organization = {
         ...this.organization,
         verifiedSkillsCount: built.skills.filter(skill => skill.status === "active").length,
@@ -454,6 +463,73 @@ export class Store {
 
     return { ok: true };
   }
+
+  /*
+   * تبديل لغة الصندوق وهو مفتوح.
+   *
+   * يُعاد توليد نصوص التاريخ المولَّد بلغة الزائر الجديدة (حالاتٌ مكتملة، موافقاتٌ محسومة، سجلّ،
+   * إشاراتٌ مغلقة). والقاعدة: ما لمسه الزائر لا يُمسّ. يُولَّد النص بلغته القديمة أيضاً، فإن
+   * طابق العنصرُ الحاليُّ ما كان سيولَّد تماماً فهو لم يُعدَّل ويُستبدل بنسخته الجديدة؛ وإن اختلف
+   * (اعتمد الزائر موافقة، أو استلم حالة) بقي كما هو. وأحداث التدقيق التي كتبتها المحرّكات
+   * تُترجَم من نصّها العربي المحفوظ وتعود إليه عند الرجوع.
+   */
+  public setLang(next: DemoLang): void {
+    if (!this.isDemo || next === this.lang) return;
+    const prev = this.lang;
+    const generated = (lang: DemoLang) => {
+      if (this.sectorCode && this.sectorCode !== EDUCATION_CODE) {
+        const base = buildSector(this.sectorCode);
+        if (!base) return null;
+        const extra = buildExtraDemoSkills(this.sectorCode).map((definition, offset) => expandSkill(definition, base.skills.length + offset));
+        const built = { ...base, skills: [...base.skills, ...extra] };
+        const history = buildDemoHistory(built, this.sectorCode, new Date(), lang);
+        return {
+          workItems: history.workItems, approvalRequests: history.approvalRequests, auditEvents: history.auditEvents,
+          proposals: buildResolvedProposals(built.skills.map(skill => (lang === "en" ? skill.nameEn || skill.name : skill.name)), this.sectorCode, lang),
+          purposes: new Map<string, string>(),
+        };
+      }
+      const seed = createDemoSandboxSeed(lang);
+      return {
+        workItems: seed.workItems, approvalRequests: seed.approvalRequests, auditEvents: seed.auditEvents,
+        proposals: seed.learningProposals,
+        purposes: new Map(seed.skills.map(skill => [skill.id, skill.purpose] as const)),
+      };
+    };
+    const before = generated(prev);
+    const after = generated(next);
+    this.lang = next;
+    if (!before || !after) return;
+    const swap = <T extends { id: string }>(current: T[], was: T[], now: T[]): T[] => {
+      const wasById = new Map(was.map(item => [item.id, JSON.stringify(item)]));
+      const nowById = new Map(now.map(item => [item.id, item]));
+      return current.map(item => (wasById.get(item.id) === JSON.stringify(item) && nowById.has(item.id) ? nowById.get(item.id)! : item));
+    };
+    this.workItems = swap(this.workItems, before.workItems, after.workItems);
+    this.approvalRequests = swap(this.approvalRequests, before.approvalRequests, after.approvalRequests);
+    this.learningProposals = swap(this.learningProposals, before.proposals, after.proposals);
+    const generatedAudit = new Set(before.auditEvents.map(event => event.id));
+    this.auditEvents = swap(this.auditEvents, before.auditEvents, after.auditEvents).map(event => {
+      if (generatedAudit.has(event.id)) return event;
+      /* حدثٌ كتبه محرّكٌ أو الزائر: يُترجَم من العربية المحفوظة ويعود إليها. */
+      const original = this.auditOriginals.get(event.id);
+      if (!original) return event;
+      const at = event.at ? new Date(event.at) : null;
+      const offset = at ? Math.max(0, Math.round((Date.now() - at.getTime()) / 86_400_000)) : 0;
+      return {
+        ...event,
+        details: next === "en" ? localizeAuditDetails(original.details, "en") : original.details,
+        actorName: next === "en" ? localizeActor(original.actorName, "en") : original.actorName,
+        timestamp: at ? displayStampLang(at, offset, next) : event.timestamp,
+      };
+    });
+    if (after.purposes.size) {
+      this.skills = this.skills.map(skill => (skill.id.startsWith("sk_demo_") && after.purposes.has(skill.id) ? { ...skill, purpose: after.purposes.get(skill.id)! } : skill));
+    }
+  }
+
+  /** نصوص الأحداث الأصلية بالعربية — ليُترجَم الحدث ويعود. صندوق العرض وحده. */
+  private auditOriginals = new Map<string, { details: string; actorName: string }>();
 
   public resetSimulator(): void {
     const chat = this.isDemo && this.sectorCode !== EDUCATION_CODE ? getSectorPack(this.sectorCode)?.demo?.chat : undefined;
@@ -559,8 +635,8 @@ type DemoRecord = { store: Store; expiresAt: number; sector: string };
  * صندوق عرضٍ على قطاعٍ بعينه. التعليم هو البذرة نفسها؛ وما عداه يُركَّب فوقها
  * بحزمته ونشاطها — فمن اختار «عيادة» يدخل عيادةً من أول شاشة.
  */
-function sandboxStore(sector: string): Store {
-  const store = new Store(createDemoSandboxSeed());
+function sandboxStore(sector: string, lang: DemoLang = "ar"): Store {
+  const store = new Store(createDemoSandboxSeed(lang), lang);
   if (sector && sector !== EDUCATION_CODE) store.applySector(sector, "زائر العرض");
   return store;
 }
@@ -631,7 +707,7 @@ export const DemoSandbox = {
   setWarmup(fn: () => Promise<void>): void { sandboxWarmup = fn; },
   isDemoRequest: (): boolean => Boolean(demoContext.getStore()),
   currentSessionId: (): string => demoContext.getStore()?.sessionId || "",
-  create(sessionId: string, ttlMs: number = DEMO_SESSION_TTL_MS, sector: string = EDUCATION_CODE): void {
+  create(sessionId: string, ttlMs: number = DEMO_SESSION_TTL_MS, sector: string = EDUCATION_CODE, lang: DemoLang = "ar"): void {
     sweepExpiredSandboxes();
     /*
      * سقفٌ لعدد الصناديق: /try/<قطاع> رابطٌ عامّ يُنشئ صندوقاً بكل زيارة، وزاحفٌ
@@ -645,15 +721,15 @@ export const DemoSandbox = {
       demoSandboxes.delete(oldestId);
     }
     const code = normalizeDemoSector(sector);
-    const store = sandboxStore(code);
+    const store = sandboxStore(code, lang);
     demoSandboxes.set(sessionId, { store, expiresAt: Date.now() + ttlMs, sector: code });
     warmSandbox(sessionId, store);
   },
   /** إعادة الضبط تُبقي القطاع الذي اختاره الزائر — لا تُعيده إلى المدرسة. */
-  reset(sessionId: string, ttlMs: number = DEMO_SESSION_TTL_MS): boolean {
+  reset(sessionId: string, ttlMs: number = DEMO_SESSION_TTL_MS, lang?: DemoLang): boolean {
     if (!sessionId.startsWith("demo_") || !demoSandboxes.has(sessionId)) return false;
     const sector = demoSandboxes.get(sessionId)!.sector;
-    const store = sandboxStore(sector);
+    const store = sandboxStore(sector, lang ?? demoSandboxes.get(sessionId)!.store.lang);
     demoSandboxes.set(sessionId, { store, expiresAt: Date.now() + ttlMs, sector });
     warmSandbox(sessionId, store);
     return true;

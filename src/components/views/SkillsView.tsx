@@ -7,6 +7,7 @@ import { PageHeader, SectionTitle } from "../Primitives";
 import { SkillRunway } from "../Visuals";
 import { DnaStepper, DnaTimeline, type DnaStepState } from "../dna";
 import { AutonomyBadge, Term } from "../Explain";
+import { riskLabel } from "../../lib/labels";
 import { ladderStep, ladderPlain, ladderYourPart, RISK_PLAIN, SKILL_STATUS_PLAIN } from "../../lib/glossary";
 
 export type PromoteOptions={signOff?:boolean;note?:string};
@@ -145,7 +146,9 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
       <section className="skills-map surface">
         <div className="skills-axis">{stages.map((stage,i)=><span key={stage} title={ar?ladderStep(i).yourPart:stage}>{ar?ladderStep(i).plain.split(" ").slice(0,2).join(" "):stage}</span>)}</div>
         <div className="skills-lanes">
-          {skills.map(s=><button key={s.id} className={`skill-lane ${skill?.id===s.id?"selected":""}`} onClick={()=>setSelected(s.id)}>
+          {skills.map(s=><button key={s.id} className={`skill-lane ${skill?.id===s.id?"selected":""}`} onClick={()=>{setSelected(s.id);
+            /* على الهاتف تقع اللوحة تحت قائمةٍ طويلة: يُنقل إليها المستخدم بدل أن يبحث عنها. */
+            if(window.matchMedia("(max-width:1180px)").matches)requestAnimationFrame(()=>document.querySelector(".skill-inspector")?.scrollIntoView({behavior:"smooth",block:"start"}))}}>
             <div className="skill-lane-head"><span className={`skill-glyph risk-${s.riskLevel}`}><BrainCircuit/></span><div><strong>{ar?s.name:s.nameEn}</strong><small>{s.category}</small></div><b>{s.reliabilityScore}%</b></div><AutonomyBadge level={s.autonomyLevel} compact/>
             <SkillRunway level={s.autonomyLevel} reliability={s.reliabilityScore}/>
           </button>)}
@@ -171,7 +174,7 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
           return <button key={st} type="button" className={i===skill.autonomyLevel?"active":""} aria-current={i===skill.autonomyLevel?"step":undefined} aria-label={label} title={label}
             onClick={()=>{if(i===skill.autonomyLevel)return;if(i>skill.autonomyLevel)setPromoteTo(i);else onPromote(skill.id,i as AutonomyLevel)}}>
             {i<skill.autonomyLevel?<span aria-hidden="true"><Check/></span>:i===skill.autonomyLevel?<span aria-hidden="true"><CircleDot/></span>:<span aria-hidden="true"/>}<small aria-hidden="true">{i}</small></button>})}</div>
-        <div className="skill-risk-plain" title={skill.riskLevel}>{ar?(RISK_PLAIN[skill.riskLevel]||skill.riskLevel):skill.riskLevel}</div>
+        <div className="skill-risk-plain" title={skill.riskLevel}>{ar?(RISK_PLAIN[skill.riskLevel]||skill.riskLevel):riskLabel(skill.riskLevel,false)}</div>
         <div className="skill-mini-metrics"><div><strong>{skill.usageCount}</strong><span>{ar?"تشغيل":"runs"}</span></div><div><strong>{skill.successRate}%</strong><span>{ar?"نجاح":"success"}</span></div><div><strong>{skill.hoursSavedTotal}h</strong><span>{ar?"وقت":"saved"}</span></div></div>
         <div className="skill-alerts">{skill.isSinglePointOfFailure&&!(skill.backupOwnerNames||[]).length&&<div><AlertTriangle aria-hidden="true"/><span>{ar?`تعتمد على شخص واحد (${skill.ownerName})`:`Single-person dependency (${skill.ownerName})`}</span>{onOpenPeople&&<button type="button" className="spof-nudge" onClick={onOpenPeople}><UserPlus aria-hidden="true"/>{ar?"أسند زميلاً بديلاً":"Assign a backup"}</button>}</div>}{skill.killSwitchActive&&<div className="danger"><CirclePause/><span>{ar?"المهارة متوقفة":"Skill paused"}</span></div>}</div>
         <div className="inspector-actions"><button onClick={()=>onToggleKill(skill.id)} className={skill.killSwitchActive?"resume":"danger"}>{skill.killSwitchActive?<Zap/>:<CirclePause/>}{skill.killSwitchActive?(ar?"استئناف":"Resume"):(ar?"إيقاف":"Pause")}</button>{skill.activeVersion>1&&<button onClick={()=>onRollback(skill.id,skill.activeVersion-1)}><History/>{ar?"رجوع":"Rollback"}</button>}</div>

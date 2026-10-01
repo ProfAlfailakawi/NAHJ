@@ -86,3 +86,43 @@ test("تصدير العرض يخرج من الصندوق وحده: لا فوتر
   assert.equal(counts.invoices, 0);
   assert.deepEqual([...DEMO_LEDGERS].sort(), ["audit", "skills", "workItems"]);
 });
+
+test("لغة الصندوق: نصوص التاريخ المولَّدة بالإنجليزية، وتتبدّل وهو مفتوح بلا مسّ ما لمسه الزائر", async () => {
+  const hasArabic = (text: string) => /[؀-ۿ]/.test(text);
+  for (const sector of ["education", "clinic"]) {
+    const id = `demo_lang_${sector}`;
+    DemoSandbox.create(id, 60_000, sector, "en");
+    let pending: Promise<void> = Promise.resolve();
+    DemoSandbox.run(id, 60_000, () => { pending = warmDemoSandbox(); });
+    await pending;
+    let snap: any = null;
+    DemoSandbox.run(id, 60_000, () => {
+      const done = (db.workItems as any[]).filter(item => (item.state === "completed" || item.state === "escalated") && (item.details?.history || String(item.id).startsWith("wi_demo_")));
+      snap = {
+        steps: done.slice(0, 40).map(item => item.currentStepTitle),
+        audit: (db.auditEvents as any[]).slice(0, 60).map(event => `${event.timestamp} ${event.actorName} ${event.details}`),
+      };
+    });
+    assert.ok(snap.steps.length > 0);
+    assert.ok(snap.steps.every((text: string) => !/الإجراء|اكتمل|رفض|حالة|الاعتماد/.test(text)), `${sector}: خطوة حالة بالعربية في صندوق إنجليزي: ${snap.steps.find((text: string) => /الإجراء|اكتمل|رفض|حالة/.test(text))}`);
+    const engineLines = snap.audit.filter((line: string) => /Evaluated|Compared/.test(line));
+    assert.ok(engineLines.length >= 2, `${sector}: أحداث المحرّكين لم تُترجَم`);
+
+    /* الرجوع إلى العربية يعيد النصوص، ولا يمسّ موافقةً حسمها الزائر. */
+    let pendingId = "";
+    DemoSandbox.run(id, 60_000, () => {
+      const target = (db.approvalRequests as any[]).find(item => item.status === "pending");
+      if (target) { target.status = "approved"; target.decidedBy = "Visitor"; pendingId = target.id; }
+      db.setLang("ar");
+    });
+    let after: any = null;
+    DemoSandbox.run(id, 60_000, () => {
+      after = {
+        arabicSteps: (db.workItems as any[]).filter(item => item.state === "completed" && (item.details?.history || String(item.id).startsWith("wi_demo_"))).slice(0, 5).map(item => item.currentStepTitle),
+        touched: (db.approvalRequests as any[]).find(item => item.id === pendingId),
+      };
+    });
+    assert.ok(after.arabicSteps.every((text: string) => hasArabic(text)), `${sector}: لم تعد النصوص إلى العربية`);
+    if (pendingId) assert.equal(after.touched.decidedBy, "Visitor", "ما حسمه الزائر لا يُستبدل");
+  }
+});

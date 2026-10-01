@@ -175,6 +175,14 @@ export const ladderStep = (level: number): LadderStep =>
 
 /* --------------------------------------------------- حالات العمل */
 
+/** الإنجليزية: «waiting_approval» ليست كلمة يقولها أحد هنا أيضاً. */
+export const WORK_STATE_PLAIN_EN: Record<string, string> = {
+  queued: "Queued", collecting_data: "Gathering information", waiting_documents: "Waiting for documents",
+  waiting_approval: "Waiting for your approval", executing: "Running", completed: "Completed",
+  escalated: "Escalated to a manager", needs_human_decision: "Needs your decision", human_takeover: "Taken over by staff", in_progress: "In progress",
+};
+export const workStatePlain = (state: string, ar: boolean): string => (ar ? WORK_STATE_PLAIN[state] : WORK_STATE_PLAIN_EN[state]) || state;
+
 /** حالات العمل بلغة تُقرأ — «collecting_data» ليست كلمة يقولها أحد. */
 export const WORK_STATE_PLAIN: Record<string, string> = {
   queued: "في الانتظار",

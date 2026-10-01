@@ -308,7 +308,9 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
             {subscription && <span className="sub-cycle-chip">{ar ? CYCLE_LABEL[subscription.cycle].ar : CYCLE_LABEL[subscription.cycle].en}</span>}
             {!state.writable && <span className="sub-frozen-chip">{ar ? "الكتابة مجمّدة" : "Writes frozen"}</span>}
           </div>
-          <p>{ar ? state.reason : state.reason.replace(/^اشتراك سارٍ حتى (\S+?)\.$/, "Subscription active until $1.")}</p>
+          <p>{ar
+            ? state.reason.split(/(\d{4}-\d{2}-\d{2})/).map((part, i) => /^\d{4}-\d{2}-\d{2}$/.test(part) ? <bdi key={i} dir="ltr">{part}</bdi> : part)
+            : state.reason.replace(/^اشتراك سارٍ حتى (\S+?)\.$/, "Subscription active until $1.")}</p>
           {!state.writable && (
             <p className="sub-readonly-note">
               {ar

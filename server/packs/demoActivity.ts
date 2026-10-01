@@ -1,5 +1,6 @@
 import type { ApprovalRequest, AuditEvent, LearningProposal, ShadowComparison, TestCase, WorkItem } from "../../src/types/index.ts";
 import type { ExpandedPack, PackDemo } from "./types.ts";
+import { displayStampLang, pick, type DemoLang } from "../demoLocale.ts";
 
 /*
  * يوسّع نشاط العرض المضغوط في الحزمة إلى كيانات كاملة الأنواع.
@@ -125,7 +126,8 @@ export interface DemoHistory {
   auditEvents: AuditEvent[];
 }
 
-export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now: Date = new Date()): DemoHistory {
+export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now: Date = new Date(), lang: DemoLang = "ar"): DemoHistory {
+  const en = lang === "en";
   const contacts = HISTORY_CONTACTS[sectorCode] || HISTORY_CONTACTS.retail;
   const skills = expanded.skills;
   const people = expanded.users.map(user => user.name);
@@ -147,7 +149,7 @@ export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now
       const at = new Date(now);
       at.setDate(at.getDate() - dayOffset);
       at.setHours(8 + ((slot * 3 + dayOffset) % 9), (serial * 17) % 60, 0, 0);
-      const stamp = displayStamp(at, dayOffset);
+      const stamp = displayStampLang(at, dayOffset, lang);
       const iso = at.toISOString();
       const escalated = serial % 7 === 3;
       const gated = skill.riskLevel === "high" || skill.riskLevel === "critical";
@@ -157,12 +159,13 @@ export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now
        */
       const rejected = gated && !escalated && serial % 9 === 4;
       const code = `H-${sectorCode.slice(0, 3).toUpperCase()}-${1100 + serial}`;
+      const skillName = en ? skill.nameEn || skill.name : skill.name;
       const item: WorkItem = {
         id: `wi_${sectorCode}_h${serial + 1}`,
         code,
-        title: `${skill.name} — ${contact}`,
+        title: `${skillName} — ${contact}`,
         skillId: skill.id,
-        skillName: skill.name,
+        skillName,
         contactName: contact,
         contactPhone: "",
         state: escalated || rejected ? "escalated" : "completed",
@@ -171,11 +174,11 @@ export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now
         createdAt: stamp,
         updatedAt: stamp,
         progressPercent: rejected ? 80 : 100,
-        currentStepTitle: escalated ? `تولّاها ${people[serial % people.length] || manager} — حالة خارج الإجراء الموثّق`
-          : rejected ? `رفض ${manager} الاعتماد — أُوقف التنفيذ وأُعيدت الحالة للموظف` : "اكتمل الإجراء وسُجّل الأثر كاملاً",
+        currentStepTitle: escalated ? pick(lang, `تولّاها ${people[serial % people.length] || manager} — حالة خارج الإجراء الموثّق`, `Taken over by ${people[serial % people.length] || manager}: a case outside the documented procedure`)
+          : rejected ? pick(lang, `رفض ${manager} الاعتماد — أُوقف التنفيذ وأُعيدت الحالة للموظف`, `${manager} rejected the approval: execution stopped and the case returned to staff`) : pick(lang, "اكتمل الإجراء وسُجّل الأثر كاملاً", "Procedure completed and the full trail recorded"),
         details: { sector: sectorCode, history: true },
         timeline: [
-          ...(rejected ? [{ time: stamp, actor: "human" as const, title: "رُفض الاعتماد", details: `رفض ${manager} الإجراء — لم يُنفَّذ.`, badge: "Rejected" }] : []),
+          ...(rejected ? [{ time: stamp, actor: "human" as const, title: pick(lang, "رُفض الاعتماد", "Approval rejected"), details: pick(lang, `رفض ${manager} الإجراء — لم يُنفَّذ.`, `${manager} rejected the action; it was not executed.`), badge: "Rejected" }] : []),
           ...skill.steps.slice(0, 3).map(step => ({
             time: stamp, actor: step.isAutomated ? "ai" as const : "human" as const, title: step.title, details: step.description,
           })).reverse(),
@@ -193,7 +196,7 @@ export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now
           actionName: action,
           payload: { sector: sectorCode, contact },
           reasonCode: expanded.policies[serial % Math.max(1, expanded.policies.length)]?.code || "POL",
-          reasonDescription: `إجراء عالي الخطورة في «${skill.name}» يحتاج اعتماداً بشرياً قبل التنفيذ.`,
+          reasonDescription: pick(lang, `إجراء عالي الخطورة في «${skill.name}» يحتاج اعتماداً بشرياً قبل التنفيذ.`, `A high-risk action in “${skillName}” needs human approval before it runs.`),
           riskLevel: skill.riskLevel,
           requiredRole: "manager",
           requestedAt: stamp,
@@ -208,7 +211,7 @@ export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now
         timestamp: stamp,
         at: iso,
         actorType: escalated ? "human" : "ai",
-        actorName: escalated ? (people[serial % people.length] || manager) : "نهج",
+        actorName: escalated ? (people[serial % people.length] || manager) : pick(lang, "نهج", "NAHJ"),
         action: escalated ? "HUMAN_TAKEOVER" : approved || !gated ? action : "APPROVAL_REJECTED",
         provenance: code,
         risk: escalated ? "medium" : approved || !gated ? skill.riskLevel : "medium",
@@ -223,13 +226,13 @@ export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now
           timestamp: stamp,
           at: new Date(at.getTime() - 60_000).toISOString(),
           actorType: "system",
-          actorName: "محرك السياسات",
+          actorName: pick(lang, "محرك السياسات", "Policy engine"),
           action: "POLICY_INTERCEPT",
           policyCode: policy?.code,
           provenance: "Policy Engine Interception",
           risk: "high",
           latencyMs: 40,
-          details: `أُوقف طلبٌ خارج «${policy?.title || "السياسة المعتمدة"}» قبل التنفيذ — ${contact}.`,
+          details: pick(lang, `أُوقف طلبٌ خارج «${policy?.title || "السياسة المعتمدة"}» قبل التنفيذ — ${contact}.`, `A request outside “${(en ? policy?.titleEn : policy?.title) || policy?.title || "the approved policy"}” was stopped before execution: ${contact}.`),
           status: "intercepted",
         } as AuditEvent);
       }
@@ -249,9 +252,10 @@ export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now
  * ٠٪ وكأن النظام لم يعمل يوماً. هذه إشاراتٌ مغلقة بأسماء مهارات المؤسسة نفسها، وبعدد حالات
  * ونسبة ثقةٍ مختلفين، تُضاف إلى صندوق العرض وحده.
  */
-export function buildResolvedProposals(skillNames: string[], sectorCode: string): LearningProposal[] {
-  const names = skillNames.length ? skillNames : ["الإجراء الأساسي"];
-  const templates: Array<{ type: LearningProposal["type"]; title: (n: string) => string; titleEn: string; summary: (n: string) => string; days: number; cases: number; confidence: number; status: "resolved" | "dismissed" }> = [
+export function buildResolvedProposals(skillNames: string[], sectorCode: string, lang: DemoLang = "ar"): LearningProposal[] {
+  const names = skillNames.length ? skillNames : [pick(lang, "الإجراء الأساسي", "the core procedure")];
+  type Tpl = { type: LearningProposal["type"]; title: (n: string) => string; titleEn: string; summary: (n: string) => string; days: number; cases: number; confidence: number; status: "resolved" | "dismissed" };
+  const ar: Tpl[] = [
     { type: "conflict", title: n => `توحيد طريقة تنفيذ «${n}»`, titleEn: "Unified two competing methods", summary: n => `رُصدت طريقتان لتنفيذ «${n}»؛ اعتمد المسؤول الأدقّ منهما وأُلحقت بالمهارة كخطوة موثّقة.`, days: 84, cases: 46, confidence: 91, status: "resolved" },
     { type: "process_drift", title: n => `انحراف مؤقّت في «${n}» أُغلق`, titleEn: "Process drift closed", summary: () => "تخطّى موظفان خطوة تحقّق لضغط العمل؛ أُعيدت الخطوة إلزاميةً وصدرت تذكرةٌ بالتدريب.", days: 71, cases: 19, confidence: 86, status: "resolved" },
     { type: "improvement", title: n => `رسائل استباقية قبل «${n}» تقلّل التأخير`, titleEn: "Proactive reminder adopted", summary: () => "قيس أثر تذكيرٍ مسبق على عيّنةٍ سابقة فاختُصر زمن الإنجاز؛ اعتُمد وأُضيف إلى المهارة.", days: 58, cases: 73, confidence: 94, status: "resolved" },
@@ -260,6 +264,16 @@ export function buildResolvedProposals(skillNames: string[], sectorCode: string)
     { type: "single_person_risk", title: n => `اعتماد «${n}» على موظف واحد`, titleEn: "Single-person dependency", summary: () => "أُسند زميلٌ بديل ودُرّب على الإجراء؛ لم يعد يتوقف العمل على غياب شخص واحد.", days: 21, cases: 15, confidence: 90, status: "resolved" },
     { type: "improvement", title: () => "اقتراح خارج نطاق السياسة — رُفض", titleEn: "Out-of-policy suggestion dismissed", summary: () => "اقترحت الإشارة تجاوز خطوة اعتمادٍ لتسريع الإنجاز؛ رفضها المسؤول لأنها تنقض سياسة معتمدة.", days: 12, cases: 8, confidence: 61, status: "dismissed" },
   ];
+  const enTpl: Tpl[] = [
+    { type: "conflict", title: n => `Unified how “${n}” is carried out`, titleEn: "Unified two competing methods", summary: n => `Two ways of carrying out “${n}” were observed; the manager approved the more accurate one and added it to the skill as a documented step.`, days: 84, cases: 46, confidence: 91, status: "resolved" },
+    { type: "process_drift", title: n => `Temporary drift in “${n}” closed`, titleEn: "Process drift closed", summary: () => "Two staff members skipped a verification step under workload; the step was made mandatory again and a training ticket was raised.", days: 71, cases: 19, confidence: 86, status: "resolved" },
+    { type: "improvement", title: n => `Proactive messages before “${n}” reduce delay`, titleEn: "Proactive reminder adopted", summary: () => "The effect of an advance reminder was measured on an earlier sample and completion time dropped; it was approved and added to the skill.", days: 58, cases: 73, confidence: 94, status: "resolved" },
+    { type: "new_skill", title: n => `Skill proposed from repeated “${n}”`, titleEn: "Skill proposed from repetition", summary: () => "The same procedure repeated with near-identical steps, so NAHJ proposed documenting it; the skill was created and is now under observation.", days: 44, cases: 112, confidence: 89, status: "resolved" },
+    { type: "outdated_source", title: () => "An old source no longer matches the work", titleEn: "Outdated source flagged", summary: () => "Practice moved past the recorded regulation to a newer version; the source was renewed and the old version archived.", days: 33, cases: 27, confidence: 82, status: "resolved" },
+    { type: "single_person_risk", title: n => `“${n}” depended on one employee`, titleEn: "Single-person dependency", summary: () => "A backup colleague was assigned and trained on the procedure; work no longer stops when one person is absent.", days: 21, cases: 15, confidence: 90, status: "resolved" },
+    { type: "improvement", title: () => "Out-of-policy suggestion: rejected", titleEn: "Out-of-policy suggestion dismissed", summary: () => "The signal suggested skipping an approval step to speed things up; the manager rejected it because it breaks an approved policy.", days: 12, cases: 8, confidence: 61, status: "dismissed" },
+  ];
+  const templates = lang === "en" ? enTpl : ar;
   return templates.map((t, index) => {
     const name = names[(index * 2 + 1) % names.length];
     const at = new Date();
@@ -274,7 +288,9 @@ export function buildResolvedProposals(skillNames: string[], sectorCode: string)
       confidence: t.confidence,
       summary: t.summary(name),
       status: t.status,
-      evidence: { details: t.status === "dismissed" ? "رفضه المسؤول — بلا أثر على المهارات." : "حُسمت بقرارٍ بشري موثّق في سجلّ التدقيق." },
+      evidence: { details: t.status === "dismissed"
+        ? pick(lang, "رفضه المسؤول — بلا أثر على المهارات.", "Rejected by the manager; no effect on the skills.")
+        : pick(lang, "حُسمت بقرارٍ بشري موثّق في سجلّ التدقيق.", "Resolved by a human decision recorded in the audit log.") },
     } as LearningProposal;
   });
 }
