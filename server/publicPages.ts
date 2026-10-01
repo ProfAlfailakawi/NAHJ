@@ -164,6 +164,7 @@ const STYLE = `
   .honest h3 { margin:0 0 10px; font-size:18px; }
   .honest li { font-size:14px; margin-bottom:6px; }
   footer { margin-top:32px; color:var(--muted); font-size:13px; }
+  @media (max-width:900px) { footer a { display:inline-flex; align-items:center; min-height:44px; padding:0 6px; } }
   @media (prefers-color-scheme: dark) {
     :root { --bg:#0e1614; --ink:#eaf2ef; --line:#22332e; --muted:#9bb0aa; }
     .plan, .honest { background:#121d1a; }
