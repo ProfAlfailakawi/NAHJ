@@ -3,7 +3,7 @@ import { Bot, Hand, PauseCircle, Play, ShieldAlert, UserRound, Waypoints } from 
 import type { WorkItem } from "../../types";
 import { PageHeader, SectionTitle } from "../Primitives";
 import { DnaStepper, DnaTimeline, type DnaStep } from "../dna";
-import { WORK_STATE_PLAIN } from "../../lib/glossary";
+import { workStatePlain } from "../../lib/glossary";
 import { timelineBadgeLabel } from "../../lib/labels";
 
 const WORK_FLOW=["queued","collecting_data","waiting_documents","waiting_approval","executing","completed"];
@@ -11,7 +11,7 @@ const EN_STATE={done:"done",current:"current",pending:"upcoming",returned:"retur
 export const workStepText=(ar:boolean)=>ar?undefined:EN_STATE;
 /** مراحل الحالة من `state` وحده؛ «رُفعت» تُرسم عقدةً مُرجَعة. */
 export function workSteps(state:string,ar:boolean):DnaStep[]{
-  const label=(st:string)=>ar?(WORK_STATE_PLAIN[st]||st):st.replace(/_/g," ");
+  const label=(st:string)=>workStatePlain(st, ar);
   if(state==="escalated")return [
     {key:"queued",label:label("queued"),state:"done"},
     {key:"escalated",label:label("escalated"),state:"returned"},
@@ -24,18 +24,27 @@ export function workSteps(state:string,ar:boolean):DnaStep[]{
 type Props={lang:"ar"|"en";items:WorkItem[];onTakeOver:(id:string)=>void;onResume:(id:string)=>void;onApproval:(id:string)=>void;approvalByWork:Record<string,string>};
 export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWork}:Props){
   const ar=lang==="ar"; const [selectedId,setSelectedId]=useState(items[0]?.id||""); const item=useMemo(()=>items.find(w=>w.id===selectedId)||items[0],[items,selectedId]);
+  /* مئة حالة وأكثر في عمودٍ واحد تُضيّع المهمّ: مرشّحٌ سريع ودفعاتٌ تُفتح بزرّ. */
+  const [filter,setFilter]=useState<"all"|"live"|"approval"|"done">("all"); const [shown,setShown]=useState(24);
+  const matches=(w:WorkItem)=>filter==="all"||(filter==="live"?w.state!=="completed"&&w.state!=="waiting_approval":filter==="approval"?w.state==="waiting_approval"||w.state==="escalated":w.state==="completed");
+  const filtered=useMemo(()=>items.filter(matches),[items,filter]); // eslint-disable-line react-hooks/exhaustive-deps
+  const counts={all:items.length,live:items.filter(w=>w.state!=="completed"&&w.state!=="waiting_approval").length,approval:items.filter(w=>w.state==="waiting_approval"||w.state==="escalated").length,done:items.filter(w=>w.state==="completed").length};
+  const tabs:[typeof filter,string][]=[["all",ar?"الكل":"All"],["live",ar?"جارية":"Running"],["approval",ar?"تحتاج قراراً":"Needs a decision"],["done",ar?"مكتملة":"Completed"]];
   return <div className="page-enter">
     <PageHeader eyebrow={ar?"العمل / مباشر":"WORK / LIVE"} title={ar?"العمل يتحرك أمامك.":"Watch the work move."} hint={ar?"كل حالة لها مسار، قرار، مصدر، وإنسان يستطيع الاستلام فورًا.":"Every case has a path, evidence, and a human takeover switch."}/>
     <div className="work-layout">
       <section className="work-queue surface">
         <SectionTitle title={ar?"الجاري":"Live"} meta={`${items.filter(i=>i.state!=="completed").length}`}/>
-        <div className="work-queue-list">{items.map(w=><button key={w.id} className={`queue-card ${item?.id===w.id?"selected":""}`} onClick={()=>{setSelectedId(w.id);
+        <div className="work-filters" role="tablist" aria-label={ar?"تصفية الحالات":"Filter cases"}>{tabs.map(([key,label])=><button key={key} type="button" role="tab" aria-selected={filter===key} className={filter===key?"active":""} onClick={()=>{setFilter(key);setShown(24)}}>{label}<b>{counts[key]}</b></button>)}</div>
+        <div className="work-queue-list">{filtered.slice(0,shown).map(w=><button key={w.id} className={`queue-card ${item?.id===w.id?"selected":""}`} onClick={()=>{setSelectedId(w.id);
           /* على الهاتف تقع اللوحة تحت قائمةٍ طويلة: يُنقل إليها المستخدم بدل أن يبحث عنها. */
           if(window.matchMedia("(max-width:1180px)").matches)requestAnimationFrame(()=>document.querySelector(".work-focus")?.scrollIntoView({behavior:"smooth",block:"start"}))}}>
           <div><span className={`risk-dot risk-${w.riskLevel}`}/><b>{w.code}</b><em>{w.assignedMode==="ai"?<Bot/>:<UserRound/>}</em></div>
           <strong>{w.details?.studentName||w.contactName}</strong><small>{w.currentStepTitle}</small>
-          <DnaStepper size="xs" steps={workSteps(w.state,ar)} stateText={workStepText(ar)} ariaLabel={ar?(WORK_STATE_PLAIN[w.state]||w.state):w.state}/>
+          <DnaStepper size="xs" steps={workSteps(w.state,ar)} stateText={workStepText(ar)} ariaLabel={workStatePlain(w.state, ar)}/>
         </button>)}</div>
+        {filtered.length>shown&&<button type="button" className="btn-secondary work-more" onClick={()=>setShown(v=>v+24)}>{ar?`عرض ${Math.min(24,filtered.length-shown)} حالة أخرى من ${filtered.length-shown}`:`Show ${Math.min(24,filtered.length-shown)} more of ${filtered.length-shown}`}</button>}
+        {filtered.length===0&&<p className="decision-muted">{ar?"لا حالات في هذا التصنيف.":"No cases in this group."}</p>}
       </section>
       {item&&<section className="work-focus surface-strong">
         <div className="work-focus-top"><div><em>{item.code}</em><h2>{item.details?.studentName||item.contactName}</h2><span>{item.skillName}</span></div><div className={`mode-orb ${item.assignedMode}`}><span>{item.assignedMode==="ai"?<Bot/>:<UserRound/>}</span><small>{item.assignedMode==="ai"?(ar?"نهج":"AI"):(ar?"موظف":"HUMAN")}</small></div></div>

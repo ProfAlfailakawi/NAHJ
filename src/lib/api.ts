@@ -15,6 +15,10 @@ export function csrfToken(): string {
   return match ? decodeURIComponent(match.slice(1).join("=")) : "";
 }
 
+/* لغة الواجهة الحالية — تُرسَل مع كل طلب ليولّد صندوق العرض نصوص تاريخه بها. */
+let uiLang: "ar" | "en" = "ar";
+export const setApiLang = (lang: "ar" | "en") => { uiLang = lang; };
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const method = (init?.method || "GET").toUpperCase();
   const response = await fetch(`/api${path}`, {
@@ -22,6 +26,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
+      "X-NAHJ-Lang": uiLang,
       ...(["GET", "HEAD"].includes(method) ? {} : { "X-CSRF-Token": csrfToken() }),
       ...(init?.headers || {}),
     },

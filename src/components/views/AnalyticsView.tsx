@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, CheckCircle2, Clock3, Gauge, Info, ShieldCheck, TimerReset } from "lucide-react";
 import { PageHeader, SectionTitle } from "../Primitives";
 import { DnaRing } from "../dna";
-import { measureBasis, trendReason, weekdayLabel } from "../../lib/labels";
+import { riskLabel, measureBasis, trendReason, weekdayLabel } from "../../lib/labels";
 
 /*
  * شاشة الأثر.
@@ -147,7 +147,7 @@ export function AnalyticsView({ lang, data }: Props) {
         <section className="risk-visual surface">
           <SectionTitle title={ar ? "توزيع المخاطر" : "Risk distribution"}
             meta={ar ? `${riskTotal} مهارة` : `${riskTotal} skills`} />
-          {riskTotal > 0 ? (
+          {riskTotal > 0 ? (<>
             <div className="risk-bar" role="img"
               aria-label={ar ? `منخفض ${risk.low}، متوسط ${risk.medium}، مرتفع ${risk.high}` : "risk distribution"}>
               {([["low", risk.low], ["medium", risk.medium], ["high", risk.high], ["critical", risk.critical || 0]] as const).map(([level, count]) =>
@@ -157,7 +157,12 @@ export function AnalyticsView({ lang, data }: Props) {
                 ) : null,
               )}
             </div>
-          ) : (
+            <ul className="risk-legend">
+              {([["low", risk.low], ["medium", risk.medium], ["high", risk.high], ["critical", risk.critical || 0]] as const).map(([level, count]) => (
+                <li key={level}><i className={`risk-seg risk-${level}`} /><span>{riskLabel(level, ar)}</span><b>{count}</b><small>{Math.round((count / riskTotal) * 100)}%</small></li>
+              ))}
+            </ul>
+          </>) : (
             <div className="metric-unavailable"><Info /><p>{ar ? "لا مهارات موثّقة بعد." : "No codified skills yet."}</p></div>
           )}
         </section>

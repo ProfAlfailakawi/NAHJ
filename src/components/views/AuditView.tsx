@@ -17,6 +17,8 @@ type Props = { lang: "ar" | "en"; events: AuditEvent[] };
 export function AuditView({ lang, events }: Props) {
   const ar = lang === "ar";
   const [q, setQ] = useState("");
+  /* مئتا حدث في صفحةٍ واحدة تُطيل الشاشة عشرين ألف بكسل: دفعاتٌ تُفتح بزرّ، والبحث يعمل على الكل. */
+  const [shown, setShown] = useState(40);
   const filtered = useMemo(() => events.filter(e =>
     `${e.action} ${actionLabel(e.action, true)} ${e.actorName} ${actorLabel(e.actorName, true)} ${e.provenance} ${provenanceLabel(e.provenance, true)} ${e.details}`.toLowerCase().includes(q.toLowerCase())), [events, q]);
   return (
@@ -26,10 +28,10 @@ export function AuditView({ lang, events }: Props) {
       <section className="audit-surface surface-strong">
         <div className="audit-search">
           <Search aria-hidden="true" />
-          <input value={q} onChange={e => setQ(e.target.value)} aria-label={ar ? "ابحث في السجل" : "Search the audit trail"} placeholder={ar ? "ابحث في الأثر..." : "Search evidence..."} />
+          <input value={q} onChange={e => { setQ(e.target.value); setShown(40); }} aria-label={ar ? "ابحث في السجل" : "Search the audit trail"} placeholder={ar ? "ابحث في الأثر..." : "Search evidence..."} />
         </div>
         <div className="audit-timeline">
-          {filtered.map(e => {
+          {filtered.slice(0, shown).map(e => {
             const record = e.record as { skill?: { name: string; version: number } | null; reason?: string; review?: { stats?: { passRate: number | null; shadowAgreement: number | null }; signedOffBy?: string } } | undefined;
             return (
               <article key={e.id}>
@@ -52,6 +54,12 @@ export function AuditView({ lang, events }: Props) {
             );
           })}
         </div>
+        {filtered.length > shown && (
+          <button type="button" className="btn-secondary audit-more" onClick={() => setShown(v => v + 40)}>
+            {ar ? `عرض ${Math.min(40, filtered.length - shown)} حدثاً أقدم (متبقٍ ${filtered.length - shown})` : `Show ${Math.min(40, filtered.length - shown)} older events (${filtered.length - shown} left)`}
+          </button>
+        )}
+        {filtered.length === 0 && <p className="empty-note">{ar ? "لا أثر يطابق بحثك." : "No evidence matches your search."}</p>}
       </section>
     </div>
   );

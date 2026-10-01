@@ -1,4 +1,4 @@
-import React,{useCallback,useEffect,useMemo,useState} from "react";
+import React,{useCallback,useEffect,useMemo,useRef,useState} from "react";
 import { CheckCircle2, LogOut, TriangleAlert } from "lucide-react";
 import { BrandLockup } from "./components/Brand";
 import { Shell,type SectionId } from "./components/Shell";
@@ -28,7 +28,7 @@ import { DemoOwnerPreview } from "./components/views/DemoOwnerPreview";
 import { DemoBanner, type DemoSector } from "./components/DemoBanner";
 import { PeopleView } from "./components/views/PeopleView";
 import type { PromoteOptions } from "./components/views/SkillsView";
-import { api, ApiError, apiOrNull, authApi, SubscriptionBlockedError, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
+import { api, ApiError, setApiLang, apiOrNull, authApi, SubscriptionBlockedError, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
 import { LoginScreen } from "./components/LoginScreen";
 import { OrgSetupView } from "./components/OrgSetupView";
 import type { ApprovalRequest,AuditEvent,AutonomyLevel,Connector,LearningProposal,Organization,ShadowComparison,Skill,TestCase,User,WorkItem } from "./types";
@@ -254,6 +254,13 @@ export default function App(){
   useEffect(()=>{void refreshDemoConfig();void checkAuth()},[refreshDemoConfig,checkAuth]);
   useEffect(()=>{if(authState==="authenticated")void loadAll()},[authState,loadAll]);
 
+  /* لغة الواجهة تسبق كل طلب (الخادم يولّد نصوص تاريخ العرض بها)؛ وتبديلها وسط العرض يُعيد القراءة. */
+  const firstLang=useRef(true);
+  useEffect(()=>{
+    setApiLang(lang);
+    if(firstLang.current){firstLang.current=false;return}
+    if(demoActive)void loadAll();
+  },[lang]); // eslint-disable-line react-hooks/exhaustive-deps
   const enterDemo=async(sector?:string)=>{
     setDemoBusy(true);
     const d=await apiOrNull<{ok:boolean}>("/demo/enter",{method:"POST",body:JSON.stringify(sector?{sector}:{})});
@@ -433,7 +440,7 @@ export default function App(){
     case "practice":view=<PracticeView lang={lang} cases={practice} shadow={shadow} running={practiceBusy} shadowRunning={shadowBusy} onRunPractice={()=>void runPractice()} onRunShadow={()=>void runShadow()}/>;break;
     case "work":view=<WorkView lang={lang} items={work} approvalByWork={approvalByWork} onTakeOver={id=>void takeOver(id)} onResume={id=>void resume(id)} onApproval={setActiveApproval}/>;break;
     case "simulator":view=<SimulatorView lang={lang} state={sim} busy={simBusy} onSend={t=>void simSend(t)} onReset={()=>void simReset()} onUpload={()=>void simUpload()} onOpenApproval={()=>{/* الطلب الذي فتحته هذه المحادثة بعينه — لا أول طلبٍ معلّق في المؤسسة. */const a=approvals.find(x=>x.id===sim.approvalId&&x.status==="pending")||approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id)}}/>;break;
-    case "connections":view=<ConnectionsView lang={lang} connectors={connectors} testingId={testingConnector} onTest={id=>void testConnector(id)}/>;break;
+    case "connections":view=<ConnectionsView lang={lang} connectors={connectors} testingId={testingConnector} onTest={id=>void testConnector(id)} isDemo={demoActive}/>;break;
     case "analytics":view=<AnalyticsView lang={lang} data={analytics}/>;break;
     case "control":view=<ControlView lang={lang} governance={governance} paused={paused} pause={autopilot.pause} onPause={()=>setPauseOpen(true)}/>;break;
     case "people":view=<PeopleView lang={lang} canAssign={account?.role==="admin"||account?.role==="owner"||account?.role==="manager"} notify={notify} onChanged={()=>void refreshSkills()}/>;break;

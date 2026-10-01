@@ -49,11 +49,13 @@ type Props = {
   connectors: Connector[];
   testingId: string | null;
   onTest: (id: string) => void;
+  /** في العرض: لا مرآة سحابية ولا اسم مشروعٍ حقيقي ولا رمز خطأ خام. */
+  isDemo?: boolean;
 };
 
 const icons = [Database, CalendarDays, CircleDollarSign, FileCheck2, MessageCircleMore, PlugZap];
 
-export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) {
+export function ConnectionsView({ lang, connectors, testingId, onTest, isDemo = false }: Props) {
   const ar = lang === "ar";
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
@@ -132,21 +134,23 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
               ? (ar ? "وصلةٌ قائمة" : "Link established")
               : (ar ? "غير موصولة" : "Not connected")} />
         </>}
-        subtitle={ar
+        subtitle={isDemo
+          ? (ar ? "في العرض التجريبي لا تُرفع أي نسخة إلى سحابة: كل ما تراه محفوظ في ذاكرة جلستك وحدها ويزول بزوالها." : "In the demo nothing is copied to any cloud: everything you see lives in your own session memory and disappears with it.")
+          : ar
           ? "مصدر الحقيقة هو مخزن المحرّك المحلي؛ وهذه نسخةٌ اختيارية تُرفع إليها. وإن لم تُضبط بيانات المشروع أو رفضت قواعد الأمان الكتابة، لا تُكتب نسخة — ويُقال ذلك هنا بدل أن يُعرض وسمٌ أخضر."
           : "The local engine store is the source of truth; this is an optional copy. If the project is unconfigured or security rules reject the write, nothing is copied — and that is said here."}
         actions={
-          <button onClick={handleFirebaseSync} disabled={syncing} className="dna-btn cloud-sync">
+          isDemo ? undefined : <button onClick={handleFirebaseSync} disabled={syncing} className="dna-btn cloud-sync">
             <RefreshCw className={syncing ? "animate-spin" : ""} />
             <span>{syncing ? (ar ? "جارٍ المحاولة..." : "Trying...") : (ar ? "جرّب رفع نسخة" : "Try a cloud copy")}</span>
           </button>
         }
       >
         <div className="cloud-facts">
-          <span><Server aria-hidden="true" />{ar ? "المشروع" : "Project"}: {cloud?.projectId || (ar ? "غير مضبوط" : "unset")}</span>
-          <span><RefreshCw aria-hidden="true" />{ar ? "آخر مزامنة ناجحة" : "Last successful sync"}: {cloud?.lastSyncTime ? new Date(cloud.lastSyncTime).toLocaleString("ar-KW") : (ar ? "لا شيء" : "none")}</span>
+          <span><Server aria-hidden="true" />{ar ? "المشروع" : "Project"}: {isDemo ? (ar ? "صندوق العرض (معزول)" : "Demo sandbox (isolated)") : cloud?.projectId || (ar ? "غير مضبوط" : "unset")}</span>
+          <span><RefreshCw aria-hidden="true" />{ar ? "آخر مزامنة ناجحة" : "Last successful sync"}: {!isDemo && cloud?.lastSyncTime ? new Date(cloud.lastSyncTime).toLocaleString(ar ? "ar-KW" : "en-GB") : (ar ? "لا شيء" : "none")}</span>
         </div>
-        {cloud?.error && (
+        {!isDemo && cloud?.error && (
           <div className="cloud-note warn">
             <TriangleAlert aria-hidden="true" />
             <span className="break-all">{cloud.error}</span>

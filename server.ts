@@ -6,6 +6,7 @@ import { paymentPublicRouter } from "./server/paymentRoutes.ts";
 import { publicRouter } from "./server/publicPages.ts";
 import { bootstrapFirstAccount, ensureOwnerAccount, purgeExpiredSessions } from "./server/auth.ts";
 import { ensureSubscription, startBillingWorker, stopBillingWorker } from "./server/billing.ts";
+import { normalizeLang } from "./server/demoLocale.ts";
 import { db, DemoSandbox, DEMO_SESSION_TTL_MS, normalizeDemoSector, persistence } from "./server/db.ts";
 import { listSectors } from "./server/packs/index.ts";
 import { neonMirror } from "./server/persistence.ts";
@@ -153,7 +154,9 @@ async function startServer() {
   app.use("/api", (req, res, next) => {
     const sessionId = readDemoCookie(req);
     if (!sessionId.startsWith("demo_")) { next(); return; }
-    if (!DemoSandbox.run(sessionId, DEMO_SESSION_TTL_MS, next)) {
+    /* لغة الواجهة تصل بترويسةٍ مع كل طلب؛ الصندوق يولّد نصوص تاريخه بها (انظر demoLocale.ts). */
+    const lang = req.headers["x-nahj-lang"] ? normalizeLang(req.headers["x-nahj-lang"]) : null;
+    if (!DemoSandbox.run(sessionId, DEMO_SESSION_TTL_MS, () => { if (lang) db.setLang(lang); next(); })) {
       // The sandbox aged out. Clear the cookie rather than silently serving real data.
       setDemoCookie(res, "");
       next();
@@ -175,7 +178,7 @@ async function startServer() {
     if (!demoEnabled()) { res.status(404).json({ error: "البيئة التجريبية غير مفعّلة في هذا النشر" }); return; }
     const sessionId = `demo_${randomBytes(32).toString("hex")}`;
     const sector = normalizeDemoSector(req.body?.sector);
-    DemoSandbox.create(sessionId, DEMO_SESSION_TTL_MS, sector);
+    DemoSandbox.create(sessionId, DEMO_SESSION_TTL_MS, sector, normalizeLang(req.headers["x-nahj-lang"]));
     setDemoCookie(res, sessionId);
     res.json({ ok: true, demo: true, sector, ttlMs: DEMO_SESSION_TTL_MS });
   });
@@ -196,7 +199,7 @@ async function startServer() {
 
   app.post("/api/demo/reset", (req, res) => {
     const sessionId = readDemoCookie(req);
-    if (!DemoSandbox.reset(sessionId, DEMO_SESSION_TTL_MS)) {
+    if (!DemoSandbox.reset(sessionId, DEMO_SESSION_TTL_MS, req.headers["x-nahj-lang"] ? normalizeLang(req.headers["x-nahj-lang"]) : undefined)) {
       res.status(410).json({ error: "انتهت الجلسة التجريبية" });
       return;
     }
