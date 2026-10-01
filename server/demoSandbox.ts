@@ -27,6 +27,7 @@ import {
   initialTestCases,
   initialShadowComparisons,
 } from "../src/data/seedData.ts";
+import { buildResolvedProposals } from "./packs/demoActivity.ts";
 import type {
   ApprovalRequest,
   AuditEvent,
@@ -370,7 +371,7 @@ export function createDemoSandboxSeed(): DemoSandboxSeed {
     knowledgeSources: clone(initialKnowledgeSources),
     policies: clone(initialPolicies),
     skills,
-    learningProposals: clone(initialLearningProposals),
+    learningProposals: [...clone(initialLearningProposals), ...buildResolvedProposals(skills.map(skill => skill.name), "education")],
     workItems,
     approvalRequests: syntheticApprovals(workItems),
     auditEvents: syntheticAudit(),
