@@ -230,6 +230,55 @@ const monthsAgo = (months: number) => {
 const tierFor = (score: number): Skill["reliabilityTier"] =>
   score >= 95 ? "verified" : score >= 85 ? "high" : score >= 70 ? "medium" : "low";
 
+/** يوسّع تعريف مهارة واحدة؛ الفهرس يفصل معرّفات الخطوات بين المهارات. */
+export function expandSkill(definition: PackSkill, index: number): Skill {
+  const reliability = definition.reliabilityScore ?? 0;
+  return {
+    id: slugId("skill", definition.slug, index),
+    slug: definition.slug,
+    name: definition.name,
+    nameEn: definition.nameEn,
+    category: definition.category,
+    purpose: definition.purpose,
+    department: definition.department,
+    autonomyLevel: definition.autonomyLevel,
+    status: definition.status,
+    reliabilityScore: reliability,
+    reliabilityTier: tierFor(reliability),
+    riskLevel: definition.riskLevel,
+    activeVersion: 1,
+    ownerName: definition.ownerName,
+    isSinglePointOfFailure: Boolean(definition.singlePointOfFailure),
+    usageCount: definition.usageCount ?? 0,
+    successRate: definition.successRate ?? 0,
+    humanTakeoverRate: definition.humanTakeoverRate ?? 0,
+    avgDurationMinutes: definition.avgDurationMinutes ?? 0,
+    hoursSavedTotal: definition.hoursSavedTotal ?? 0,
+    steps: definition.steps.map((step, order) => ({
+      id: `step_${index}_${order}`,
+      order: order + 1,
+      title: step.title,
+      description: step.description,
+      system: step.system,
+      decisionRule: step.decisionRule,
+      isAutomated: Boolean(step.automated),
+    })),
+    decisions: definition.decisions || [],
+    exceptions: definition.exceptions || [],
+    versions: [{
+      version: 1,
+      createdAt: monthsAgo(2),
+      approvedBy: definition.ownerName,
+      changeSummary: "النسخة الأولى المعتمدة من الحزمة القطاعية.",
+      steps: [],
+      rules: [],
+      exceptions: definition.exceptions || [],
+    }],
+    allowedActions: definition.allowedActions,
+    killSwitchActive: false,
+  };
+}
+
 /**
  * يوسّع حزمة مضغوطة إلى كيانات كاملة الأنواع.
  *
@@ -247,53 +296,7 @@ export function expandPack(pack: SectorPack): ExpandedPack {
     avatar: person.name.slice(0, 1),
   }));
 
-  const skills: Skill[] = pack.skills.map((definition, index) => {
-    const reliability = definition.reliabilityScore ?? 0;
-    return {
-      id: slugId("skill", definition.slug, index),
-      slug: definition.slug,
-      name: definition.name,
-      nameEn: definition.nameEn,
-      category: definition.category,
-      purpose: definition.purpose,
-      department: definition.department,
-      autonomyLevel: definition.autonomyLevel,
-      status: definition.status,
-      reliabilityScore: reliability,
-      reliabilityTier: tierFor(reliability),
-      riskLevel: definition.riskLevel,
-      activeVersion: 1,
-      ownerName: definition.ownerName,
-      isSinglePointOfFailure: Boolean(definition.singlePointOfFailure),
-      usageCount: definition.usageCount ?? 0,
-      successRate: definition.successRate ?? 0,
-      humanTakeoverRate: definition.humanTakeoverRate ?? 0,
-      avgDurationMinutes: definition.avgDurationMinutes ?? 0,
-      hoursSavedTotal: definition.hoursSavedTotal ?? 0,
-      steps: definition.steps.map((step, order) => ({
-        id: `step_${index}_${order}`,
-        order: order + 1,
-        title: step.title,
-        description: step.description,
-        system: step.system,
-        decisionRule: step.decisionRule,
-        isAutomated: Boolean(step.automated),
-      })),
-      decisions: definition.decisions || [],
-      exceptions: definition.exceptions || [],
-      versions: [{
-        version: 1,
-        createdAt: monthsAgo(2),
-        approvedBy: definition.ownerName,
-        changeSummary: "النسخة الأولى المعتمدة من الحزمة القطاعية.",
-        steps: [],
-        rules: [],
-        exceptions: definition.exceptions || [],
-      }],
-      allowedActions: definition.allowedActions,
-      killSwitchActive: false,
-    };
-  });
+  const skills: Skill[] = pack.skills.map(expandSkill);
 
   const policies: Policy[] = pack.policies.map((definition, index) => ({
     id: slugId("pol", definition.code, index),

@@ -32,6 +32,8 @@ import { AUDIT_RETENTION, readState, startPersistenceWorker } from "./persistenc
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createDemoSandboxSeed, type DemoSandboxSeed } from "./demoSandbox.ts";
 import { buildSector, EDUCATION_CODE, getSectorPack } from "./packs/index.ts";
+import { buildExtraDemoSkills } from "./packs/demoSkills.ts";
+import { expandSkill } from "./packs/types.ts";
 import { buildDemoActivity, buildDemoHistory, buildResolvedProposals } from "./packs/demoActivity.ts";
 import { buildCleanStart, type CleanStart } from "./packs/cleanStart.ts";
 
@@ -350,8 +352,15 @@ export class Store {
       });
       return { ok: true };
     }
-    const built = buildSector(code);
-    if (!built) return { ok: false, reason: `قطاع غير معروف: ${code}` };
+    const baseBuilt = buildSector(code);
+    if (!baseBuilt) return { ok: false, reason: `قطاع غير معروف: ${code}` };
+    /*
+     * مكتبة مهاراتٍ بحجم مؤسسةٍ تعمل منذ شهور، في الصندوق وحده: الحزمة تحمل ثلاثاً أو
+     * أربعاً، ومدرسة العرض تسع عشرة. المهارات الإضافية تُوسَّع بالاشتقاق نفسه وتدخل
+     * في التاريخ والعمل، ولا تُكتب لها نتائج: التدرّب والظلّ يقرّرهما المحرّك.
+     */
+    const extraSkills = buildExtraDemoSkills(code).map((definition, offset) => expandSkill(definition, baseBuilt.skills.length + offset));
+    const built = { ...baseBuilt, skills: [...baseBuilt.skills, ...extraSkills] };
 
     this.organization = built.organization;
     this.users = built.users;
