@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useId, useState } from "react";
 import { AlertTriangle, UserPlus, Users } from "lucide-react";
 import { api, ApiError, apiOrNull } from "../../lib/api";
 import { PageHeader, SectionTitle } from "../Primitives";
+import { DnaRing } from "../dna";
 
 /*
  * من تعتمد عليه المؤسسة وحده.
@@ -69,6 +70,11 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
           <strong>{coverage?.score == null ? "—" : `${coverage.score}%`}</strong>
           <span>{ar ? "غطاء المعرفة" : "Knowledge coverage"}</span>
           <small>{coverage ? (ar ? `${coverage.covered} من ${coverage.total} مهارة لها أكثر من شخص` : `${coverage.covered} of ${coverage.total} skills have more than one person`) : ""}</small>
+          {coverage && coverage.total > 0 && (
+            <DnaRing className="people-ring" value={coverage.covered} max={coverage.total} size={132} stroke={9}
+              label={`${coverage.covered}/${coverage.total}`}
+              ariaLabel={ar ? `${coverage.covered} من ${coverage.total} مهارة لها أكثر من شخص` : `${coverage.covered} of ${coverage.total} skills covered`} />
+          )}
           {history.length > 1 && (
             <figure className="coverage-trend">
               <svg viewBox={`0 0 ${Math.max(history.length - 1, 1) * 20} 60`} preserveAspectRatio="none" role="img"

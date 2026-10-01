@@ -131,7 +131,7 @@ export function AnalyticsView({ lang, data }: Props) {
                 <div key={point.day}>
                   <span style={{ height: `${Math.max(6, (point.events / max) * 100)}%` }} />
                   <b>{point.events}</b>
-                  <small>{point.label.slice(0, 3)}</small>
+                  <small title={point.label}>{point.label}</small>
                 </div>
               ))}
             </div>
