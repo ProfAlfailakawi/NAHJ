@@ -280,7 +280,14 @@ export const ACTOR_AR: Record<string, string> = {
   "Vision OCR Engine": "محرّك قراءة المستندات",
   "Skill Executor": "منفّذ المهارات",
 };
-export const actorLabel = lookup(ACTOR_AR);
+const ACTOR_EN: Record<string, string> = {
+  "نهج": "NAHJ", "محرك السياسات": "Policy engine", "محرّك السياسات": "Policy engine", "النظام": "System",
+  "زائر العرض": "Demo visitor", "محرّك التقييم": "Evaluation engine", "موظف": "Staff member",
+};
+export const actorLabel = (value: string | undefined | null, ar = true): string => {
+  const raw = String(value ?? "");
+  return ar ? ACTOR_AR[raw] || raw : ACTOR_EN[raw] || raw;
+};
 
 /*
  * أساس القياس بالإنجليزية.
@@ -332,3 +339,52 @@ export function weekdayLabel(day: string, fallback: string, ar: boolean): string
   const date = new Date(`${day}T12:00:00`);
   return Number.isNaN(date.getTime()) ? fallback : date.toLocaleDateString("en-GB", { weekday: "long" });
 }
+
+
+/**
+ * «أمس، 09:55 ص» كما يكتبها الخادم → «Yesterday, 09:55 AM» في الواجهة الإنجليزية.
+ * ما لا يطابق النمط (تاريخٌ كامل مثلاً) يبقى كما جاء.
+ */
+export function stampLabel(value: string | undefined | null, ar: boolean): string {
+  const raw = String(value ?? "");
+  if (ar || !/[\u0600-\u06FF]/.test(raw)) return raw;
+  return raw
+    .replace(/^اليوم/, "Today").replace(/^أمس/, "Yesterday").replace(/^قبل يومين/, "2 days ago")
+    .replace(/^قبل (\d+) أيام/, "$1 days ago").replace(/^قبل (\d+) يوما?ً?/, "$1 days ago")
+    .replace(/،\s*/g, ", ").replace(/\s*ص$/, " AM").replace(/\s*م$/, " PM")
+    .replace(/^الآن$/, "Now");
+}
+
+const LEDGER_EN: Record<string, string> = {
+  "الفواتير": "Invoices", "الدفعات": "Payments", "سجلّ التدقيق": "Audit log",
+  "عمولات المسوّقين": "Partner commissions", "المهارات": "Skills", "حالات العمل": "Work items",
+};
+export const ledgerLabel = (label: string, ar: boolean): string => (ar ? label : LEDGER_EN[label] || label);
+
+/** حالة المزامنة التي يكتبها الخادم للموصلات المحاكاة. */
+export const syncLabel = (value: string | undefined | null, ar: boolean): string => {
+  const raw = String(value ?? "");
+  return ar ? raw : raw === "محاكاة — لا مزامنة" ? "Simulated — no sync" : raw;
+};
+
+/** ملاحظة لقطة الاشتراك التجريبية. */
+export const demoSnapshotNote = (note: string | undefined, ar: boolean): string =>
+  ar || !note ? note || "" : /^أرقام الاشتراك هنا اصطناعية/.test(note)
+    ? "Subscription figures here are synthetic. The demo environment neither reads nor writes the real billing ledger."
+    : note;
+
+/** وصف القطاع بالإنجليزية: الخادم يرسل العربية فقط. */
+const SECTOR_DESC_EN: Record<string, string> = {
+  education: "Enrolment, admissions, fees and student affairs: the seeded pack.",
+  clinic: "Appointments, insurance, referrals and test results, under patient privacy.",
+  law: "Cases, procedural deadlines, conflict checks and engagement fees.",
+  retail: "Orders, refunds, inventory and customer complaints.",
+  logistics: "Shipments, customs clearance, tracking and damage claims.",
+  realestate: "Viewings, leases, collections and maintenance requests.",
+};
+const SECTOR_ORG_EN: Record<string, string> = {
+  education: "Future International Academy", clinic: "Al-Shifa Specialist Centre", law: "Al-Mizan Law & Advisory",
+  retail: "Al-Waha Stores", logistics: "Al-Masar Shipping", realestate: "Al-Dira Real Estate",
+};
+export const sectorDescription = (code: string, arabic: string, ar: boolean): string => (ar ? arabic : SECTOR_DESC_EN[code] || arabic);
+export const sectorOrganization = (code: string, arabic: string, ar: boolean): string => (ar ? arabic : SECTOR_ORG_EN[code] || arabic);

@@ -16,6 +16,7 @@ process.env.NAHJ_DATABASE_PATH = path.join(fs.mkdtempSync(path.join(os.tmpdir(),
 
 const { warmDemoSandbox } = await import("./routes.ts");
 const { DemoSandbox, db } = await import("./db.ts");
+const { buildDemoExport, describeDemoExport, DEMO_LEDGERS } = await import("./archive.ts");
 const { buildExtraDemoSkills, EXTRA_DEMO_SKILLS } = await import("./packs/demoSkills.ts");
 
 const SECTORS = ["education", "clinic", "law", "retail", "logistics", "realestate"];
@@ -44,6 +45,13 @@ for (const sector of SECTORS) {
     assert.ok(shadows.every(item => item.aiAction), "مقارنة ظل بلا قرار من المحرّك");
     assert.ok(shadows.some(item => item.matched), "لا مقارنة تطابقت");
 
+    if (sector !== "education") {
+      const extra = cases.filter(item => /_x\d+$/.test(String(item.id)));
+      assert.ok(extra.length >= 8, `${sector}: حالات المهارات الإضافية قليلة`);
+      assert.ok(extra.every(item => item.resultStatus === "pass"), `${sector}: المحرّك خالف المتوقَّع البشري في حالةٍ إضافية`);
+      assert.ok(shadows.some(item => item.driftDetected), `${sector}: لا انحراف ظلّ يراه الزائر`);
+    }
+
     /* مكتبة مهاراتٍ بحجم مؤسسةٍ تعمل، لا ثلاثٍ أو أربع. */
     assert.ok(skills >= 15, `${sector}: ${skills} مهارة فقط`);
   });
@@ -62,4 +70,19 @@ test("مهارات العرض الإضافية: معرّفات فريدة، وخ
     }
     assert.equal(slugs.size, definitions.length);
   }
+});
+
+test("تصدير العرض يخرج من الصندوق وحده: لا فوترة ولا مسوّقين ولا دفاتر حقيقية", () => {
+  DemoSandbox.create("demo_export_probe", 60_000, "clinic");
+  let payload: any = null;
+  let counts: any = null;
+  DemoSandbox.run("demo_export_probe", 60_000, () => { payload = buildDemoExport(); counts = describeDemoExport(); });
+  assert.equal(payload.meta.demo, true);
+  assert.equal(payload.meta.sectorCode, "clinic");
+  assert.equal(payload.billing, undefined, "فوترة في تصدير العرض");
+  assert.equal(payload.owner, undefined, "دفتر مالك في تصدير العرض");
+  assert.equal(payload.operations.users, undefined);
+  assert.ok(payload.operations.skills.length >= 15);
+  assert.equal(counts.invoices, 0);
+  assert.deepEqual([...DEMO_LEDGERS].sort(), ["audit", "skills", "workItems"]);
 });

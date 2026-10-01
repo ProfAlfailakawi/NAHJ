@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { Bot, FileCheck2, Search, ShieldAlert, UserRound, Waypoints } from "lucide-react";
 import type { AuditEvent } from "../../types";
 import { PageHeader } from "../Primitives";
-import { actionLabel, actorLabel, provenanceLabel, reasonLabel, riskLabel } from "../../lib/labels";
+import { stampLabel, actionLabel, actorLabel, provenanceLabel, reasonLabel, riskLabel } from "../../lib/labels";
 
 /*
  * سجلّ التدقيق.
@@ -37,7 +37,7 @@ export function AuditView({ lang, events }: Props) {
                   {e.actorType === "ai" ? <Bot /> : e.actorType === "human" ? <UserRound /> : e.risk === "high" || e.risk === "critical" ? <ShieldAlert /> : <Waypoints />}
                 </span>
                 <div>
-                  <div className="audit-head"><strong title={e.action}>{actionLabel(e.action, ar)}</strong><small>{e.timestamp} · {actorLabel(e.actorName, ar)} · {riskLabel(e.risk, ar)}</small></div>
+                  <div className="audit-head"><strong title={e.action}>{actionLabel(e.action, ar)}</strong><small>{stampLabel(e.timestamp, ar)} · {actorLabel(e.actorName, ar)} · {riskLabel(e.risk, ar)}</small></div>
                   <p>{e.details}</p>
                   {record?.skill && <p className="audit-record">{ar ? `المهارة: ${record.skill.name} — v${record.skill.version}` : `Skill: ${record.skill.name} — v${record.skill.version}`}</p>}
                   {record?.review?.signedOffBy && <p className="audit-record">{ar

@@ -1,3 +1,4 @@
+import { demoSnapshotNote, ledgerLabel } from "../../lib/labels";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle, ArrowUpRight, BadgeCheck, CalendarClock, CheckCircle2, CircleSlash, CreditCard,
@@ -294,7 +295,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
       />
 
       {snapshot.isDemo && (
-        <div className="sub-demo-note"><AlertTriangle /> {snapshot.demoNote}</div>
+        <div className="sub-demo-note"><AlertTriangle /> {demoSnapshotNote(snapshot.demoNote, ar)}</div>
       )}
 
       {/* الحالة أولاً، وبصوت عالٍ: من يفتح هذه الشاشة يفتحها لسؤال واحد. */}
@@ -307,7 +308,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
             {subscription && <span className="sub-cycle-chip">{ar ? CYCLE_LABEL[subscription.cycle].ar : CYCLE_LABEL[subscription.cycle].en}</span>}
             {!state.writable && <span className="sub-frozen-chip">{ar ? "الكتابة مجمّدة" : "Writes frozen"}</span>}
           </div>
-          <p>{state.reason}</p>
+          <p>{ar ? state.reason : state.reason.replace(/^اشتراك سارٍ حتى (\S+?)\.$/, "Subscription active until $1.")}</p>
           {!state.writable && (
             <p className="sub-readonly-note">
               {ar
@@ -424,12 +425,14 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
         * ليست مالكةً لها مهما كُتب في العقد — والتصدير هنا متاحٌ حتى والكتابة
         * مجمّدة، لأن منعه عن متأخّرٍ عن السداد ابتزازٌ لا تحصيل.
       */}
-      {exportSummary && !snapshot.isDemo && (
+      {exportSummary && (
         <section className="surface-strong sub-block">
           <SectionTitle title={ar ? "بياناتك" : "Your data"} icon={<Download />}
             meta={ar ? "لك، لا لنا" : "yours, not ours"} />
           <p className="sub-footnote" style={{ marginTop: 0 }}>
-            {ar
+            {snapshot.isDemo
+              ? (ar ? `نسخة من بيانات العرض المختلقة: ${exportSummary.counts.skills} مهارة، و${exportSummary.counts.workItems} حالة عمل، و${exportSummary.counts.auditEvents} حدث تدقيق. لا فواتير ولا دفتر مسوّقين فيها.` : `A copy of the invented demo data: ${exportSummary.counts.skills} skills, ${exportSummary.counts.workItems} work cases, ${exportSummary.counts.auditEvents} audit events. No invoices or partner ledger.`)
+              : ar
               ? `${exportSummary.counts.skills} مهارة، و${exportSummary.counts.workItems} حالة عمل، و${exportSummary.counts.auditEvents} حدث تدقيق، و${exportSummary.counts.invoices} فاتورة. تخرج كلها بصيغةٍ تُقرأ خارج نهج — الآن، وبلا طلبٍ منّا.`
               : `Everything you have built, exported in formats readable outside NAHJ.`}
           </p>
@@ -440,12 +443,14 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
             {exportSummary.ledgers.map(ledger => (
               <button key={ledger.name} className="btn-secondary"
                 onClick={() => archiveApi.download(`/export/${ledger.name}.csv`)}>
-                <FileText /> {ledger.label} (CSV)
+                <FileText /> {ledgerLabel(ledger.label, ar)} (CSV)
               </button>
             ))}
           </div>
           <p className="sub-footnote">
-            {ar
+            {snapshot.isDemo
+              ? (ar ? "تصدير العرض لا يمسّ أي دفتر حقيقي ولا يُسجَّل في سجلّ مؤسسة." : "The demo export touches no real ledger and is not logged to any organisation.")
+              : ar
               ? "كل تصدير يُسجَّل في سجلّ التدقيق بمن فعله ومتى — إخراج بيانات مؤسسة حدثٌ أمني بقدر ما هو خدمة."
               : "Every export is recorded in the audit log."}
           </p>

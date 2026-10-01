@@ -32,6 +32,7 @@ import { AUDIT_RETENTION, readState, startPersistenceWorker } from "./persistenc
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createDemoSandboxSeed, type DemoSandboxSeed } from "./demoSandbox.ts";
 import { buildSector, EDUCATION_CODE, getSectorPack } from "./packs/index.ts";
+import { buildExtraDemoCases } from "./packs/demoExtraCases.ts";
 import { buildExtraDemoSkills } from "./packs/demoSkills.ts";
 import { expandSkill } from "./packs/types.ts";
 import { buildDemoActivity, buildDemoHistory, buildResolvedProposals } from "./packs/demoActivity.ts";
@@ -395,6 +396,10 @@ export class Store {
       this.approvalRequests = activity.approvalRequests;
       this.testCases = activity.testCases;
       this.shadowComparisons = activity.shadowComparisons;
+      /* حالاتٌ لمهارات العرض الإضافية، بلا نتائج: يملؤها المحرّكان عند الإحماء. */
+      const extraCases = buildExtraDemoCases(code, built.skills);
+      this.testCases = [...this.testCases, ...extraCases.testCases];
+      this.shadowComparisons = [...this.shadowComparisons, ...extraCases.shadowComparisons];
       /*
        * سجلّ الصندوق يبدأ من تاريخ هذه المؤسسة لا من تاريخ المدرسة المبذورة:
        * كان «السجل» في عيادة العرض يعرض «مديرة القبول» و«KG2». ويُبنى من

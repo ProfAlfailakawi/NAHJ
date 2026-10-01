@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { connectorTypeLabel } from "../../lib/labels";
+import { connectorTypeLabel, syncLabel } from "../../lib/labels";
 import {
   CalendarDays,
   CheckCircle2,
@@ -184,7 +184,7 @@ export function ConnectionsView({ lang, connectors, testingId, onTest }: Props) 
                   <div>
                     <strong>{c.name}</strong>
                     <small>
-                      {connectorTypeLabel(c.type, ar)} · {c.lastSync}
+                      {connectorTypeLabel(c.type, ar)} · {syncLabel(c.lastSync, ar)}
                     </small>
                     {/* وسمُ المحاكاة لا يُخفى: من يشتري يعرف ما اشترى. */}
                     {c.mode !== "live" && (
