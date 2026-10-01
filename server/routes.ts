@@ -1064,6 +1064,17 @@ apiRouter.get("/compliance/presets", (_req: Request, res: Response) => {
   res.json({ sector: db.sectorCode, presets: SECTOR_COMPLIANCE_PRESETS[db.sectorCode] || [], all: SECTOR_COMPLIANCE_PRESETS });
 });
 
+/*
+ * صندوق العرض يُسلَّم مُجرَّباً: يُشغَّل المحرّكان الحقيقيان على حالاته عند الإنشاء،
+ * فيرى الزائر نتائج تدرّبٍ وظلٍّ قرّرها المحرّك لا خانات «—» و«بانتظار المقارنة».
+ * لا نتيجة تُكتب بيد؛ ولا يمسّ هذا إلا مخزن الصندوق (يُشغَّل داخل سياقه).
+ */
+export async function warmDemoSandbox(): Promise<void> {
+  await SkillEngine.runPracticeTests();
+  await SkillEngine.runShadowComparison();
+}
+DemoSandbox.setWarmup(warmDemoSandbox);
+
 // 6. Practice & Shadow Modes
 apiRouter.post("/practice/run", requireRole("admin", "manager", "operator"), async (req: Request, res: Response) => {
   const result = await SkillEngine.runPracticeTests();
@@ -1709,7 +1720,7 @@ apiRouter.get("/sectors", (req: Request, res: Response) => {
  * والبيئة التجريبية مسموحة عمداً: صندوق الزائر في الذاكرة، وتبديل القطاع فيه هو
  * أوضح ما يُري أن المنتج ليس نظام مدارس.
  */
-apiRouter.post("/sectors/apply", requireRole("admin"), (req: AuthenticatedRequest, res: Response) => {
+apiRouter.post("/sectors/apply", requireRole("admin"), async (req: AuthenticatedRequest, res: Response) => {
   if (req.body?.confirm !== "REPLACE") {
     return void res.status(400).json({
       error: 'تبديل القطاع يمحو المهارات والسياسات وحالات العمل. أرسل confirm="REPLACE" للتأكيد.',
@@ -1726,6 +1737,7 @@ apiRouter.post("/sectors/apply", requireRole("admin"), (req: AuthenticatedReques
   }
   const result = db.applySector(code, req.account?.email || "مشرف");
   if (!result.ok) return void res.status(404).json({ error: result.reason });
+  if (db.isDemo) await warmDemoSandbox();
 
   res.json({
     ok: true,

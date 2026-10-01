@@ -32,7 +32,7 @@ import { AUDIT_RETENTION, readState, startPersistenceWorker } from "./persistenc
 import { AsyncLocalStorage } from "node:async_hooks";
 import { createDemoSandboxSeed, type DemoSandboxSeed } from "./demoSandbox.ts";
 import { buildSector, EDUCATION_CODE, getSectorPack } from "./packs/index.ts";
-import { buildDemoActivity, buildDemoHistory } from "./packs/demoActivity.ts";
+import { buildDemoActivity, buildDemoHistory, buildResolvedProposals } from "./packs/demoActivity.ts";
 import { buildCleanStart, type CleanStart } from "./packs/cleanStart.ts";
 
 /*
@@ -418,6 +418,7 @@ export class Store {
       this.workItems = [...this.workItems, ...history.workItems];
       this.approvalRequests = [...this.approvalRequests, ...history.approvalRequests];
       this.auditEvents = [...this.auditEvents, ...history.auditEvents];
+      this.learningProposals = [...this.learningProposals, ...buildResolvedProposals(built.skills.map(skill => skill.name), code)];
       this.organization = {
         ...this.organization,
         verifiedSkillsCount: built.skills.filter(skill => skill.status === "active").length,
@@ -601,7 +602,19 @@ function sweepExpiredSandboxes(): void {
   for (const [id, record] of demoSandboxes) if (record.expiresAt <= now) demoSandboxes.delete(id);
 }
 
+/*
+ * يُركَّب من الخارج (server.ts) لأن المحرّكات تقرأ `db` نفسه فتستورده: ربطٌ دائري لو استوردناها هنا.
+ * يُشغَّل داخل سياق الصندوق الجديد فيكتب فيه وحده — لا في مخزن المؤسسة.
+ */
+let sandboxWarmup: (() => Promise<void>) | null = null;
+function warmSandbox(sessionId: string, store: Store): void {
+  if (!sandboxWarmup) return;
+  const warm = sandboxWarmup;
+  demoContext.run({ sessionId, store }, () => { void warm().catch(() => undefined); });
+}
+
 export const DemoSandbox = {
+  setWarmup(fn: () => Promise<void>): void { sandboxWarmup = fn; },
   isDemoRequest: (): boolean => Boolean(demoContext.getStore()),
   currentSessionId: (): string => demoContext.getStore()?.sessionId || "",
   create(sessionId: string, ttlMs: number = DEMO_SESSION_TTL_MS, sector: string = EDUCATION_CODE): void {
@@ -618,13 +631,17 @@ export const DemoSandbox = {
       demoSandboxes.delete(oldestId);
     }
     const code = normalizeDemoSector(sector);
-    demoSandboxes.set(sessionId, { store: sandboxStore(code), expiresAt: Date.now() + ttlMs, sector: code });
+    const store = sandboxStore(code);
+    demoSandboxes.set(sessionId, { store, expiresAt: Date.now() + ttlMs, sector: code });
+    warmSandbox(sessionId, store);
   },
   /** إعادة الضبط تُبقي القطاع الذي اختاره الزائر — لا تُعيده إلى المدرسة. */
   reset(sessionId: string, ttlMs: number = DEMO_SESSION_TTL_MS): boolean {
     if (!sessionId.startsWith("demo_") || !demoSandboxes.has(sessionId)) return false;
     const sector = demoSandboxes.get(sessionId)!.sector;
-    demoSandboxes.set(sessionId, { store: sandboxStore(sector), expiresAt: Date.now() + ttlMs, sector });
+    const store = sandboxStore(sector);
+    demoSandboxes.set(sessionId, { store, expiresAt: Date.now() + ttlMs, sector });
+    warmSandbox(sessionId, store);
     return true;
   },
   destroy(sessionId: string): void { demoSandboxes.delete(sessionId); },

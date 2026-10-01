@@ -1,4 +1,4 @@
-import type { ApprovalRequest, AuditEvent, ShadowComparison, TestCase, WorkItem } from "../../src/types/index.ts";
+import type { ApprovalRequest, AuditEvent, LearningProposal, ShadowComparison, TestCase, WorkItem } from "../../src/types/index.ts";
 import type { ExpandedPack, PackDemo } from "./types.ts";
 
 /*
@@ -112,7 +112,9 @@ const HISTORY_CONTACTS: Record<string, string[]> = {
 
 const pad2 = (value: number) => String(value).padStart(2, "0");
 const displayStamp = (date: Date, dayOffset: number) => {
-  const day = dayOffset === 0 ? "اليوم" : dayOffset === 1 ? "أمس" : dayOffset === 2 ? "قبل يومين" : `قبل ${dayOffset} أيام`;
+  /* بعد أسبوعٍ يصير «قبل 45 أيام» ركيكاً — يُكتب التاريخ نفسه. */
+  if (dayOffset > 10) return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}، ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+  const day = dayOffset === 0 ? "اليوم" : dayOffset === 1 ? "أمس" : dayOffset === 2 ? "قبل يومين" : dayOffset <= 10 ? `قبل ${dayOffset} أيام` : "";
   const hours = date.getHours();
   return `${day}، ${pad2(hours)}:${pad2(date.getMinutes())} ${hours >= 12 ? "م" : "ص"}`;
 };
@@ -133,8 +135,12 @@ export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now
   const auditEvents: AuditEvent[] = [];
   let serial = 0;
 
-  for (let dayOffset = 6; dayOffset >= 1; dayOffset--) {
-    const perDay = 2 + ((dayOffset * 7) % 3);
+  /*
+   * الأسبوع الأخير كثيف (٢–٤ حالات يومياً)، وما قبله حتى أربعة أشهرٍ أخفّ: مؤسسةٌ تعمل منذ
+   * شهور لا أسبوعٍ واحد، فيقرأ السجلّ والعمل والموافقات عمراً حقيقياً.
+   */
+  for (let dayOffset = 120; dayOffset >= 1; dayOffset--) {
+    const perDay = dayOffset <= 6 ? 2 + ((dayOffset * 7) % 3) : (dayOffset % 2 === 0 ? 1 : 0) + (dayOffset % 5 === 0 ? 1 : 0);
     for (let slot = 0; slot < perDay; slot++) {
       const skill = skills[(serial + dayOffset) % skills.length];
       const contact = contacts[serial % contacts.length];
@@ -232,4 +238,43 @@ export function buildDemoHistory(expanded: ExpandedPack, sectorCode: string, now
   }
   /* الأحدث أولاً، كما يعرضه السجل. */
   return { workItems: workItems.reverse(), approvalRequests: approvalRequests.reverse(), auditEvents: auditEvents.sort((a, b) => String(b.at).localeCompare(String(a.at))) };
+}
+
+/* ============================================================ إشارات حُسمت */
+
+/*
+ * إشاراتُ تعلّمٍ بُتّ فيها خلال الأشهر الماضية.
+ *
+ * «من الإشارات محسوم» يُحسب من نسبة المحسوم إلى المرصود، فمؤسسةٌ لم يُحسم فيها شيء تُقرأ
+ * ٠٪ وكأن النظام لم يعمل يوماً. هذه إشاراتٌ مغلقة بأسماء مهارات المؤسسة نفسها، وبعدد حالات
+ * ونسبة ثقةٍ مختلفين، تُضاف إلى صندوق العرض وحده.
+ */
+export function buildResolvedProposals(skillNames: string[], sectorCode: string): LearningProposal[] {
+  const names = skillNames.length ? skillNames : ["الإجراء الأساسي"];
+  const templates: Array<{ type: LearningProposal["type"]; title: (n: string) => string; titleEn: string; summary: (n: string) => string; days: number; cases: number; confidence: number; status: "resolved" | "dismissed" }> = [
+    { type: "conflict", title: n => `توحيد طريقة تنفيذ «${n}»`, titleEn: "Unified two competing methods", summary: n => `رُصدت طريقتان لتنفيذ «${n}»؛ اعتمد المسؤول الأدقّ منهما وأُلحقت بالمهارة كخطوة موثّقة.`, days: 84, cases: 46, confidence: 91, status: "resolved" },
+    { type: "process_drift", title: n => `انحراف مؤقّت في «${n}» أُغلق`, titleEn: "Process drift closed", summary: () => "تخطّى موظفان خطوة تحقّق لضغط العمل؛ أُعيدت الخطوة إلزاميةً وصدرت تذكرةٌ بالتدريب.", days: 71, cases: 19, confidence: 86, status: "resolved" },
+    { type: "improvement", title: n => `رسائل استباقية قبل «${n}» تقلّل التأخير`, titleEn: "Proactive reminder adopted", summary: () => "قيس أثر تذكيرٍ مسبق على عيّنةٍ سابقة فاختُصر زمن الإنجاز؛ اعتُمد وأُضيف إلى المهارة.", days: 58, cases: 73, confidence: 94, status: "resolved" },
+    { type: "new_skill", title: n => `مهارة مقترحة من تكرار «${n}»`, titleEn: "Skill proposed from repetition", summary: () => "تكرّر الإجراء نفسه بخطواتٍ متطابقة تقريباً فاقترح نهج توثيقه؛ أُنشئت المهارة وهي الآن تحت الملاحظة.", days: 44, cases: 112, confidence: 89, status: "resolved" },
+    { type: "outdated_source", title: () => "مصدرٌ قديم لم يعد يطابق العمل", titleEn: "Outdated source flagged", summary: () => "تجاوزت الممارسة اللائحة المسجّلة بنسخةٍ أحدث؛ جُدِّد المصدر وأُرشفت النسخة القديمة.", days: 33, cases: 27, confidence: 82, status: "resolved" },
+    { type: "single_person_risk", title: n => `اعتماد «${n}» على موظف واحد`, titleEn: "Single-person dependency", summary: () => "أُسند زميلٌ بديل ودُرّب على الإجراء؛ لم يعد يتوقف العمل على غياب شخص واحد.", days: 21, cases: 15, confidence: 90, status: "resolved" },
+    { type: "improvement", title: () => "اقتراح خارج نطاق السياسة — رُفض", titleEn: "Out-of-policy suggestion dismissed", summary: () => "اقترحت الإشارة تجاوز خطوة اعتمادٍ لتسريع الإنجاز؛ رفضها المسؤول لأنها تنقض سياسة معتمدة.", days: 12, cases: 8, confidence: 61, status: "dismissed" },
+  ];
+  return templates.map((t, index) => {
+    const name = names[(index * 2 + 1) % names.length];
+    const at = new Date();
+    at.setDate(at.getDate() - t.days);
+    return {
+      id: `prop_${sectorCode}_done_${index + 1}`,
+      type: t.type,
+      title: t.title(name),
+      titleEn: t.titleEn,
+      detectedAt: `${at.getFullYear()}-${pad2(at.getMonth() + 1)}-${pad2(at.getDate())}`,
+      observedCasesCount: t.cases,
+      confidence: t.confidence,
+      summary: t.summary(name),
+      status: t.status,
+      evidence: { details: t.status === "dismissed" ? "رفضه المسؤول — بلا أثر على المهارات." : "حُسمت بقرارٍ بشري موثّق في سجلّ التدقيق." },
+    } as LearningProposal;
+  });
 }
