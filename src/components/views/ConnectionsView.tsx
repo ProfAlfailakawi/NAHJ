@@ -14,6 +14,7 @@ import {
   Server,
   ShieldCheck,
   TriangleAlert,
+  Users,
   Zap,
 } from "lucide-react";
 import type { Connector } from "../../types";
@@ -53,7 +54,11 @@ type Props = {
   isDemo?: boolean;
 };
 
-const icons = [Database, CalendarDays, CircleDollarSign, FileCheck2, MessageCircleMore, PlugZap];
+/* الأيقونة حسب نوع الموصل لا حسب ترتيبه في القائمة. */
+const TYPE_ICON: Record<string, typeof Database> = {
+  database: Database, sis: FileCheck2, calendar: CalendarDays, payment: CircleDollarSign,
+  crm: Users, storage: HardDriveDownload, whatsapp: MessageCircleMore, cloud: Cloud,
+};
 
 export function ConnectionsView({ lang, connectors, testingId, onTest, isDemo = false }: Props) {
   const ar = lang === "ar";
@@ -178,24 +183,21 @@ export function ConnectionsView({ lang, connectors, testingId, onTest, isDemo = 
               : `${connectors.filter(c => c.mode !== "live").length} simulated of ${connectors.length}`}
           />
           <div>
-            {connectors.map((c, i) => {
-              const Icon = icons[i % icons.length];
+            {connectors.some(c => c.mode !== "live") && (
+              <p className="connector-sim-note"><Zap aria-hidden="true" />{ar ? "المحاكاة: لا يخرج منها طلب شبكة، والأرقام للعرض." : "Simulated: no network calls; figures are illustrative."}</p>
+            )}
+            {connectors.map((c) => {
+              const Icon = TYPE_ICON[c.type] || PlugZap;
               return (
                 <article key={c.id} className="connector-row">
                   <span className={`connector-icon status-${c.status}`}>
                     <Icon />
                   </span>
                   <div>
-                    <strong><Dt t={c.name} ar={ar} /></strong>
+                    <strong><Dt t={c.name} ar={ar} />{c.mode !== "live" && <em className="connector-sim-badge" title={ar ? "محاكاة — لا يخرج منها طلب شبكة، والأرقام للعرض" : "Simulated — no network calls; figures are illustrative"}>{ar ? "محاكاة" : "Simulated"}</em>}</strong>
                     <small>
                       {connectorTypeLabel(c.type, ar)} · {syncLabel(c.lastSync, ar)}
                     </small>
-                    {/* وسمُ المحاكاة لا يُخفى: من يشتري يعرف ما اشترى. */}
-                    {c.mode !== "live" && (
-                      <small className="connector-simulated">
-                        {ar ? "محاكاة — لا يخرج منها طلب شبكة، والأرقام للعرض" : "Simulated — no network calls; figures are illustrative"}
-                      </small>
-                    )}
                   </div>
                   <span className={`health status-${c.status}`}>
                     {c.status === "healthy" ? <CheckCircle2 /> : <TriangleAlert />}

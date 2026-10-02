@@ -6,7 +6,7 @@ import {
 import type { ApprovalRequest, LearningProposal, Organization, Skill, WorkItem } from "../../types";
 import type { SectionId } from "../Shell";
 import { workStepText, workSteps } from "./WorkView";
-import { DnaHubMap, DnaStepper } from "../dna";
+import { DnaHubMap, DnaSpark, DnaStepper } from "../dna";
 import { Dt, PageHeader, SectionTitle, Stat } from "../Primitives";
 import { hoursLabel } from "../../lib/labels";
 import { Term } from "../Explain";
@@ -39,13 +39,16 @@ type Props = {
   serverLive?: boolean;
   demoActive?: boolean;
   policiesActive?: number | null;
+  /* أحداث كل يوم من سجلّ التدقيق (موجودة أصلاً في /analytics) — للرسم المصغّر فقط. */
+  activityTrend?: number[];
 };
 
-export function TodayView({ lang, organization, onNavigate, approvals, proposals, workItems, onApproval, todayMetrics, memory, skills = [], practiceCount = 0, canManageAccounts = false, serverLive = false, demoActive = false, policiesActive = null }: Props) {
+export function TodayView({ lang, organization, onNavigate, approvals, proposals, workItems, onApproval, todayMetrics, memory, skills = [], practiceCount = 0, canManageAccounts = false, serverLive = false, demoActive = false, policiesActive = null, activityTrend }: Props) {
   const ar = lang === "ar";
   const open = proposals.filter(p=>p.status==="pending");
   const active = workItems.filter(w=>w.state!=="completed").slice(0,3);
   const conflictCount = open.filter(p=>p.type==="conflict"||p.type==="process_drift").length;
+  const needsYou = approvals.filter(a=>a.status==="pending").length+conflictCount;
   return (
     <div className="page-enter">
       <PageHeader eyebrow={ar?"نبض نهج":"NAHJ / PULSE"} title={ar ? "العقل يعمل." : "The brain is working."} hint={ar ? "ما يظهر هنا هو ما يحتاجك أنت. الباقي يمشي وحده أو ينتظر دوره." : "What appears here needs you. The rest runs or waits its turn."} action={<button className="btn-primary" onClick={()=>onNavigate("teach")}><GraduationCap/>{ar?"علّم نهج":"Teach NAHJ"}</button>}/>
@@ -96,10 +99,11 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
         </article>
         <div className="pulse-stats">
           {/* «نشاط» لا «أُنجز»: العدّ يشمل كل ما سُجِّل، لا المهام المكتملة وحدها. */}
-          <Stat label={ar?"نشاط اليوم":"ACTIVITY TODAY"} value={todayMetrics?.auditEventsToday ?? 0} tone="moss" icon={<Activity/>}/>
+          <Stat label={ar?"نشاط اليوم":"ACTIVITY TODAY"} value={todayMetrics?.auditEventsToday ?? 0} tone="moss" icon={<Activity/>}
+            spark={activityTrend && activityTrend.length > 1 ? <DnaSpark values={activityTrend} width={64} height={24} ariaLabel={ar?"أحداث آخر أيام":"Recent daily events"}/> : undefined}/>
           <Stat label={ar?"وقت مستعاد":"TIME BACK"} value={hoursLabel(todayMetrics?.hoursSavedThisMonth ?? organization.hoursSavedMonth, ar)} tone="moss" icon={<Clock3/>}/>
           <Stat label={ar?"تعلّم":"LEARNING"} value={open.length} tone="moss" icon={<Sparkles/>}/>
-          <Stat label={ar?"قرارك":"NEEDS YOU"} value={approvals.filter(a=>a.status==="pending").length+conflictCount} tone="moss" icon={<ShieldCheck/>}/>
+          <Stat label={ar?"قرارك":"NEEDS YOU"} value={needsYou} tone={needsYou>0?"amber":"moss"} icon={<ShieldCheck/>}/>
         </div>
       </section>
 
@@ -149,6 +153,7 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
         <MemoryGlyph icon={<Route/>} value={memory?.undocumentedProcesses === null || memory?.undocumentedProcesses === undefined ? "—" : String(memory.undocumentedProcesses)} label={ar?"غير موثقة":"Undocumented"}/>
         <MemoryGlyph icon={<AlertTriangle/>} value={String(memory?.singlePersonDependencies ?? 0)} label={ar?"تعتمد على شخص":"Single-person"}/>
         <MemoryGlyph icon={<Sparkles/>} value={String(memory?.candidatesForAutomation ?? 0)} label={ar?"جاهزة للترقية":"Ready to promote"}/>
+        <MemoryBar ar={ar} total={memory?.documentedSkills ?? 0} single={memory?.singlePersonDependencies ?? 0} ready={memory?.candidatesForAutomation ?? 0}/>
       </section>
     </div>
   );
@@ -181,4 +186,21 @@ function GettingStarted({ ar, steps, onNavigate }: { ar: boolean; steps: Step[];
 
 function MemoryGlyph({icon,value,label}:{icon:React.ReactNode;value:string;label:string}){
   return <div className="memory-glyph"><span>{icon}</span><strong>{value}</strong><small>{label}</small></div>;
+}
+
+/* شريط مكدّس من الأرقام نفسها: من المهارات الموثّقة، كم يعتمد على شخص وكم جاهز للترقية. لا رقم جديد. */
+function MemoryBar({ar,total,single,ready}:{ar:boolean;total:number;single:number;ready:number}){
+  if(total<=0||single+ready>total)return null;
+  const rest=total-single-ready;
+  const segs:[string,number,string][]=[
+    ["single",single,ar?"تعتمد على شخص":"Single-person"],
+    ["ready",ready,ar?"جاهزة للترقية":"Ready to promote"],
+    ["rest",rest,ar?"باقي الموثّقة":"Other documented"],
+  ];
+  return <div className="memory-bar-wrap">
+    <div className="memory-bar" role="img" aria-label={segs.map(([,n,l])=>`${l}: ${n}`).join("، ")+(ar?` من ${total}`:` of ${total}`)}>
+      {segs.map(([k,n,l])=>n>0?<span key={k} className={`mb-${k}`} style={{flexGrow:n}} title={`${l}: ${n}`}/>:null)}
+    </div>
+    <div className="memory-bar-legend" aria-hidden="true">{segs.map(([k,n,l])=>n>0?<span key={k}><i className={`mb-${k}`}/>{l} <b>{n}</b></span>:null)}</div>
+  </div>;
 }

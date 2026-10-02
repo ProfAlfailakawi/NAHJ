@@ -1,8 +1,9 @@
 import React from "react";
-import { AlertTriangle, FileClock, Lightbulb, Route, Sparkles, UserRoundCheck } from "lucide-react";
+import { AlertTriangle, FileClock, Lightbulb, Radar, Route, Sparkles, UserRoundCheck } from "lucide-react";
 import type { LearningProposal } from "../../types";
 import { EvidenceSplit, LearningLens } from "../Visuals";
 import { Dt, PageHeader, SectionTitle } from "../Primitives";
+import { DnaEmpty } from "../dna";
 
 type Props={lang:"ar"|"en";proposals:LearningProposal[];onResolve:(proposalId:string,clarificationId:string,answer:string)=>void};
 
@@ -46,6 +47,7 @@ export function LearnView({lang,proposals,onResolve}:Props){
       </aside>
       <section className="learning-feed surface-strong">
         <SectionTitle title={ar?"إشارات اليوم":"Signals"} meta={`${open.length}`}/>
+        {open.length===0&&<DnaEmpty icon={<Radar/>} title={ar?"لا إشارات بانتظارك":"No signals waiting"} hint={ar?"حين يلاحظ نهج نمطاً أو تعارضاً جديداً يظهر هنا.":"When NAHJ notices a new pattern or conflict, it appears here."}/>}
         <div className="signal-list">
           {open.map((p)=>{
             const m=meta[p.type]; const Icon=m.icon; const q=p.clarifications?.find(c=>!c.selectedAnswer) || p.clarifications?.[0];

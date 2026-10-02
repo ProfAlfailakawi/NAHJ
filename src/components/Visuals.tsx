@@ -1,7 +1,7 @@
 import { LADDER_NAME_AR } from "../lib/labels";
 import React from "react";
 import {
-  BrainCircuit, BookOpenCheck, CalendarDays, CircleDollarSign, FileCheck2, Fingerprint,
+  BrainCircuit, BookOpenCheck, CalendarDays, Check, Circle, CircleDollarSign, FileCheck2, Fingerprint,
   GitBranch, GraduationCap, MessageCircleMore, Orbit, Route, ShieldCheck, Sparkles, UserRound,
   Waypoints
 } from "lucide-react";
@@ -33,7 +33,7 @@ export function LearningLens({ progress = 76, label, ar = true }: { progress?: n
       <svg viewBox="0 0 120 120" aria-hidden="true">
         <circle cx="60" cy="60" r="47" fill="none" stroke="rgba(16,37,31,.055)" strokeWidth="1"/>
         <circle cx="60" cy="60" r="42" fill="none" stroke="rgba(16,37,31,.08)" strokeWidth="5"/>
-        <circle cx="60" cy="60" r="42" fill="none" stroke="#2f7d65" strokeWidth="5" strokeLinecap="round" strokeDasharray={`${dash} ${circumference}`} transform="rotate(-90 60 60)" className="lens-progress"/>
+        <circle cx="60" cy="60" r="42" fill="none" stroke="var(--moss)" strokeWidth="5" strokeLinecap="round" strokeDasharray={`${dash} ${circumference}`} transform="rotate(-90 60 60)" className="lens-progress"/>
       </svg>
       {/* الرقم يظهر مرة واحدة: داخل الحلقة، لا فوق قوسها ولا مكرَّراً تحتها. */}
       <div className="learning-lens-core"><strong>{label ?? `${progress}%`}</strong></div>
@@ -51,7 +51,7 @@ export function TeachStageVisual({ active = false, eventCount = 0, ar = true }: 
       <div className="teach-source source-c" title={ar ? "التقويم" : "Calendar"}><CalendarDays/></div>
       <div className="teach-source source-d" title={ar ? "الأنظمة" : "Systems"}><Route/></div>
       <div className="teach-wave" aria-hidden="true">{Array.from({length:18}).map((_,i)=><i key={i} style={{height:`${9 + ((i*13)%28)}px`}}/>)}</div>
-      <span className="teach-count">{eventCount}</span>
+      <span className="teach-count" title={ar ? `الخطوات الملتقطة: ${eventCount}` : `Captured steps: ${eventCount}`} aria-label={ar ? `الخطوات الملتقطة: ${eventCount}` : `Captured steps: ${eventCount}`}>{eventCount}</span>
     </div>
   );
 }
@@ -62,7 +62,7 @@ export function SkillRunway({ level, reliability, ar = true }: { level: number; 
     <div className="skill-runway" aria-label={ar ? `مستوى الاستقلالية ${level}` : `Autonomy level ${level}`}>
       <div className="runway-line"><div style={{width:`${Math.min(100,(level/6)*100)}%`}}/></div>
       <div className="runway-stages">
-        {stages.map((_,i)=><span key={i} className={i<=level?"done":""} title={stages[i]}><i>{i<level?"✓":i===level?"●":""}</i></span>)}
+        {stages.map((_,i)=><span key={i} className={i<=level?"done":""} title={stages[i]}><i>{i<level?<Check aria-hidden="true"/>:i===level?<Circle aria-hidden="true" fill="currentColor"/>:null}</i></span>)}
       </div>
       <div className="runway-reliability"><span style={{width:`${reliability}%`}}/></div>
     </div>
@@ -82,11 +82,15 @@ export function ConnectionConstellation({ statuses, ar = true }: { statuses: {he
       <svg viewBox="0 0 390 330" fill="none" aria-hidden="true">
         {nodes.map((n,i)=><path key={i} d={`M195 165 C${(195+n.x)/2} ${(165+n.y)/2-30} ${n.x} ${n.y} ${n.x} ${n.y}`} stroke="rgba(16,37,31,.11)" strokeWidth="1.5" strokeDasharray="5 6"/>) }
         <circle cx="195" cy="165" r="69" fill="rgba(224,240,231,.66)" stroke="rgba(47,125,101,.14)"/>
-        <circle cx="195" cy="165" r="43" fill="#10251f"/>
+        <circle cx="195" cy="165" r="43" fill="var(--ink)"/>
       </svg>
       <div className="constellation-core"><Orbit/></div>
       {nodes.map((n,i)=><div key={i} className="constellation-node" style={{left:`calc(${n.x/3.9}% - 25px)`,top:`calc(${n.y/3.3}% - 25px)`,background:nodeTones[n.tone].bg,color:nodeTones[n.tone].fg}} title={n.label}>{n.icon}</div>)}
-      <div className="constellation-status"><b>{statuses.healthy}</b><i/><b>{statuses.degraded}</b><i/><b>{statuses.disconnected}</b></div>
+      <div className="constellation-status" role="group" aria-label={ar?"حالة الموصلات: سليمة، متدهورة، منقطعة":"Connector health: healthy, degraded, disconnected"}>
+        <b title={ar?"سليمة":"Healthy"} aria-label={`${ar?"سليمة":"Healthy"}: ${statuses.healthy}`}>{statuses.healthy}</b><i/>
+        <b title={ar?"متدهورة":"Degraded"} aria-label={`${ar?"متدهورة":"Degraded"}: ${statuses.degraded}`}>{statuses.degraded}</b><i/>
+        <b title={ar?"منقطعة":"Disconnected"} aria-label={`${ar?"منقطعة":"Disconnected"}: ${statuses.disconnected}`}>{statuses.disconnected}</b>
+      </div>
     </div>
   );
 }
@@ -105,7 +109,7 @@ export function MiniProcessGlyph() {
   return (
     <svg viewBox="0 0 260 86" className="mini-process-glyph" fill="none" aria-hidden="true">
       <path d="M18 43h44c19 0 20-23 39-23h42c20 0 21 46 42 46h57" stroke="rgba(16,37,31,.14)" strokeWidth="2.5" strokeLinecap="round"/>
-      {[18,62,101,143,185,242].map((x,i)=><circle key={x} cx={x} cy={[43,43,20,20,66,66][i]} r={i===5?8:5} fill={i===5?"#10251f":"#fffdf7"} stroke={i===5?"#10251f":"rgba(16,37,31,.25)"} strokeWidth="2"/>)}
+      {[18,62,101,143,185,242].map((x,i)=><circle key={x} cx={x} cy={[43,43,20,20,66,66][i]} r={i===5?8:5} fill={i===5?"var(--ink)":"var(--white)"} stroke={i===5?"var(--ink)":"rgba(16,37,31,.25)"} strokeWidth="2"/>)}
       <circle cx="242" cy="66" r="2.5" fill="#dff0e7"/>
     </svg>
   );

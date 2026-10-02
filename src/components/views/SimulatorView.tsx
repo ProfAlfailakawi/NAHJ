@@ -1,5 +1,5 @@
 import React,{useEffect,useRef,useState} from "react";
-import { Bot, CreditCard, FileUp, RotateCcw, Send, ShieldCheck, UserRound } from "lucide-react";
+import { Bot, Check, Circle, CreditCard, FileUp, RotateCcw, Send, ShieldCheck, UserRound } from "lucide-react";
 import { PageHeader } from "../Primitives";
 
 type SimMessage={id:string;sender:"customer"|"ai"|"system";text:string;timestamp:string;cardType?:string;metadata?:Record<string,any>};
@@ -25,7 +25,7 @@ export function SimulatorView({lang,state,busy,onSend,onReset,onUpload,onOpenApp
       <aside className="sim-trace surface-strong">
         <div className="trace-orb"><Bot/></div>
         <strong>{ladder[Math.min(current,ladder.length-1)]}</strong><span>{ar?"مرحلة المحادثة":"conversation stage"}</span>
-        <div className="trace-ladder">{ladder.map((s,i)=><div key={s} className={i<=current?"done":""}><i>{i<current?"✓":i===current?"●":""}</i><small>{s}</small></div>)}</div>
+        <div className="trace-ladder">{ladder.map((s,i)=><div key={s} className={i<=current?"done":""}><i>{i<current?<Check aria-hidden="true"/>:i===current?<Circle aria-hidden="true" fill="currentColor"/>:null}</i><small>{s}</small></div>)}</div>
         {state.approvalStatus==="rejected"&&<p className="sim-note">{ar?"رُفض الطلب وأُعيد إلى الموظف المختص.":"Rejected and returned to staff."}</p>}
         <p className="sim-note">{ar?"اكتب كما يكتب عميلك. حين يبلغ الطلب قراراً حسّاساً يتوقّف نهج ويطلب موافقتك — افتح بوابة القرار واعتمده أو ارفضه.":"Write as your customer would. At a sensitive decision NAHJ stops and asks for your approval."}</p>
         {state.requiresManagerApproval&&state.approvalStatus==="pending"&&<button className="approval-cta mt-auto" onClick={onOpenApproval}><ShieldCheck/>{ar?"افتح بوابة القرار":"Open approval gate"}</button>}
