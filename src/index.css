@@ -1268,3 +1268,6 @@
 .impact-badges small{font-size:12px;font-weight:800;color:var(--muted)}
 .top-skills .ts-bar{display:block;height:4px;margin-top:5px;border-radius:99px;background:rgba(16,37,31,.07);overflow:hidden}
 .top-skills .ts-bar i{display:block;height:100%;border-radius:99px;background:var(--moss)}
+
+/* Skills: الصفوف بعد الخامس في «عرض الكل» مطويّاً افتراضياً. */
+.skills-more{margin-top:8px}.skills-more>summary{cursor:pointer;list-style:none;padding:10px 12px;border-radius:14px;border:1px dashed var(--line-strong);text-align:center;font-size:13px;font-weight:900;color:var(--muted)}.skills-more>summary::-webkit-details-marker{display:none}.skills-more[open]>summary{margin-bottom:8px}
