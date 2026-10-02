@@ -1287,3 +1287,4 @@
   .demo-banner button svg{flex:none}
   .demo-banner button{gap:4px}
 }
+@media(min-width:621px){.brain-collapse::details-content{content-visibility:visible;display:block}}
