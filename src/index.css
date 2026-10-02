@@ -95,23 +95,9 @@
   padding: 28px;
   border-radius: 20px;
 }
-.login-demo-outside {
-  width: min(100%, 420px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  margin-top: 16px;
-}
-.login-demo-outside .demo-enter {
-  min-height: 46px;
-  justify-content: center;
-  padding-inline: 18px;
-  font-size: 14px;
-  letter-spacing: 0;
-}
-.login-demo-outside small { color: #5d716b; font-size: 12px; text-align: center; }
 .login-brand { display: flex; align-items: center; gap: 12px; }
+.login-brand .login-demo-icon { margin-inline-start: auto; }
+.login-brand .login-demo-icon svg { width: 18px; height: 18px; }
 .login-brand svg { width: 28px; height: 28px; flex: none; }
 .login-brand strong { display: block; font-size: 20px; line-height: 1.2; }
 .login-brand small { display: block; opacity: .65; font-size: 12px; }
@@ -167,7 +153,7 @@
 .demo-chip>button:disabled{opacity:.5;cursor:default}
 .demo-chip>button svg{width:13px;height:13px;stroke-width:2}
 .demo-chip--icon{padding:0 5px 0 9px;gap:6px}
-/* روابط الصفحة العامة تبقى داخل بطاقة الحساب، ومدخل التجربة خارجها. */
+/* روابط الصفحة العامة تبقى داخل بطاقة الحساب، ومدخل التجربة أيقونةٌ في رأسها. */
 .login-links-row{margin-top:2px;padding-top:14px;border-top:1px solid rgba(16,37,31,.1)}
 .login-links{display:flex;justify-content:center;gap:14px;font-size:12.5px}
 .login-links a{color:#2f7d65;font-weight:700;text-decoration:none}.login-links a:hover{text-decoration:underline}
