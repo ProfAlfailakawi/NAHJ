@@ -1284,3 +1284,6 @@
   .demo-banner button{flex:none;width:44px;height:44px;justify-content:center;padding:0}
   .demo-banner button svg{flex:none;width:18px}
 }
+
+/* Skills: تسميات درجات السُّلّم السبع فوق الأشرطة تظهر من sm فأكثر؛ تبقى في DOM للقارئ الشاشي. */
+@media(max-width:639px){.skills-axis{position:absolute;width:1px;height:1px;margin:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
