@@ -1391,3 +1391,10 @@
   .topbar .demo-chip{order:9;flex:0 0 auto}
   .demo-chip>svg,.demo-chip>i{display:none}
 }
+
+/* Accounts: the role select fills its field instead of overflowing it (its right border was clipped). */
+.accounts-create .field select,.accounts-create .field input{width:100%;max-width:100%;box-sizing:border-box;min-width:0}
+.accounts-create .accounts-password-row input{width:auto}
+
+/* Governance halo: ".ring-1/.ring-3" collide with Tailwind ring utilities, which painted heavy dark outlines; they are plain rings here. */
+.governance-shield .shield-ring{box-shadow:none}
