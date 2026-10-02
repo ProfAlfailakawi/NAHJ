@@ -27,11 +27,12 @@ export function SectionTitle({ title, meta, icon }: { title: React.ReactNode; me
   );
 }
 
-export function Stat({ value, label, tone = "moss", icon }: { value: string | number; label: string; tone?: "moss" | "sky" | "amber" | "rose" | "violet"; icon?: React.ReactNode }) {
+export function Stat({ value, label, tone = "moss", icon, spark }: { value: string | number; label: string; tone?: "moss" | "sky" | "amber" | "rose" | "violet"; icon?: React.ReactNode; spark?: React.ReactNode }) {
   return (
     <div className={`stat-tile tone-${tone}`}>
       <div className="stat-top"><span>{label}</span>{icon && <span className="stat-icon">{icon}</span>}</div>
       <strong>{value}</strong>
+      {spark && <span className="stat-spark">{spark}</span>}
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useId, useState } from "react";
-import { AlertTriangle, UserPlus, Users } from "lucide-react";
+import { AlertTriangle, Circle, UserPlus, Users } from "lucide-react";
 import { api, ApiError, apiOrNull } from "../../lib/api";
 import { Dt, PageHeader, SectionTitle } from "../Primitives";
 import { DnaRing } from "../dna";
+import { dataText } from "../../lib/labels";
 
 /*
  * من تعتمد عليه المؤسسة وحده.
@@ -50,21 +51,35 @@ function BackupForm({ skillId, ar, onAssigned, notify }: { skillId: string; ar: 
 export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
   const ar = lang === "ar";
   const [coverage, setCoverage] = useState<CoverageReport | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const load = useCallback(async () => {
     const data = await apiOrNull<{ coverage: CoverageReport }>("/people/coverage");
     if (data?.coverage) setCoverage(data.coverage);
+    setLoaded(true);
   }, []);
   useEffect(() => { void load(); }, [load]);
   const assigned = (next: CoverageReport) => { setCoverage(next); onChanged?.(); };
 
   const history = coverage?.history || [];
   const max = 100;
+  /* شبكة شخص × مهارة من بيانات الغطاء نفسها: ممتلئة = يحملها ومغطّاة، تحذير = يحملها وحده، فارغة = لا يحملها. */
+  const gridSkills = (() => {
+    const seen = new Map<string, string>();
+    for (const person of coverage?.people || []) for (const skill of person.skills) if (!seen.has(skill.id)) seen.set(skill.id, skill.name);
+    return Array.from(seen, ([id, name]) => ({ id, name }));
+  })();
   return (
     <div className="page-enter">
       <PageHeader eyebrow={ar ? "الأشخاص / الاعتماد" : "PEOPLE / COVERAGE"}
         title={ar ? "لو غاب أحدهم غداً، من يعرف كيف يُنجَز عمله؟" : "If someone is out tomorrow, who knows how to do their work?"}
         hint={ar ? "كل إجراءٍ يحمله شخصٌ واحد مخاطرة. أسند زميلاً بديلاً لكل مهارة، وتابع الغطاء يوماً بيوم." : "Every procedure held by one person is a risk. Assign a backup for each skill and track coverage over time."} />
-      <div className="people-layout">
+      {!loaded && (
+        <div className="people-layout" role="status" aria-busy="true" aria-label={ar ? "جارٍ التحميل" : "Loading"}>
+          <div className="surface-strong skel-card"><i className="skel skel-ring"/><i className="skel skel-line"/></div>
+          <div className="surface-strong skel-card"><i className="skel skel-line"/><i className="skel skel-line"/><i className="skel skel-line short"/></div>
+        </div>
+      )}
+      {loaded && <div className="people-layout">
         <section className="surface-strong people-score">
           <Users aria-hidden="true" />
           {/* المقياس مرة واحدة: حلقةٌ بنسبتها في وسطها، وتحتها العدّ بالكلام. */}
@@ -98,6 +113,38 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
             ))}
           </ul>
         </section>
+        {coverage && coverage.people.length > 0 && gridSkills.length > 0 && (
+          <section className="surface people-matrix">
+            <SectionTitle title={ar ? "من يحمل ماذا" : "Who holds what"} />
+            <div className="people-matrix-scroll">
+              <table>
+                <caption className="sr-only">{ar ? "شبكة الأشخاص والمهارات" : "People by skill grid"}</caption>
+                <thead><tr><td />{gridSkills.map(skill => <th key={skill.id} scope="col" title={dataText(skill.name, ar)}><span><Dt t={skill.name} ar={ar} /></span></th>)}</tr></thead>
+                <tbody>
+                  {coverage.people.map(person => (
+                    <tr key={person.name}>
+                      <th scope="row">{person.name}</th>
+                      {gridSkills.map(skill => {
+                        const held = person.skills.find(item => item.id === skill.id);
+                        const state = !held ? "none" : held.covered ? "ok" : "warn";
+                        const text = !held ? (ar ? "لا يحملها" : "Does not hold") : held.covered ? (ar ? "يحملها ومغطّاة" : "Holds, covered") : (ar ? "يحملها وحده" : "Sole holder");
+                        return <td key={skill.id} className={`pm-${state}`} title={text}>
+                          {state === "warn" ? <AlertTriangle aria-hidden="true" /> : <Circle aria-hidden="true" fill={state === "ok" ? "currentColor" : "none"} />}
+                          <span className="sr-only">{text}</span>
+                        </td>;
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="pm-legend" aria-hidden="true">
+              <span className="pm-ok"><Circle fill="currentColor" />{ar ? "يحملها ومغطّاة" : "Holds, covered"}</span>
+              <span className="pm-warn"><AlertTriangle />{ar ? "يحملها وحده" : "Sole holder"}</span>
+              <span className="pm-none"><Circle />{ar ? "لا يحملها" : "Does not hold"}</span>
+            </div>
+          </section>
+        )}
         <section className="surface people-list">
           <SectionTitle title={ar ? "الأشخاص" : "People"} meta={`${coverage?.people.length ?? 0}`} />
           <ul>
@@ -111,7 +158,7 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
             ))}
           </ul>
         </section>
-      </div>
+      </div>}
     </div>
   );
 }

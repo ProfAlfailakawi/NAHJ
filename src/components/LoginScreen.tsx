@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { FlaskConical, LogIn, ShieldCheck, TriangleAlert } from "lucide-react";
+import { FlaskConical, LogIn, TriangleAlert } from "lucide-react";
+import { NahjMark } from "./Brand";
 import { ApiError, authApi } from "../lib/api";
 
 interface Props {
@@ -51,7 +52,7 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated, demoEnabled, de
     <div className="login-shell" dir={ar ? "rtl" : "ltr"}>
       <form className="login-card surface-strong" onSubmit={submit}>
         <div className="login-brand">
-          <ShieldCheck />
+          <span className="login-mark" aria-hidden="true"><NahjMark size={40} /></span>
           <div>
             <strong>{ar ? "نهج" : "NAHJ"}</strong>
             <small>{ar ? "نظام التعلّم التشغيلي" : "Operational Learning OS"}</small>

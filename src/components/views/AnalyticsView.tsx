@@ -102,9 +102,9 @@ export function AnalyticsView({ lang, data }: Props) {
             <span className="impact-hours"><Clock3 aria-hidden="true" /> {hoursLabel(data.kpis.totalHoursSaved, ar)}</span>
           </div>
           <div className="impact-badges">
-            <span><ArrowUpRight /> {show(data.kpis.automationRatePercent, "%")}</span>
-            <span><ShieldCheck /> {show(data.kpis.shadowMatchRatePercent, "%")}</span>
-            <span><ArrowDownRight /> {show(data.kpis.errorRatePercent, "%")}</span>
+            <span title={ar ? "نسبة الأتمتة" : "Automation rate"}><ArrowUpRight aria-hidden="true" /><small>{ar ? "أتمتة" : "Automation"}</small> {show(data.kpis.automationRatePercent, "%")}</span>
+            <span title={ar ? "تطابق الظل" : "Shadow match"}><ShieldCheck aria-hidden="true" /><small>{ar ? "ظل" : "Shadow"}</small> {show(data.kpis.shadowMatchRatePercent, "%")}</span>
+            <span title={ar ? "نسبة الخطأ" : "Error rate"}><ArrowDownRight aria-hidden="true" /><small>{ar ? "خطأ" : "Errors"}</small> {show(data.kpis.errorRatePercent, "%")}</span>
           </div>
         </section>
 
@@ -127,15 +127,20 @@ export function AnalyticsView({ lang, data }: Props) {
             * يكفي التاريخ يُقال السبب ويُترك المكان فارغاً.
           */}
           {trend?.available ? (
-            <div className="bars">
+            <>
+            <div className="bars" role="list" aria-label={ar ? "الأحداث لكل يوم" : "Events per day"}>
               {trend.points.map(point => (
-                <div key={point.day}>
+                <div key={point.day} role="listitem" className={point.events === max && max > 0 ? "is-peak" : ""}
+                  title={`${weekdayLabel(point.day, point.label, ar)}: ${point.events} ${ar ? "حدث" : "events"}`}
+                  aria-label={`${weekdayLabel(point.day, point.label, ar)}: ${point.events} ${ar ? "حدث" : "events"}`}>
                   <span style={{ height: `${Math.max(6, (point.events / max) * 100)}%` }} />
                   <b>{point.events}</b>
                   <small title={weekdayLabel(point.day, point.label, ar)}>{weekdayLabel(point.day, point.label, ar)}</small>
                 </div>
               ))}
             </div>
+            <p className="bars-axis"><span>{ar ? "الأعلى" : "Peak"}: <b>{max}</b></span><span>{ar ? "أحداث التدقيق في اليوم" : "Audit events per day"}</span><span>0</span></p>
+            </>
           ) : (
             <div className="metric-unavailable">
               <Info />
@@ -177,6 +182,7 @@ export function AnalyticsView({ lang, data }: Props) {
                   <div>
                     <strong>{skill.name}</strong>
                     <small>{skill.usageCount} · {hoursLabel(skill.hoursSaved, ar)}</small>
+                    <span className="ts-bar" aria-hidden="true"><i style={{ width: `${Math.max(3, (skill.usageCount / Math.max(1, ...data.topSkillsByUsage.slice(0, 5).map(x => x.usageCount))) * 100)}%` }} /></span>
                   </div>
                   <b>{skill.successRate}%</b>
                 </div>

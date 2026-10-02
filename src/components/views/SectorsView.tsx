@@ -1,9 +1,10 @@
 import { sectorDescription, sectorOrganization } from "../../lib/labels";
 import React, { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Building2, CheckCircle2, Layers, MessageSquare, RefreshCw, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Building2, BrainCircuit, CheckCircle2, Layers, MessageSquare, PlugZap, RefreshCw, ShieldCheck } from "lucide-react";
 import { PageHeader, SectionTitle } from "../Primitives";
 import { sectorsApi, type SectorChannel, type SectorSummary } from "../../lib/api";
 import { SectorIcon } from "../SectorIcon";
+import { DnaCount } from "../dna";
 
 /*
  * شاشة النشاط.
@@ -65,7 +66,10 @@ export function SectorsView({ lang, canApply, isDemo, notify, onApplied }: Props
   };
 
   if (loading) {
-    return <div className="page-enter"><PageHeader eyebrow={ar?"النشاط":"SECTOR"} title={ar ? "جارٍ القراءة..." : "Loading..."} /></div>;
+    return <div className="page-enter" role="status" aria-busy="true" aria-label={ar ? "جارٍ القراءة..." : "Loading..."}>
+      <div className="page-heading"><div className="min-w-0"><div className="eyebrow">{ar?"النشاط":"SECTOR"}</div><i className="skel skel-title"/></div></div>
+      <div className="sector-grid">{[0,1,2].map(n => <div key={n} className="surface-strong skel-card"><i className="skel skel-line"/><i className="skel skel-line short"/><i className="skel skel-line"/></div>)}</div>
+    </div>;
   }
 
   return (
@@ -117,11 +121,11 @@ export function SectorsView({ lang, canApply, isDemo, notify, onApplied }: Props
                   </div>
                   {active && <i className="sector-flag"><CheckCircle2 /> {ar ? "الحالي" : "Current"}</i>}
                 </div>
-                <p>{sectorDescription(sector.code, sector.descriptionAr, ar)}</p>
+                <p className="sector-desc" title={sectorDescription(sector.code, sector.descriptionAr, ar)}>{sectorDescription(sector.code, sector.descriptionAr, ar)}</p>
                 <div className="sector-counts">
-                  <span><b>{sector.skills}</b> {ar ? "مهارة" : "skills"}</span>
-                  <span><b>{sector.policies}</b> {ar ? "سياسة" : "policies"}</span>
-                  <span><b>{sector.connectors}</b> {ar ? "موصل" : "connectors"}</span>
+                  <DnaCount icon={<BrainCircuit aria-hidden="true" />} value={sector.skills} label={ar ? "مهارة" : "skills"} />
+                  <DnaCount icon={<ShieldCheck aria-hidden="true" />} value={sector.policies} label={ar ? "سياسة" : "policies"} />
+                  <DnaCount icon={<PlugZap aria-hidden="true" />} value={sector.connectors} label={ar ? "موصل" : "connectors"} />
                 </div>
 
                 {!active && canApply && (!sector.isSeeded || !isDemo) && (

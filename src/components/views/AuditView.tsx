@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
-import { Bot, FileCheck2, Search, ShieldAlert, UserRound, Waypoints } from "lucide-react";
+import { Bot, FileCheck2, LayoutList, Search, ShieldAlert, UserRound, Waypoints } from "lucide-react";
 import type { AuditEvent } from "../../types";
 import { Dt, PageHeader } from "../Primitives";
+import { DnaHeat, DnaSegmented } from "../dna";
 import { stampLabel, actionLabel, actorLabel, provenanceLabel, reasonLabel, riskLabel, dataText } from "../../lib/labels";
 
 /*
@@ -19,8 +20,20 @@ export function AuditView({ lang, events }: Props) {
   const [q, setQ] = useState("");
   /* مئتا حدث في صفحةٍ واحدة تُطيل الشاشة عشرين ألف بكسل: دفعاتٌ تُفتح بزرّ، والبحث يعمل على الكل. */
   const [shown, setShown] = useState(40);
+  /* مرشّح سريع بحسب الفاعل أو الخطورة — عرضٌ لما في القائمة نفسها. */
+  type Kind = "all" | "ai" | "human" | "system" | "risk";
+  const [kind, setKind] = useState<Kind>("all");
+  const isRisky = (e: AuditEvent) => e.risk === "high" || e.risk === "critical";
+  const kindCounts = useMemo(() => ({
+    all: events.length,
+    ai: events.filter(e => e.actorType === "ai").length,
+    human: events.filter(e => e.actorType === "human").length,
+    system: events.filter(e => e.actorType !== "ai" && e.actorType !== "human").length,
+    risk: events.filter(isRisky).length,
+  }), [events]);
   const filtered = useMemo(() => events.filter(e =>
-    `${e.action} ${actionLabel(e.action, true)} ${e.actorName} ${actorLabel(e.actorName, true)} ${e.provenance} ${provenanceLabel(e.provenance, true)} ${e.details}`.toLowerCase().includes(q.toLowerCase())), [events, q]);
+    (kind === "all" || (kind === "risk" ? isRisky(e) : kind === "system" ? e.actorType !== "ai" && e.actorType !== "human" : e.actorType === kind)) &&
+    `${e.action} ${actionLabel(e.action, true)} ${e.actorName} ${actorLabel(e.actorName, true)} ${e.provenance} ${provenanceLabel(e.provenance, true)} ${e.details}`.toLowerCase().includes(q.toLowerCase())), [events, q, kind]);
   /* اليوم من نصّ العرض نفسه («اليوم، 21:13 م»): تُجمع الأحداث المتجاورة بيومها، والعدّ على كل المطابِق لا المعروض وحده. */
   const dayRuns = useMemo(() => {
     const dayOf = (x: AuditEvent) => stampLabel(x.timestamp, ar).match(/^(.*?)\s*[،,]\s*\d/)?.[1] || "";
@@ -34,11 +47,32 @@ export function AuditView({ lang, events }: Props) {
     }
     return runs;
   }, [filtered, ar]);
+  /* شريط حرارة: عمود لكل يوم (الأقدم أولاً، آخر 30 يوماً معروضاً) — الأحداث كلها، ثم عالية/حرجة الخطورة منها. */
+  const heatDays = useMemo(() => Array.from(dayRuns.values()).slice(0, 30).reverse(), [dayRuns]);
   return (
     <div className="page-enter">
       <PageHeader eyebrow={ar ? "السجل والأدلة" : "AUDIT / EVIDENCE"} title={ar ? "كل خطوة لها أثر." : "Every step leaves evidence."}
         hint={ar ? "من فعل ماذا، بأي سياسة، وعلى أي مصدر — بدون كشف تفكير داخلي خاص." : "Who did what, under which policy and source — without exposing private chain-of-thought."} />
       <section className="audit-surface surface-strong">
+        {heatDays.length > 1 && (
+          <div className="audit-heat">
+            <div><small>{ar ? "الأحداث لكل يوم" : "Events per day"}</small>
+              <DnaHeat tone="accent" ariaLabel={ar ? "الأحداث لكل يوم" : "Events per day"}
+                cells={heatDays.map((d, i) => ({ key: `${i}-${d.day}`, value: d.events.length, label: `${d.day}: ${d.events.length}` }))} /></div>
+            <div><small>{ar ? "عالية وحرجة الخطورة" : "High and critical risk"}</small>
+              <DnaHeat tone="danger" max={Math.max(1, ...heatDays.map(d => d.events.filter(isRisky).length))} ariaLabel={ar ? "الأحداث عالية الخطورة لكل يوم" : "High-risk events per day"}
+                cells={heatDays.map((d, i) => ({ key: `${i}-${d.day}`, value: d.events.filter(isRisky).length, label: `${d.day}: ${d.events.filter(isRisky).length}` }))} /></div>
+          </div>
+        )}
+        <DnaSegmented<Kind> className="audit-kinds" ariaLabel={ar ? "تصفية حسب الفاعل" : "Filter by actor"} value={kind}
+          onChange={k => { setKind(k); setShown(40); }}
+          options={[
+            { value: "all", label: ar ? "الكل" : "All", icon: <LayoutList />, count: kindCounts.all },
+            { value: "ai", label: ar ? "نهج" : "AI", icon: <Bot />, count: kindCounts.ai },
+            { value: "human", label: ar ? "بشر" : "People", icon: <UserRound />, count: kindCounts.human },
+            { value: "system", label: ar ? "النظام" : "System", icon: <Waypoints />, count: kindCounts.system },
+            { value: "risk", label: ar ? "خطر" : "Risk", icon: <ShieldAlert />, count: kindCounts.risk },
+          ]} />
         <div className="audit-search">
           <Search aria-hidden="true" />
           <input value={q} onChange={e => { setQ(e.target.value); setShown(40); }} aria-label={ar ? "ابحث في السجل" : "Search the audit trail"} placeholder={ar ? "ابحث في الأثر..." : "Search evidence..."} />
@@ -65,7 +99,7 @@ export function AuditView({ lang, events }: Props) {
                 </span>
                 <div>
                   <div className="audit-head"><strong title={e.action}>{actionLabel(e.action, ar)}</strong><small>{stampLabel(e.timestamp, ar)} · {actorLabel(e.actorName, ar)} · {riskLabel(e.risk, ar)}</small></div>
-                  <p><Dt t={e.details} ar={ar} /></p>
+                  <p className="audit-detail" title={dataText(e.details, ar)}><Dt t={e.details} ar={ar} /></p>
                   {record?.skill && <p className="audit-record">{ar ? `المهارة: ${dataText(record.skill.name, true)} — v${record.skill.version}` : `Skill: ${record.skill.name} — v${record.skill.version}`}</p>}
                   {record?.review?.signedOffBy && <p className="audit-record">{ar
                     ? `وقّع: ${record.review.signedOffBy} · نجاح التدرّب ${record.review.stats?.passRate ?? "—"}% · التطابق في الظل ${record.review.stats?.shadowAgreement ?? "—"}%`
