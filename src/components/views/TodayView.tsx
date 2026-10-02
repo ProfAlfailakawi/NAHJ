@@ -6,6 +6,7 @@ import {
 import type { ApprovalRequest, LearningProposal, Organization, Skill, WorkItem } from "../../types";
 import type { SectionId } from "../Shell";
 import { workStepText, workSteps } from "./WorkView";
+import { AppHub } from "./AppHub";
 import { DnaHubMap, DnaSpark, DnaStepper } from "../dna";
 import { Dt, PageHeader, SectionTitle, Stat } from "../Primitives";
 import { hoursLabel } from "../../lib/labels";
@@ -76,6 +77,12 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
             detail: ar ? "اكتب كما يكتب عميلك، وشاهد متى يطلب نهج موافقتك." : "See when NAHJ asks for approval." },
         ]}/>
       )}
+
+      {/* خريطة التطبيق: إضافةٌ للعرض فقط، وخريطة الذاكرة أدناه كما كانت. */}
+      <AppHub ar={ar} onNavigate={onNavigate} documented={memory?.documentedSkills ?? 0} active={memory?.activeSkills ?? 0}
+        pending={open.length} practice={practiceCount} workActive={workItems.filter(w=>w.state!=="completed").length}
+        hours={todayMetrics?.hoursSavedThisMonth ?? organization.hoursSavedMonth} policies={policiesActive}
+        singlePerson={memory?.singlePersonDependencies ?? 0} auditToday={todayMetrics?.auditEventsToday ?? 0}/>
 
       <section className="hero-grid">
         <article className="brain-hero">
