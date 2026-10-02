@@ -1279,8 +1279,11 @@
   .demo-banner{flex-wrap:wrap;gap:6px 8px;padding:8px 10px}
   .demo-banner p{flex:1 1 calc(100% - 30px);min-width:0;margin:0}
   .demo-banner p span{display:none}
-  .demo-banner-switch{flex:1.5 1 0;min-width:90px;order:3}
+  .demo-banner-switch{flex:1.35 1 0;min-width:84px;order:3}
+  .demo-banner select{padding:0 4px;font-size:12.5px}
   .demo-banner-switch select{min-width:0;width:100%}
   .demo-banner-switch label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-  .demo-banner button{flex:1 1 0;min-width:0;justify-content:center;order:4;padding:0 6px;font-size:12px;white-space:nowrap}
+  .demo-banner button{flex:1 1 0;min-width:0;justify-content:center;order:4;padding:0 3px;font-size:12px;white-space:nowrap}
+  .demo-banner button svg{flex:none}
+  .demo-banner button{gap:4px}
 }
