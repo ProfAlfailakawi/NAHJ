@@ -1271,11 +1271,10 @@
 
 /* Skills: الصفوف بعد الخامس في «عرض الكل» مطويّاً افتراضياً. */
 .skills-more{margin-top:8px}.skills-more>summary{cursor:pointer;list-style:none;padding:10px 12px;border-radius:14px;border:1px dashed var(--line-strong);text-align:center;font-size:13px;font-weight:900;color:var(--muted)}.skills-more>summary::-webkit-details-marker{display:none}.skills-more[open]>summary{margin-bottom:8px}
-/* Today: المدار مطويّ افتراضياً على الهاتف فقط؛ على سطح المكتب يبقى مفتوحاً والعنوان مخفياً. */
-.brain-collapse>summary{display:none;list-style:none;cursor:pointer}.brain-collapse>summary::-webkit-details-marker{display:none}
+/* Today: المدار مطويّ افتراضياً في كل العروض خلف ملخّصٍ ظاهرٍ دائماً. */
+.brain-collapse>summary{display:block;list-style:none;cursor:pointer;min-height:44px;padding:12px 16px;font-size:14px;font-weight:900;border-radius:20px;background:rgba(255,255,255,.7);border:1px solid var(--line)}.brain-collapse>summary::-webkit-details-marker{display:none}
+.brain-collapse[open]>summary{margin-bottom:8px}
 @media(max-width:620px){
-  .brain-collapse>summary{display:block;padding:14px 16px;font-size:14px;font-weight:900;border-radius:20px;background:rgba(255,255,255,.7);border:1px solid var(--line)}
-  .brain-collapse[open]>summary{margin-bottom:8px}
   .demo-banner{flex-wrap:wrap;gap:6px 8px;padding:8px 10px}
   .demo-banner p{flex:1 1 calc(100% - 30px);min-width:0;margin:0}
   .demo-banner p span{display:none}
@@ -1287,4 +1286,3 @@
   .demo-banner button svg{flex:none}
   .demo-banner button{gap:4px}
 }
-@media(min-width:621px){.brain-collapse::details-content{content-visibility:visible;display:block}}
