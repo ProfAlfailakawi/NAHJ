@@ -1371,3 +1371,10 @@
   .dna-ring.impact-ring>svg,.dna-ring.people-ring>svg,.dna-ring.graduation-ring>svg{width:100%;height:100%}
 }
 @media(max-width:620px){.graduation-stage{min-height:0;gap:18px}.control-core,.graduation-stage{padding-bottom:20px}}
+
+/* Audit (phones): four filter tabs wrap into a grid so none is hidden behind a scroll with no visible scrollbar. */
+@media(max-width:620px){
+  .dna-seg.audit-kinds{display:grid;grid-template-columns:1fr 1fr;overflow:visible;width:100%}
+  .dna-seg.audit-kinds .dna-segb{justify-content:center;min-height:44px}
+}
+@media(max-width:900px){.demo-chip button{width:44px;height:44px;min-width:44px}.demo-chip button::after{inset:0}}
