@@ -37,8 +37,8 @@ export function DemoBanner({ lang, sector, sectors, busy, onSwitch, onReset, onE
           </select>
         </div>
       )}
-      {onReset && <button type="button" onClick={onReset} disabled={busy}><RefreshCw aria-hidden="true" />{ar ? "إعادة البيانات" : "Reset"}</button>}
-      {onExit && <button type="button" onClick={onExit} disabled={busy}><LogOut aria-hidden="true" />{ar ? "خروج من العرض" : "Exit demo"}</button>}
+      {onReset && <button type="button" onClick={onReset} disabled={busy} title={ar ? "إعادة البيانات" : "Reset"}><RefreshCw aria-hidden="true" /><span>{ar ? "إعادة البيانات" : "Reset"}</span></button>}
+      {onExit && <button type="button" onClick={onExit} disabled={busy} title={ar ? "خروج من العرض" : "Exit demo"}><LogOut aria-hidden="true" /><span>{ar ? "خروج من العرض" : "Exit demo"}</span></button>}
     </div>
   );
 }
