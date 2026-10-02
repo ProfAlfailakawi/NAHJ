@@ -1290,3 +1290,67 @@
 
 /* Today (desktop): the four pulse stats sit in one row under the orbit summary instead of a tall narrow column that left a void beside it. */
 @media(min-width:1181px){.hero-grid{grid-template-columns:minmax(0,1fr)}.hero-grid>.pulse-stats{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:auto}}
+
+/* =====================================================================
+   جولة التدقيق البصري (r53) — عرضٌ فقط.
+   ===================================================================== */
+
+/* Phones: the emergency FAB floats above the dock; the page gets enough end-padding that, scrolled to the end, no control (Teach's input row, People's assign buttons) sits under it. */
+@media(max-width:900px){
+  .content-stage{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+  .emergency-fab{bottom:calc(86px + env(safe-area-inset-bottom,0px))}
+}
+
+/* Learn: the resolved-share ring is a quiet gauge, not the page's hero. */
+@media(max-width:620px){
+  .learning-lens{width:min(100%,168px)}
+  .learn-radar{padding-block:14px}
+}
+@media(min-width:621px){.learning-lens{width:min(100%,210px)}}
+
+/* Governance: the shield carries no per-ring data, so it is drawn as one calm halo — no dashed ring, no orbiting pips that imply measurement. */
+.governance-shield{width:200px;height:200px}
+.governance-shield .ring-2,.governance-shield .shield-pip{display:none}
+.governance-shield .ring-1{width:190px;height:190px}
+.governance-shield .ring-3{width:136px;height:136px}
+.governance-shield .shield-core{width:84px;height:84px;border-radius:28px}
+.governance-shield .shield-core svg{width:32px}
+.control-core{min-height:0}
+
+/* Control: seven ladder columns on a phone — names wrap on spaces, never mid-word. */
+.ladder-spread small{min-height:3.9em}
+.ladder-spread small em{font-size:11px;overflow-wrap:normal;word-break:keep-all;hyphens:none}
+@media(max-width:620px){.ladder-spread{gap:5px}}
+
+/* Practice: the per-row latency is the same value on every row, so it recedes. */
+.eval-row>b{font-size:11px;font-weight:500;opacity:.45;white-space:nowrap}
+
+/* Practice: shadow header wraps on phones instead of squeezing its note into a sliver. */
+@media(max-width:620px){
+  .shadow-head{flex-wrap:wrap;row-gap:10px}
+  .shadow-head>div:not(.dna-ring){flex:1 1 140px;min-width:0;flex-wrap:wrap}
+  .shadow-head .shadow-run{flex:1 1 100%}
+}
+.governance-shield .shield-ring{border:1px solid rgba(47,125,101,.16)}
+.governance-shield.paused .shield-ring{border-color:rgba(228,111,97,.2)}
+.control-state{margin-top:12px}
+
+/* Phones: every top-bar icon and every details summary meets the 44px tap size. */
+@media(max-width:900px){
+  .topbar .top-icon{width:44px;min-width:44px;height:44px}
+  .manual-translate>summary,.skills-more>summary{min-height:44px;display:flex;align-items:center;justify-content:center}
+  .manual-translate>summary{justify-content:flex-start}
+}
+
+/* The emergency FAB sits under the "more" sheet and its backdrop so it never hides the sheet's last item (Quick guide); closing the sheet restores it. */
+@media(max-width:900px){.emergency-fab{z-index:78}}
+
+/* Teach (phones): the decorative orbit is shorter so the input row and the synthesize button sit within the first screen. */
+@media(max-width:620px){
+  .teach-stage{min-height:0}
+  .teach-stage-visual{min-height:250px}
+  .teach-radar.r1{width:232px;height:232px}
+  .teach-radar.r2{width:170px;height:170px}
+  .teach-radar.r3{width:108px;height:108px}
+  .teach-core{width:80px;height:80px;border-radius:26px}
+}
