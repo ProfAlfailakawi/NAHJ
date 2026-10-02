@@ -68,6 +68,17 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
     for (const person of coverage?.people || []) for (const skill of person.skills) if (!seen.has(skill.id)) seen.set(skill.id, skill.name);
     return Array.from(seen, ([id, name]) => ({ id, name }));
   })();
+  /* الغطاء يضع المهارة عند مالكها وحده ويحفظ الاحتياط في skill.backups: الاحتياطي يحملها أيضاً، حتى لو لا يملك مهارة. */
+  const gridHolders = (() => {
+    const bySkill = new Map<string, { owner: string; covered: boolean; backups: string[] }>();
+    const names: string[] = [];
+    for (const person of coverage?.people || []) {
+      names.push(person.name);
+      for (const skill of person.skills) if (!bySkill.has(skill.id)) bySkill.set(skill.id, { owner: person.name, covered: skill.covered, backups: skill.backups || [] });
+    }
+    for (const info of bySkill.values()) for (const backup of info.backups) if (!names.includes(backup)) names.push(backup);
+    return { bySkill, names };
+  })();
   return (
     <div className="page-enter">
       <PageHeader eyebrow={ar ? "الأشخاص / الاعتماد" : "PEOPLE / COVERAGE"}
@@ -121,13 +132,18 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
                 <caption className="sr-only">{ar ? "شبكة الأشخاص والمهارات" : "People by skill grid"}</caption>
                 <thead><tr><td />{gridSkills.map(skill => <th key={skill.id} scope="col" title={dataText(skill.name, ar)}><span><Dt t={skill.name} ar={ar} /></span></th>)}</tr></thead>
                 <tbody>
-                  {coverage.people.map(person => (
-                    <tr key={person.name}>
-                      <th scope="row">{person.name}</th>
+                  {gridHolders.names.map(personName => (
+                    <tr key={personName}>
+                      <th scope="row">{personName}</th>
                       {gridSkills.map(skill => {
-                        const held = person.skills.find(item => item.id === skill.id);
-                        const state = !held ? "none" : held.covered ? "ok" : "warn";
-                        const text = !held ? (ar ? "لا يحملها" : "Does not hold") : held.covered ? (ar ? "يحملها ومغطّاة" : "Holds, covered") : (ar ? "يحملها وحده" : "Sole holder");
+                        const info = gridHolders.bySkill.get(skill.id);
+                        const isOwner = info?.owner === personName;
+                        const isBackup = !isOwner && !!info?.backups.includes(personName);
+                        const state = isOwner ? (info?.covered ? "ok" : "warn") : isBackup ? "ok" : "none";
+                        const text = isOwner
+                          ? (info?.covered ? (ar ? "يحملها ومغطّاة" : "Holds, covered") : (ar ? "يحملها وحده" : "Sole holder"))
+                          : isBackup ? (ar ? "يحملها احتياطاً" : "Backup holder")
+                          : (ar ? "لا يحملها" : "Does not hold");
                         return <td key={skill.id} className={`pm-${state}`} title={text}>
                           {state === "warn" ? <AlertTriangle aria-hidden="true" /> : <Circle aria-hidden="true" fill={state === "ok" ? "currentColor" : "none"} />}
                           <span className="sr-only">{text}</span>

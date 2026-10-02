@@ -48,7 +48,26 @@ export function AuditView({ lang, events }: Props) {
     return runs;
   }, [filtered, ar]);
   /* شريط حرارة: عمود لكل يوم (الأقدم أولاً، آخر 30 يوماً معروضاً) — الأحداث كلها، ثم عالية/حرجة الخطورة منها. */
-  const heatDays = useMemo(() => Array.from(dayRuns.values()).slice(0, 30).reverse(), [dayRuns]);
+  /* اليوم من الطابع الثابت AuditEvent.at لا من نصّ العرض: «اليوم، …» لا يُحدَّث مع الوقت فيجمع الأيام القديمة في يوم واحد.
+     السجلات القديمة بلا at لا تدخل الشريط حتى لا يُعرض دليل مضلِّل. */
+  const heatDays = useMemo(() => {
+    const byDay = new Map<string, { day: string; events: AuditEvent[] }>();
+    for (const x of filtered) {
+      const t = x.at ? new Date(x.at) : null;
+      if (!t || Number.isNaN(t.getTime())) continue;
+      const key = `${t.getFullYear()}-${t.getMonth() + 1}-${t.getDate()}`;
+      const slot = byDay.get(key) || { day: t.toLocaleDateString(ar ? "ar-KW-u-nu-latn" : "en-GB", { day: "numeric", month: "short" }), events: [] };
+      slot.events.push(x);
+      byDay.set(key, slot);
+    }
+    return Array.from(byDay.entries())
+      .sort((a, b) => {
+        const [ay, am, ad] = a[0].split("-").map(Number); const [by, bm, bd] = b[0].split("-").map(Number);
+        return new Date(ay, am - 1, ad).getTime() - new Date(by, bm - 1, bd).getTime();
+      })
+      .slice(-30)
+      .map(([, v]) => v);
+  }, [filtered, ar]);
   return (
     <div className="page-enter">
       <PageHeader eyebrow={ar ? "السجل والأدلة" : "AUDIT / EVIDENCE"} title={ar ? "كل خطوة لها أثر." : "Every step leaves evidence."}
