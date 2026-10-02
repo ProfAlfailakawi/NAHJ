@@ -1374,7 +1374,20 @@
 
 /* Audit (phones): four filter tabs wrap into a grid so none is hidden behind a scroll with no visible scrollbar. */
 @media(max-width:620px){
-  .dna-seg.audit-kinds{display:grid;grid-template-columns:1fr 1fr;overflow:visible;width:100%}
-  .dna-seg.audit-kinds .dna-segb{justify-content:center;min-height:44px}
+  .dna-seg.audit-kinds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;width:100%}
+  .dna-seg.audit-kinds .dna-segb{justify-content:center;min-height:44px;min-width:0;padding-inline:8px;gap:5px}
+  .dna-seg.audit-kinds .dna-segb>span:not(.dna-count){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dna-seg.audit-kinds .dna-segb .dna-count{flex:none}
 }
 @media(max-width:900px){.demo-chip button{width:44px;height:44px;min-width:44px}.demo-chip button::after{inset:0}}
+
+/* Audit (desktop): the timeline reads as one centred column instead of a short list hugging the right edge of a 1100px card. */
+@media(min-width:1181px){.audit-timeline{max-width:760px;margin-inline:auto}}
+
+/* Narrow phones: the top bar wraps; the demo chip drops to its own row under the brand row, decorative flask/dot hidden, so nothing overlaps or clips at 320px. */
+@media(max-width:420px){
+  .topbar{height:auto;min-height:calc(64px + env(safe-area-inset-top,0px));grid-template-columns:auto minmax(0,1fr);padding-block:8px}
+  .topbar .top-actions{flex-wrap:wrap;justify-content:flex-end;row-gap:4px;min-width:0}
+  .topbar .demo-chip{order:9;flex:0 0 auto}
+  .demo-chip>svg,.demo-chip>i{display:none}
+}
