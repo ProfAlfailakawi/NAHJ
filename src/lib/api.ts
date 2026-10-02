@@ -1,3 +1,4 @@
+import { currencyLabel } from "./labels";
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -249,14 +250,16 @@ const MINOR_UNITS: Record<string, number> = {
 export const currencyExponent = (currency: string) => MINOR_UNITS[(currency || "KWD").toUpperCase()] ?? 2;
 
 /** يعرض مبلغاً مخزَّناً بالوحدة الصغرى. لا حساب يجري على الناتج. */
-export function money(amountMinor: number, currency = "KWD"): string {
+export function money(amountMinor: number, currency = "KWD", ar?: boolean): string {
   const exponent = currencyExponent(currency);
   const sign = amountMinor < 0 ? "-" : "";
   const absolute = Math.abs(Math.round(amountMinor));
   const divisor = 10 ** exponent;
   const whole = Math.floor(absolute / divisor).toLocaleString("en-US");
   const fraction = String(absolute % divisor).padStart(exponent, "0");
-  return `${sign}${whole}${exponent ? `.${fraction}` : ""} ${(currency || "KWD").toUpperCase()}`;
+  /* العملة بلغة الواجهة الحالية (تُضبط على <html lang>): «KWD» ← «د.ك» في الواجهة العربية فقط. */
+  const arabicUi = ar ?? (typeof document !== "undefined" && document.documentElement.lang === "ar");
+  return `${sign}${whole}${exponent ? `.${fraction}` : ""} ${currencyLabel((currency || "KWD").toUpperCase(), arabicUi)}`;
 }
 
 /** يحوّل ما كتبه المالك بالوحدة الكبرى (12.500) إلى وحدة صغرى صحيحة (12500). */

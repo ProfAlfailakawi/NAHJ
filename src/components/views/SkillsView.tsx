@@ -3,11 +3,11 @@ import { AlertTriangle, ArrowDownToLine, BrainCircuit, Check, CircleDot, GitComm
 import { api, ApiError, apiOrNull } from "../../lib/api";
 import { Dialog } from "../Dialog";
 import type { AutonomyLevel, Skill } from "../../types";
-import { PageHeader, SectionTitle } from "../Primitives";
+import { Dt, PageHeader, SectionTitle } from "../Primitives";
 import { SkillRunway } from "../Visuals";
 import { DnaStepper, DnaTimeline, type DnaStepState } from "../dna";
 import { AutonomyBadge, Term } from "../Explain";
-import { riskLabel } from "../../lib/labels";
+import { riskLabel, hoursLabel, levelLabel } from "../../lib/labels";
 import { ladderStep, ladderPlain, ladderYourPart, RISK_PLAIN, SKILL_STATUS_PLAIN } from "../../lib/glossary";
 
 export type PromoteOptions={signOff?:boolean;note?:string};
@@ -40,7 +40,7 @@ function PromotionDialog({lang,skill,target,onClose,onConfirm}:{lang:"ar"|"en";s
   const blocked=!review||review.blocked;
   return <Dialog open onClose={onClose} closeLabel={ar?"إغلاق مراجعة الترقية":"Close promotion review"} icon={<ShieldCheck/>}
     eyebrow={ar?"مراجعة الترقية":"Promotion review"}
-    title={ar?`ترقية «${skill.name}» إلى L${target} — ${ladderStep(target).plain}`:`Promote “${skill.nameEn||skill.name}” to L${target}`}>
+    title={ar?`ترقية «${skill.name}» إلى ${levelLabel(target,true)} — ${ladderStep(target).plain}`:`Promote “${skill.nameEn||skill.name}” to L${target}`}>
     <p className="decision-muted">{ladderYourPart(target,ar)}</p>
     {loading&&<p className="decision-muted">{ar?"تُحمَّل بيانات التقييم…":"Loading evaluation data…"}</p>}
     {review&&<>
@@ -75,7 +75,7 @@ function ManualPanel({lang,skill,onSkillUpdated,notify}:{lang:"ar"|"en";skill:Sk
   const ar=lang==="ar";
   const [mlang,setMlang]=useState<"ar"|"en"|"both">("ar");
   const [calendar,setCalendar]=useState<"gregorian"|"hijri">("gregorian");
-  const [digits,setDigits]=useState<"arab"|"latn">("arab");
+  const [digits,setDigits]=useState<"arab"|"latn">("latn");
   const [version,setVersion]=useState(skill.activeVersion);
   const [signature,setSignature]=useState("");
   const [verdict,setVerdict]=useState<{valid:boolean;reason:string}|null>(null);
@@ -104,11 +104,11 @@ function ManualPanel({lang,skill,onSkillUpdated,notify}:{lang:"ar"|"en";skill:Sk
       <label htmlFor={ids.ver}>{ar?"الإصدار":"Version"}</label>
       <select id={ids.ver} value={version} onChange={e=>setVersion(Number(e.target.value))}>{versions.map(v=><option key={v} value={v}>v{v}</option>)}</select>
       <label htmlFor={ids.lang}>{ar?"اللغة":"Language"}</label>
-      <select id={ids.lang} value={mlang} onChange={e=>setMlang(e.target.value as any)}><option value="ar">العربية</option><option value="en">English</option><option value="both">{ar?"العربية والإنجليزية":"Arabic + English"}</option></select>
+      <select id={ids.lang} value={mlang} onChange={e=>setMlang(e.target.value as any)}><option value="ar">العربية</option><option value="en">{ar?"الإنجليزية":"English"}</option><option value="both">{ar?"العربية والإنجليزية":"Arabic + English"}</option></select>
       <label htmlFor={ids.cal}>{ar?"التقويم":"Calendar"}</label>
       <select id={ids.cal} value={calendar} onChange={e=>setCalendar(e.target.value as any)}><option value="gregorian">{ar?"ميلادي":"Gregorian"}</option><option value="hijri">{ar?"هجري (أم القرى)":"Hijri (Umm al-Qura)"}</option></select>
       <label htmlFor={ids.dig}>{ar?"الأرقام":"Digits"}</label>
-      <select id={ids.dig} value={digits} onChange={e=>setDigits(e.target.value as any)}><option value="arab">٠١٢٣</option><option value="latn">0123</option></select>
+      <select id={ids.dig} value={digits} onChange={e=>setDigits(e.target.value as any)}><option value="arab">{ar?"هندية":"Arabic-Indic"}</option><option value="latn">{ar?"لاتينية (123)":"Latin (123)"}</option></select>
     </div>
     <button type="button" className="btn-secondary" onClick={open}><FileText aria-hidden="true"/>{ar?"افتح الدليل للطباعة":"Open manual to print"}</button>
     <details className="manual-translate">
@@ -149,13 +149,13 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
           {skills.map(s=><button key={s.id} className={`skill-lane ${skill?.id===s.id?"selected":""}`} onClick={()=>{setSelected(s.id);
             /* على الهاتف تقع اللوحة تحت قائمةٍ طويلة: يُنقل إليها المستخدم بدل أن يبحث عنها. */
             if(window.matchMedia("(max-width:1180px)").matches)requestAnimationFrame(()=>document.querySelector(".skill-inspector")?.scrollIntoView({behavior:"smooth",block:"start"}))}}>
-            <div className="skill-lane-head"><span className={`skill-glyph risk-${s.riskLevel}`}><BrainCircuit/></span><div><strong>{ar?s.name:s.nameEn}</strong><small>{s.category}</small></div><b>{s.reliabilityScore}%</b></div><AutonomyBadge level={s.autonomyLevel} compact/>
-            <SkillRunway level={s.autonomyLevel} reliability={s.reliabilityScore}/>
+            <div className="skill-lane-head"><span className={`skill-glyph risk-${s.riskLevel}`}><BrainCircuit/></span><div><strong>{ar?<Dt t={s.name} ar={ar}/>:s.nameEn}</strong><small>{s.category}</small></div><b>{s.reliabilityScore}%</b></div><AutonomyBadge level={s.autonomyLevel} compact/>
+            <SkillRunway level={s.autonomyLevel} reliability={s.reliabilityScore} ar={ar}/>
           </button>)}
         </div>
       </section>
       {skill&&<aside className="skill-inspector surface-strong">
-        <div className="inspector-hero"><span className={`skill-glyph large risk-${skill.riskLevel}`}><BrainCircuit/></span><div><em>{ar?(SKILL_STATUS_PLAIN[skill.status]||skill.status):skill.status.toUpperCase()}</em><strong>{ar?skill.name:skill.nameEn}</strong><small>v{skill.activeVersion} · {skill.ownerName}</small></div></div>
+        <div className="inspector-hero"><span className={`skill-glyph large risk-${skill.riskLevel}`}><BrainCircuit/></span><div><em>{ar?(SKILL_STATUS_PLAIN[skill.status]||skill.status):skill.status.toUpperCase()}</em><strong>{ar?<Dt t={skill.name} ar={ar}/>:skill.nameEn}</strong><small>v{skill.activeVersion} · {skill.ownerName}</small></div></div>
         <DnaStepper className="skill-lifecycle" size="xs" ariaLabel={ar?"دورة حياة المهارة":"Skill lifecycle"} stateText={ar?undefined:EN_STATE}
           steps={LIFECYCLE.map((st,i)=>({key:st,label:ar?(SKILL_STATUS_PLAIN[st]||st):st,state:lifecycleState(skill.status,i)}))}/>
         <div className="reliability-orb" style={{"--value":`${skill.reliabilityScore}%`} as React.CSSProperties}><strong>{skill.reliabilityScore}%</strong><span>{ar?"موثوقية":"reliability"}</span></div>
@@ -175,12 +175,12 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
             onClick={()=>{if(i===skill.autonomyLevel)return;if(i>skill.autonomyLevel)setPromoteTo(i);else onPromote(skill.id,i as AutonomyLevel)}}>
             {i<skill.autonomyLevel?<span aria-hidden="true"><Check/></span>:i===skill.autonomyLevel?<span aria-hidden="true"><CircleDot/></span>:<span aria-hidden="true"/>}<small aria-hidden="true">{i}</small></button>})}</div>
         <div className="skill-risk-plain" title={skill.riskLevel}>{ar?(RISK_PLAIN[skill.riskLevel]||skill.riskLevel):riskLabel(skill.riskLevel,false)}</div>
-        <div className="skill-mini-metrics"><div><strong>{skill.usageCount}</strong><span>{ar?"تشغيل":"runs"}</span></div><div><strong>{skill.successRate}%</strong><span>{ar?"نجاح":"success"}</span></div><div><strong>{skill.hoursSavedTotal}h</strong><span>{ar?"وقت":"saved"}</span></div></div>
+        <div className="skill-mini-metrics"><div><strong>{skill.usageCount}</strong><span>{ar?"تشغيل":"runs"}</span></div><div><strong>{skill.successRate}%</strong><span>{ar?"نجاح":"success"}</span></div><div><strong>{hoursLabel(skill.hoursSavedTotal,ar)}</strong><span>{ar?"وقت":"saved"}</span></div></div>
         <div className="skill-alerts">{skill.isSinglePointOfFailure&&!(skill.backupOwnerNames||[]).length&&<div><AlertTriangle aria-hidden="true"/><span>{ar?`تعتمد على شخص واحد (${skill.ownerName})`:`Single-person dependency (${skill.ownerName})`}</span>{onOpenPeople&&<button type="button" className="spof-nudge" onClick={onOpenPeople}><UserPlus aria-hidden="true"/>{ar?"أسند زميلاً بديلاً":"Assign a backup"}</button>}</div>}{skill.killSwitchActive&&<div className="danger"><CirclePause/><span>{ar?"المهارة متوقفة":"Skill paused"}</span></div>}</div>
         <div className="inspector-actions"><button onClick={()=>onToggleKill(skill.id)} className={skill.killSwitchActive?"resume":"danger"}>{skill.killSwitchActive?<Zap/>:<CirclePause/>}{skill.killSwitchActive?(ar?"استئناف":"Resume"):(ar?"إيقاف":"Pause")}</button>{skill.activeVersion>1&&<button onClick={()=>onRollback(skill.id,skill.activeVersion-1)}><History/>{ar?"رجوع":"Rollback"}</button>}</div>
         {(skill.versions||[]).length>0&&<DnaTimeline className="skill-versions" ariaLabel={ar?"سجل النسخ":"Version history"} maxHeight={260} wrapMeta
           items={[...(skill.versions||[])].sort((a,b)=>b.version-a.version).map(v=>({key:String(v.version),icon:<GitCommitVertical/>,tone:v.version===skill.activeVersion?"accent":"neutral",
-            title:<><b>v{v.version}</b> · {v.changeSummary}</>,date:v.createdAt?.slice(0,10),meta:v.approvedBy}))}/>}
+            title:<><b>v{v.version}</b> · <Dt t={v.changeSummary} ar={ar}/></>,date:v.createdAt?.slice(0,10),meta:v.approvedBy}))}/>}
         <ManualPanel lang={lang} skill={skill} onSkillUpdated={onSkillUpdated} notify={notify}/>
       </aside>}
     </div>

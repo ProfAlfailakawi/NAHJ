@@ -1,3 +1,4 @@
+import { formattedMoney } from "../../lib/labels";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle, Building2, HandCoins, Plus, RefreshCw, Save, Trash2, UserPlus, Wallet, X,
@@ -26,7 +27,7 @@ const MODELS: CommissionModel[] = ["percent_of_contract", "fixed_per_cycle", "fi
 const STATUSES: ClientStatus[] = ["prospect", "active", "past_due", "churned"];
 
 const shortDate = (value: string | null | undefined) =>
-  value ? new Date(value).toLocaleDateString("ar-KW", { year: "numeric", month: "short", day: "numeric" }) : "—";
+  value ? new Date(value).toLocaleDateString("ar-KW-u-nu-latn", { year: "numeric", month: "short", day: "numeric" }) : "—";
 const forInput = (value: string | null | undefined) => (value ? new Date(value).toISOString().slice(0, 10) : "");
 
 export function PartnersAdminView({ lang, notify }: Props) {
@@ -120,7 +121,7 @@ export function PartnersAdminView({ lang, notify }: Props) {
         <Stat label="المسوّقون" value={partners.length} tone="sky" icon={<UserPlus />} />
         <Stat label="الشركات" value={clients.length} tone="violet" icon={<Building2 />} />
         <Stat label="قيمة العقود الجارية" value={data?.contractedValueFormatted || "—"} tone="moss" icon={<Wallet />} />
-        <Stat label="عمولات مستحقّة غير مدفوعة" value={data?.totals.formatted.due || "—"}
+        <Stat label="عمولات مستحقّة غير مدفوعة" value={formattedMoney(data?.totals.formatted.due, ar) || "—"}
           tone={(data?.totals.due ?? 0) > 0 ? "amber" : "moss"} icon={<HandCoins />} />
       </div>
 
@@ -167,15 +168,15 @@ export function PartnersAdminView({ lang, notify }: Props) {
                 <small>{partner.email}{partner.phone ? ` · ${partner.phone}` : ""}</small>
                 <small className="partner-terms">
                   {COMMISSION_MODEL_AR[partner.model]}
-                  {partner.model === "percent_of_contract" ? ` — ${(partner.rateBps / 100).toFixed(2)}%` : ` — ${money(partner.fixedAmount, partner.currency)}`}
+                  {partner.model === "percent_of_contract" ? ` — ${(partner.rateBps / 100).toFixed(2)}%` : ` — ${money(partner.fixedAmount, partner.currency, ar)}`}
                   {partner.durationMonths > 0 ? ` · ${partner.durationMonths} شهراً` : " · بلا حدّ"}
                   {!partner.accountId ? " · بلا حساب دخول" : ""}
                 </small>
               </div>
               <div className="partner-figures">
                 <span>{partner.clientCount} شركة</span>
-                <span className="mono">مستحقّ {partner.totals.formatted.due}</span>
-                <span className="mono">مدفوع {partner.totals.formatted.paid}</span>
+                <span className="mono">مستحقّ {formattedMoney(partner.totals.formatted.due, ar)}</span>
+                <span className="mono">مدفوع {formattedMoney(partner.totals.formatted.paid, ar)}</span>
               </div>
               <div className="partner-actions">
                 <button className="btn-secondary" onClick={() => setPartnerForm({
@@ -243,7 +244,7 @@ export function PartnersAdminView({ lang, notify }: Props) {
                 <strong>{client.name}</strong>
                 <small>{client.sector || "—"} · {partners.find(p => p.id === client.partnerId)?.name || "بيع مباشر"}</small>
                 <small className="partner-terms">
-                  {CYCLE_AR[client.cycle]} · {money(client.contractValue, client.currency)} · {shortDate(client.startedAt)} → {shortDate(client.endsAt)}
+                  {CYCLE_AR[client.cycle]} · {money(client.contractValue, client.currency, ar)} · {shortDate(client.startedAt)} → {shortDate(client.endsAt)}
                 </small>
               </div>
               <div className="partner-figures">
@@ -284,7 +285,7 @@ export function PartnersAdminView({ lang, notify }: Props) {
                     <span>{partners.find(p => p.id === commission.partnerId)?.name || "—"}</span>
                     <span>{clients.find(c => c.id === commission.clientId)?.name || "—"}</span>
                     <span>{shortDate(commission.periodStart)}</span>
-                    <span className="mono">{money(commission.amount, commission.currency)}</span>
+                    <span className="mono">{money(commission.amount, commission.currency, ar)}</span>
                     <span><i className="ledger-badge tone-amber">{COMMISSION_STATUS_AR[commission.status]}</i></span>
                     <button type="button" className="icon-button" aria-label="إلغاء"
                       onClick={event => { event.preventDefault(); void run(() => partnersApi.voidCommission(commission.id, "إلغاء بقرار المالك"), "أُلغيت العمولة"); }}><X /></button>

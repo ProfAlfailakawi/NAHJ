@@ -1,4 +1,4 @@
-import { demoSnapshotNote, ledgerLabel } from "../../lib/labels";
+import { demoSnapshotNote, ledgerLabel, levelLabel, dataText, currencyLabel, formattedMoney } from "../../lib/labels";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle, ArrowUpRight, BadgeCheck, CalendarClock, CheckCircle2, CircleSlash, CreditCard,
@@ -47,7 +47,7 @@ const STATUS_META: Record<SubscriptionStatus, { ar: string; en: string; tone: st
 };
 
 const FEATURE_LABELS: Record<PlanFeatureKey, { ar: string; en: string }> = {
-  teachMode: { ar: "وضع التعليم (Teach)", en: "Teach Mode" },
+  teachMode: { ar: "وضع التعليم", en: "Teach Mode" },
   processIntelligence: { ar: "ذكاء العمليات واكتشاف التعارض", en: "Process intelligence" },
   shadowEngine: { ar: "محرّك الظل والمقارنة", en: "Shadow engine" },
   mcp: { ar: "بروتوكول MCP", en: "MCP protocol" },
@@ -67,7 +67,7 @@ const CYCLE_LABEL = { monthly: { ar: "شهري", en: "Monthly" }, quarterly: { a
 
 /** تاريخ قصير بلا ساعة. الساعة في عقد سنوي ضجيج. */
 const shortDate = (value: string | null | undefined, ar: boolean) =>
-  value ? new Date(value).toLocaleDateString(ar ? "ar-KW" : "en-GB", { year: "numeric", month: "short", day: "numeric" }) : "—";
+  value ? new Date(value).toLocaleDateString(ar ? "ar-KW-u-nu-latn" : "en-GB", { year: "numeric", month: "short", day: "numeric" }) : "—";
 
 /**
  * شريط حياة الاشتراك.
@@ -128,7 +128,7 @@ function LifeBar({ snapshot, ar }: { snapshot: BillingSnapshot; ar: boolean }) {
         </span>
         {snapshot.nextRenewalAt && (
           <span>{ar ? "التجديد القادم" : "Next renewal"}: <b>{shortDate(snapshot.nextRenewalAt, ar)}</b>
-            {snapshot.formatted.nextRenewalAmount ? ` — ${snapshot.formatted.nextRenewalAmount}` : ""}</span>
+            {formattedMoney(snapshot.formatted.nextRenewalAmount, ar) ? ` — ${formattedMoney(snapshot.formatted.nextRenewalAmount, ar)}` : ""}</span>
         )}
         <span>{ar ? "مهلة السماح" : "Grace"}: <b>{subscription.graceDays} {ar ? "يوماً" : "days"}</b></span>
       </div>
@@ -323,10 +323,10 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
 
       <div className="stat-grid sub-stats">
         <Stat label={ar ? "المتبقّي من الدورة" : "Days remaining"} value={state.daysRemaining} tone={state.daysRemaining <= 7 ? "amber" : "moss"} icon={<Timer />} />
-        <Stat label={ar ? "التجديد القادم" : "Next renewal"} value={snapshot.formatted.nextRenewalAmount || (ar ? "لا تجديد" : "None")} tone="sky" icon={<CalendarClock />} />
-        <Stat label={ar ? "مستحق غير مسدَّد" : "Outstanding"} value={snapshot.formatted.outstanding} tone={snapshot.outstanding.amount > 0 ? "rose" : "moss"} icon={<Wallet />} />
-        <Stat label={ar ? "إجمالي ما سُدِّد" : "Paid to date"} value={snapshot.formatted.lifetimePaid} tone="violet" icon={<Receipt />} />
-        <Stat label={ar ? "سقف الاستقلالية" : "Autonomy ceiling"} value={`L${limits?.maxAutonomyLevel ?? 6}`} tone="moss" icon={<ShieldCheck />} />
+        <Stat label={ar ? "التجديد القادم" : "Next renewal"} value={formattedMoney(snapshot.formatted.nextRenewalAmount, ar) || (ar ? "لا تجديد" : "None")} tone="sky" icon={<CalendarClock />} />
+        <Stat label={ar ? "مستحق غير مسدَّد" : "Outstanding"} value={formattedMoney(snapshot.formatted.outstanding, ar)} tone={snapshot.outstanding.amount > 0 ? "rose" : "moss"} icon={<Wallet />} />
+        <Stat label={ar ? "إجمالي ما سُدِّد" : "Paid to date"} value={formattedMoney(snapshot.formatted.lifetimePaid, ar)} tone="violet" icon={<Receipt />} />
+        <Stat label={ar ? "سقف الاستقلالية" : "Autonomy ceiling"} value={levelLabel(limits?.maxAutonomyLevel ?? 6, ar)} tone="moss" icon={<ShieldCheck />} />
       </div>
 
       <section className="surface-strong sub-block">
@@ -397,20 +397,20 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
                   <h4>{ar ? item.nameAr : item.nameEn}</h4>
                   <p className="plan-tagline">{ar ? item.taglineAr : item.taglineEn}</p>
                   <div className="plan-price">
-                    <strong>{item.priceMonthly > 0 ? money(item.priceMonthly, item.currency) : (ar ? "بالتفاوض" : "On request")}</strong>
+                    <strong>{item.priceMonthly > 0 ? money(item.priceMonthly, item.currency, ar) : (ar ? "بالتفاوض" : "On request")}</strong>
                     {item.priceMonthly > 0 && <small>/ {ar ? "شهرياً" : "month"}</small>}
                   </div>
                   {item.priceAnnual > 0 && (
-                    <div className="plan-annual">{ar ? "سنوياً" : "Annually"}: {money(item.priceAnnual, item.currency)}</div>
+                    <div className="plan-annual">{ar ? "سنوياً" : "Annually"}: {money(item.priceAnnual, item.currency, ar)}</div>
                   )}
                   {item.setupFee > 0 && (
-                    <div className="plan-setup">{ar ? "رسوم تأسيس مرة واحدة" : "One-time setup"}: {money(item.setupFee, item.currency)}</div>
+                    <div className="plan-setup">{ar ? "رسوم تأسيس مرة واحدة" : "One-time setup"}: {money(item.setupFee, item.currency, ar)}</div>
                   )}
                   <ul className="plan-limits">
                     <li>{ar ? "مقاعد" : "Seats"}: <b>{item.limits.seats ?? "∞"}</b></li>
                     <li>{ar ? "مهارات" : "Skills"}: <b>{item.limits.skills ?? "∞"}</b></li>
                     <li>{ar ? "حالات شهرياً" : "Work items / mo"}: <b>{item.limits.workItemsPerMonth?.toLocaleString("en-US") ?? "∞"}</b></li>
-                    <li>{ar ? "سقف الاستقلالية" : "Autonomy ceiling"}: <b>L{item.limits.maxAutonomyLevel}</b></li>
+                    <li>{ar ? "سقف الاستقلالية" : "Autonomy ceiling"}: <b>{levelLabel(item.limits.maxAutonomyLevel, ar)}</b></li>
                   </ul>
                 </article>
               );
@@ -500,8 +500,8 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
                     <span className="mono">{invoice.number}</span>
                     <span>{invoice.periodStart ? `${shortDate(invoice.periodStart, ar)} → ${shortDate(invoice.periodEnd, ar)}` : shortDate(invoice.issuedAt, ar)}</span>
                     <span>{shortDate(invoice.dueAt, ar)}</span>
-                    <span className="mono">{money(invoice.total, invoice.currency)}</span>
-                    <span className="mono">{money(invoice.amountPaid, invoice.currency)}</span>
+                    <span className="mono">{money(invoice.total, invoice.currency, ar)}</span>
+                    <span className="mono">{money(invoice.amountPaid, invoice.currency, ar)}</span>
                     <span><i className={`ledger-badge tone-${status.tone}`}>{ar ? status.ar : status.en}</i></span>
                   </button>
                   {open && (
@@ -509,15 +509,15 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
                       {invoice.lines.map((line, index) => (
                         <div key={index} className="ledger-line">
                           <span>{line.description}</span>
-                          <span className="mono">{line.quantity} × {money(line.unitAmount, invoice.currency)}</span>
-                          <span className="mono">{money(line.amount, invoice.currency)}</span>
+                          <span className="mono">{line.quantity} × {money(line.unitAmount, invoice.currency, ar)}</span>
+                          <span className="mono">{money(line.amount, invoice.currency, ar)}</span>
                         </div>
                       ))}
                       <div className="ledger-totals">
-                        <span>{ar ? "المجموع الفرعي" : "Subtotal"}: <b className="mono">{money(invoice.subtotal, invoice.currency)}</b></span>
-                        {invoice.discount > 0 && <span>{ar ? "الخصم" : "Discount"}: <b className="mono">-{money(invoice.discount, invoice.currency)}</b></span>}
-                        {invoice.tax > 0 && <span>{ar ? "الضريبة" : "Tax"}: <b className="mono">{money(invoice.tax, invoice.currency)}</b></span>}
-                        <span>{ar ? "الإجمالي" : "Total"}: <b className="mono">{money(invoice.total, invoice.currency)}</b></span>
+                        <span>{ar ? "المجموع الفرعي" : "Subtotal"}: <b className="mono">{money(invoice.subtotal, invoice.currency, ar)}</b></span>
+                        {invoice.discount > 0 && <span>{ar ? "الخصم" : "Discount"}: <b className="mono">-{money(invoice.discount, invoice.currency, ar)}</b></span>}
+                        {invoice.tax > 0 && <span>{ar ? "الضريبة" : "Tax"}: <b className="mono">{money(invoice.tax, invoice.currency, ar)}</b></span>}
+                        <span>{ar ? "الإجمالي" : "Total"}: <b className="mono">{money(invoice.total, invoice.currency, ar)}</b></span>
                       </div>
                       {invoice.notes && <p className="ledger-note">{invoice.notes}</p>}
 
@@ -540,7 +540,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
                                 <CreditCard />
                                 {payingInvoice === invoice.id
                                   ? (ar ? "جارٍ فتح صفحة الدفع..." : "Opening payment page...")
-                                  : (ar ? `ادفع ${money(invoice.total - invoice.amountPaid, invoice.currency)}` : `Pay ${money(invoice.total - invoice.amountPaid, invoice.currency)}`)}
+                                  : (ar ? `ادفع ${money(invoice.total - invoice.amountPaid, invoice.currency, ar)}` : `Pay ${money(invoice.total - invoice.amountPaid, invoice.currency, ar)}`)}
                               </button>
                               <small>
                                 {gateway.providerLabel}
@@ -584,7 +584,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
             {snapshot.payments.map(payment => (
               <div key={payment.id} className="ledger-row four static">
                 <span>{shortDate(payment.paidAt, ar)}</span>
-                <span className="mono">{money(payment.amount, payment.currency)}</span>
+                <span className="mono">{money(payment.amount, payment.currency, ar)}</span>
                 <span>{ar ? (METHOD_LABEL[payment.method]?.ar || payment.method) : (METHOD_LABEL[payment.method]?.en || payment.method)}</span>
                 <span className="mono">{payment.reference || "—"}</span>
               </div>

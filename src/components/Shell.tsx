@@ -217,7 +217,7 @@ export function Shell({
           </div>
         </header>
         <main className="content-stage">{licenceBanner}{children}</main>
-        <nav className="mobile-dock" aria-label="Mobile navigation">
+        <nav className="mobile-dock" aria-label={ar ? "التنقل في الجوال" : "Mobile navigation"}>
           {dockItems.map(({id, icon:Icon, ar:a, en})=><button type="button" key={id} className={section===id?"active":""} onClick={()=>go(id)} aria-current={section===id?"page":undefined}><Icon aria-hidden="true"/><small>{ar?a:en}</small></button>)}
           <button className={moreActive||moreOpen?"active":""} onClick={()=>setMoreOpen(v=>!v)} aria-expanded={moreOpen} aria-label={ar?"كل الأقسام":"All sections"}><LayoutGrid/><small>{ar?"المزيد":"More"}</small></button>
         </nav>

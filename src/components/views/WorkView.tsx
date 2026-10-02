@@ -1,10 +1,10 @@
 import React,{useMemo,useState} from "react";
 import { Bot, Hand, PauseCircle, Play, ShieldAlert, UserRound, Waypoints } from "lucide-react";
 import type { WorkItem } from "../../types";
-import { PageHeader, SectionTitle } from "../Primitives";
+import { Dt, PageHeader, SectionTitle } from "../Primitives";
 import { DnaStepper, DnaTimeline, type DnaStep } from "../dna";
 import { workStatePlain } from "../../lib/glossary";
-import { timelineBadgeLabel } from "../../lib/labels";
+import { timelineBadgeLabel, dataText } from "../../lib/labels";
 
 const WORK_FLOW=["queued","collecting_data","waiting_documents","waiting_approval","executing","completed"];
 const EN_STATE={done:"done",current:"current",pending:"upcoming",returned:"returned",blocked:"blocked"};
@@ -40,19 +40,19 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
           /* على الهاتف تقع اللوحة تحت قائمةٍ طويلة: يُنقل إليها المستخدم بدل أن يبحث عنها. */
           if(window.matchMedia("(max-width:1180px)").matches)requestAnimationFrame(()=>document.querySelector(".work-focus")?.scrollIntoView({behavior:"smooth",block:"start"}))}}>
           <div><span className={`risk-dot risk-${w.riskLevel}`}/><b>{w.code}</b><em>{w.assignedMode==="ai"?<Bot/>:<UserRound/>}</em></div>
-          <strong>{w.details?.studentName||w.contactName}</strong><small>{w.currentStepTitle}</small>
+          <strong>{w.details?.studentName||w.contactName}</strong><small><Dt t={w.currentStepTitle} ar={ar}/></small>
           <DnaStepper size="xs" steps={workSteps(w.state,ar)} stateText={workStepText(ar)} ariaLabel={workStatePlain(w.state, ar)}/>
         </button>)}</div>
         {filtered.length>shown&&<button type="button" className="btn-secondary work-more" onClick={()=>setShown(v=>v+24)}>{ar?`عرض ${Math.min(24,filtered.length-shown)} حالة أخرى من ${filtered.length-shown}`:`Show ${Math.min(24,filtered.length-shown)} more of ${filtered.length-shown}`}</button>}
         {filtered.length===0&&<p className="decision-muted">{ar?"لا حالات في هذا التصنيف.":"No cases in this group."}</p>}
       </section>
       {item&&<section className="work-focus surface-strong">
-        <div className="work-focus-top"><div><em>{item.code}</em><h2>{item.details?.studentName||item.contactName}</h2><span>{item.skillName}</span></div><div className={`mode-orb ${item.assignedMode}`}><span>{item.assignedMode==="ai"?<Bot/>:<UserRound/>}</span><small>{item.assignedMode==="ai"?(ar?"نهج":"AI"):(ar?"موظف":"HUMAN")}</small></div></div>
+        <div className="work-focus-top"><div><em>{item.code}</em><h2>{item.details?.studentName||item.contactName}</h2><span><Dt t={item.skillName} ar={ar}/></span></div><div className={`mode-orb ${item.assignedMode}`}><span>{item.assignedMode==="ai"?<Bot/>:<UserRound/>}</span><small>{item.assignedMode==="ai"?(ar?"نهج":"AI"):(ar?"موظف":"HUMAN")}</small></div></div>
         <div className="work-focus-river"><DnaStepper size="sm" steps={workSteps(item.state,ar)} stateText={workStepText(ar)} ariaLabel={ar?"مراحل الحالة":"Case stages"}/><strong>{item.progressPercent}%</strong></div>
-        <div className="work-now"><Waypoints/><span><small>{ar?"الآن":"NOW"}</small><strong>{item.currentStepTitle}</strong></span></div>
+        <div className="work-now"><Waypoints/><span><small>{ar?"الآن":"NOW"}</small><strong><Dt t={item.currentStepTitle} ar={ar}/></strong></span></div>
         <DnaTimeline className="work-timeline" ariaLabel={ar?"سجل الحالة":"Case timeline"} wrapMeta items={item.timeline.slice(0,5).map((t,i)=>({key:`${t.time}-${i}`,
           icon:t.actor==="ai"?<Bot/>:t.actor==="human"?<UserRound/>:<Waypoints/>,tone:t.actor==="ai"?"accent":t.actor==="human"?"sky":"neutral",
-          title:<>{t.title}{t.badge&&<span className="work-tl-badge" title={t.badge}>{timelineBadgeLabel(t.badge,ar)}</span>}</>,date:t.time,meta:t.details||undefined}))}/>
+          title:<><Dt t={t.title} ar={ar}/>{t.badge&&<span className="work-tl-badge" title={t.badge}>{timelineBadgeLabel(t.badge,ar)}</span>}</>,date:t.time,meta:t.details?dataText(t.details,ar):undefined}))}/>
         <div className="work-actions">
           {approvalByWork[item.id]&&<button className="approval-cta" onClick={()=>onApproval(approvalByWork[item.id])}><ShieldAlert/>{ar?"قرار مطلوب":"Decision required"}</button>}
           {item.assignedMode==="ai"?<button className="human-cta" onClick={()=>onTakeOver(item.id)}><Hand/>{ar?"استلم":"Take over"}</button>:<button className="ai-cta" onClick={()=>onResume(item.id)}><Play/>{ar?"أعد نهج":"Resume AI"}</button>}

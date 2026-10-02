@@ -71,7 +71,7 @@ export function OwnerSalesPanel({ notify }: { notify: (message: string, error?: 
                   <span>{lead.name}</span>
                   <span>{sectorName(lead.sector)}</span>
                   <span className="mono" dir="ltr">{lead.contact}</span>
-                  <span>{new Date(lead.createdAt).toLocaleString("ar-KW")}</span>
+                  <span>{new Date(lead.createdAt).toLocaleString("ar-KW-u-nu-latn")}</span>
                 </div>
                 {lead.message && <p>{lead.message}</p>}
                 <div className="lead-actions" role="group" aria-label="حالة الطلب">

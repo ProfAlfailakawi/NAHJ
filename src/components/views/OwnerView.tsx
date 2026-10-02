@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
 import { OwnerSalesPanel } from "./OwnerSalesPanel";
+import { levelLabel, formattedMoney } from "../../lib/labels";
 import {
   archiveApi, billingApi, fromMinor, money, notifyApi, paymentsApi, toMinor,
   type BillingCycle, type InvoiceLine, type OwnerOverview, type PaymentIntentView, type Plan, type PlanFeatureKey,
@@ -52,7 +53,7 @@ const LIMIT_AR: Record<string, string> = {
 };
 
 const shortDate = (value: string | null | undefined) =>
-  value ? new Date(value).toLocaleDateString("ar-KW", { year: "numeric", month: "short", day: "numeric" }) : "—";
+  value ? new Date(value).toLocaleDateString("ar-KW-u-nu-latn", { year: "numeric", month: "short", day: "numeric" }) : "—";
 
 const forInput = (value: string | null | undefined) => (value ? new Date(value).toISOString().slice(0, 10) : "");
 
@@ -217,10 +218,10 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
 
       {revenue && (
         <div className="stat-grid">
-          <Stat label="الإيراد الشهري المتكرّر" value={revenue.formatted.mrr} tone="moss" icon={<TrendingUp />} />
-          <Stat label="الإيراد السنوي المتوقّع" value={revenue.formatted.arr} tone="sky" icon={<BadgeDollarSign />} />
-          <Stat label="محصَّل هذا العام" value={revenue.formatted.collectedThisYear} tone="violet" icon={<Wallet />} />
-          <Stat label="مستحق غير محصَّل" value={revenue.formatted.outstanding} tone={revenue.outstanding > 0 ? "rose" : "moss"} icon={<AlertTriangle />} />
+          <Stat label="الإيراد الشهري المتكرّر" value={formattedMoney(revenue.formatted.mrr, ar)} tone="moss" icon={<TrendingUp />} />
+          <Stat label="الإيراد السنوي المتوقّع" value={formattedMoney(revenue.formatted.arr, ar)} tone="sky" icon={<BadgeDollarSign />} />
+          <Stat label="محصَّل هذا العام" value={formattedMoney(revenue.formatted.collectedThisYear, ar)} tone="violet" icon={<Wallet />} />
+          <Stat label="مستحق غير محصَّل" value={formattedMoney(revenue.formatted.outstanding, ar)} tone={revenue.outstanding > 0 ? "rose" : "moss"} icon={<AlertTriangle />} />
           <Stat label="فواتير متأخرة" value={revenue.invoicesOverdue} tone={revenue.invoicesOverdue > 0 ? "amber" : "moss"} icon={<History />} />
         </div>
       )}
@@ -274,7 +275,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
               <div><small>بداية الاشتراك</small><strong>{shortDate(subscription.startedAt)}</strong></div>
               <div><small>نهاية الدورة</small><strong>{shortDate(subscription.currentPeriodEnd)}</strong></div>
               <div><small>التجديد التلقائي</small><strong>{subscription.autoRenew ? "مفعّل" : "مُطفأ"}</strong></div>
-              <div><small>رصيد المؤسسة</small><strong>{snapshot?.formatted.credit}</strong></div>
+              <div><small>رصيد المؤسسة</small><strong>{formattedMoney(snapshot?.formatted.credit, ar)}</strong></div>
             </div>
 
             <div className="owner-form">
@@ -459,7 +460,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
             <p className="owner-hint">{backups.status.note}</p>
             <div className="stat-grid compact">
               <Stat label="نسخ محفوظة" value={backups.status.count} tone="sky" icon={<DatabaseBackup />} />
-              <Stat label="آخر نسخة" value={backups.status.latest ? new Date(backups.status.latest.createdAt).toLocaleString("ar-KW") : "لا شيء"} tone={backups.status.latest ? "moss" : "amber"} icon={<History />} />
+              <Stat label="آخر نسخة" value={backups.status.latest ? new Date(backups.status.latest.createdAt).toLocaleString("ar-KW-u-nu-latn") : "لا شيء"} tone={backups.status.latest ? "moss" : "amber"} icon={<History />} />
               <Stat label="الاحتفاظ" value={`${backups.status.retention} نسخة`} tone="violet" icon={<Layers />} />
             </div>
 
@@ -484,7 +485,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
                   <div key={file.name} className="ledger-row four static">
                     <span className="mono">{file.name}</span>
                     <span className="mono">{file.size}</span>
-                    <span>{new Date(file.createdAt).toLocaleString("ar-KW")}</span>
+                    <span>{new Date(file.createdAt).toLocaleString("ar-KW-u-nu-latn")}</span>
                     <span />
                   </div>
                 ))}
@@ -576,7 +577,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
               <option value="">— بلا فاتورة (دفعة على الحساب) —</option>
               {unpaidInvoices.map(invoice => (
                 <option key={invoice.id} value={invoice.id}>
-                  {invoice.number} — متبقٍّ {money(invoice.total - invoice.amountPaid, invoice.currency)}
+                  {invoice.number} — متبقٍّ {money(invoice.total - invoice.amountPaid, invoice.currency, ar)}
                 </option>
               ))}
             </select>
@@ -670,13 +671,13 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
                   <strong>{plan.nameAr}</strong>
                   <small className="mono">{plan.code}</small>
                 </div>
-                <div className="owner-plan-price">{plan.priceMonthly > 0 ? `${money(plan.priceMonthly, plan.currency)} / شهر` : "بالتفاوض"}</div>
+                <div className="owner-plan-price">{plan.priceMonthly > 0 ? `${money(plan.priceMonthly, plan.currency, ar)} / شهر` : "بالتفاوض"}</div>
               </div>
               <p className="owner-plan-tag">{plan.taglineAr}</p>
               <div className="owner-plan-meta">
                 <span>مقاعد: <b>{plan.limits.seats ?? "∞"}</b></span>
                 <span>مهارات: <b>{plan.limits.skills ?? "∞"}</b></span>
-                <span>سقف: <b>L{plan.limits.maxAutonomyLevel}</b></span>
+                <span>سقف: <b>{levelLabel(plan.limits.maxAutonomyLevel, true)}</b></span>
                 <span>{plan.isPublic ? "معروضة" : "مخفية"}</span>
                 {plan.archived && <span className="owner-plan-archived">مؤرشفة</span>}
               </div>
@@ -777,7 +778,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
             <div key={event.id} className={`owner-event ${event.type.startsWith("request.") ? "is-request" : ""}`}>
               <span className="mono owner-event-type">{event.type}</span>
               <span className="owner-event-summary">{event.summary}</span>
-              <span className="owner-event-meta">{event.actor} · {new Date(event.at).toLocaleString("ar-KW")}</span>
+              <span className="owner-event-meta">{event.actor} · {new Date(event.at).toLocaleString("ar-KW-u-nu-latn")}</span>
             </div>
           ))}
           {!data?.events.length && <p className="owner-hint">لا حركة بعد.</p>}

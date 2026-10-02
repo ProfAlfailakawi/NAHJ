@@ -1,5 +1,6 @@
 import React from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { dataText } from "../lib/labels";
 
 export function PageHeader({ eyebrow, title, hint, action }: { eyebrow?: string; title: string; hint?: string; action?: React.ReactNode }) {
   return (
@@ -55,4 +56,14 @@ export function VisualButton({ icon, label, active = false, danger = false, onCl
       <span>{label}</span>
     </button>
   );
+}
+
+/*
+ * نصٌّ يأتي من البيانات، يُعرض بالعربية الصافية. القيمة الأصلية تبقى في التلميح
+ * كلما اختلف المعروض عنها، فلا يضيع المصطلح على من يبحث عنه.
+ */
+export function Dt({ t, ar = true }: { t: string | undefined | null; ar?: boolean }) {
+  const raw = String(t ?? "");
+  const shown = dataText(raw, ar);
+  return shown === raw ? <>{raw}</> : <span title={raw}>{shown}</span>;
 }

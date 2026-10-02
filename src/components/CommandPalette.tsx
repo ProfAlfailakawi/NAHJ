@@ -3,7 +3,7 @@ import { ArrowLeft, BrainCircuit, History, Search, ShieldCheck, Workflow } from 
 import type { SectionId } from "./Shell";
 import type { AuditEvent, Skill, WorkItem, ApprovalRequest } from "../types";
 import { SKILL_STATUS_PLAIN, WORK_STATE_PLAIN, ladderStep } from "../lib/glossary";
-import { actionLabel, actorLabel } from "../lib/labels";
+import { actionLabel, actorLabel, dataText } from "../lib/labels";
 
 /*
  * لوحة الأوامر.
@@ -168,8 +168,8 @@ export function CommandPalette({ open, onClose, lang, skills, workItems, approva
             >
               <span className={`palette-icon kind-${result.kind}`}>{icon(result.kind)}</span>
               <span className="palette-copy">
-                <strong>{result.title}</strong>
-                <small>{result.subtitle}</small>
+                <strong>{dataText(result.title, ar)}</strong>
+                <small>{dataText(result.subtitle, ar)}</small>
               </span>
             </button>
           ))}

@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { Bot, FileCheck2, Search, ShieldAlert, UserRound, Waypoints } from "lucide-react";
 import type { AuditEvent } from "../../types";
-import { PageHeader } from "../Primitives";
-import { stampLabel, actionLabel, actorLabel, provenanceLabel, reasonLabel, riskLabel } from "../../lib/labels";
+import { Dt, PageHeader } from "../Primitives";
+import { stampLabel, actionLabel, actorLabel, provenanceLabel, reasonLabel, riskLabel, dataText } from "../../lib/labels";
 
 /*
  * سجلّ التدقيق.
@@ -65,8 +65,8 @@ export function AuditView({ lang, events }: Props) {
                 </span>
                 <div>
                   <div className="audit-head"><strong title={e.action}>{actionLabel(e.action, ar)}</strong><small>{stampLabel(e.timestamp, ar)} · {actorLabel(e.actorName, ar)} · {riskLabel(e.risk, ar)}</small></div>
-                  <p>{e.details}</p>
-                  {record?.skill && <p className="audit-record">{ar ? `المهارة: ${record.skill.name} — v${record.skill.version}` : `Skill: ${record.skill.name} — v${record.skill.version}`}</p>}
+                  <p><Dt t={e.details} ar={ar} /></p>
+                  {record?.skill && <p className="audit-record">{ar ? `المهارة: ${dataText(record.skill.name, true)} — v${record.skill.version}` : `Skill: ${record.skill.name} — v${record.skill.version}`}</p>}
                   {record?.review?.signedOffBy && <p className="audit-record">{ar
                     ? `وقّع: ${record.review.signedOffBy} · نجاح التدرّب ${record.review.stats?.passRate ?? "—"}% · التطابق في الظل ${record.review.stats?.shadowAgreement ?? "—"}%`
                     : `Signed off by ${record.review.signedOffBy}`}</p>}

@@ -3,7 +3,7 @@ import { AudioLines, Check, CircleStop, FileCheck2, GraduationCap, Mic, Mic2, Mi
 import { useDictation } from "../../lib/dictation";
 import type { SkillStep } from "../../types";
 import { apiOrNull } from "../../lib/api";
-import { PageHeader } from "../Primitives";
+import { Dt, PageHeader } from "../Primitives";
 import { TeachStageVisual } from "../Visuals";
 
 type EventRow={id:string;time:string;action:string;system:string;note?:string};
@@ -64,7 +64,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
   const addEvent=async()=>{
     if(!newAction.trim())return;
     const id=await ensureSession();
-    const ev:EventRow={id:`ev_${Date.now()}`,time:new Date().toLocaleTimeString("ar-KW",{hour:"2-digit",minute:"2-digit"}),action:newAction,system:ar?"يدوي":"Manual"};
+    const ev:EventRow={id:`ev_${Date.now()}`,time:new Date().toLocaleTimeString("ar-KW-u-nu-latn",{hour:"2-digit",minute:"2-digit"}),action:newAction,system:ar?"يدوي":"Manual"};
     setEvents(v=>[...v,ev]); setNewAction("");
     if(!id.startsWith("local_")) await apiOrNull("/teach/record-event",{method:"POST",body:JSON.stringify({sessionId:id,action:ev.action,system:ev.system})});
   };
@@ -94,7 +94,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
     <section className="teach-layout">
       <article className="teach-stage surface">
         <div className="teach-title-row"><input value={title} onChange={e=>setTitle(e.target.value)} placeholder={ar?"اسم العملية التي ستعلّمها":"Process name"} aria-label={ar?"اسم العملية":"Process name"}/><span><FileCheck2/>{events.length}</span></div>
-        <TeachStageVisual active={recording||busy} eventCount={events.length}/>
+        <TeachStageVisual active={recording||busy} eventCount={events.length} ar={ar}/>
         <div className="teach-controls">
           <button className={`record-orb ${recording?"recording":""}`} onClick={toggleRecording} aria-label={recording?(ar?"إيقاف":"Stop"):(ar?"بدء":"Start")}>{recording?<CircleStop/>:<Mic2/>}</button>
           <div className="teach-input"><input value={newAction} onChange={e=>setNewAction(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")void addEvent()}} placeholder={ar?"أضف خطوة قصيرة... أو أملِها بصوتك":"Add a step... or dictate it"} aria-label={ar?"خطوة جديدة":"New step"}/>
@@ -109,7 +109,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
           <div className="capture-head"><span>{ar?"الالتقاط المباشر":"LIVE CAPTURE"}</span><b>{events.length}</b></div>
           {dictation.listening&&<p className="dictation-live" role="status" aria-live="polite"><AudioLines aria-hidden="true"/>{dictation.interim||(ar?"أستمع…":"Listening…")}</p>}
           {dictation.error&&dictation.error!=="aborted"&&<p className="dictation-error" role="alert">{dictation.error==="not-allowed"?(ar?"لم يُسمح باستخدام الميكروفون.":"Microphone permission denied."):(ar?"تعذّر الإملاء الصوتي — اكتب الخطوة بدلاً منه.":"Dictation failed — type the step instead.")}</p>}
-          <div className="capture-timeline">{events.map((e,i)=><div key={e.id}><i>{i+1}</i><span><strong>{e.action}</strong><small>{e.system}</small>
+          <div className="capture-timeline">{events.map((e,i)=><div key={e.id}><i>{i+1}</i><span><strong><Dt t={e.action} ar={ar}/></strong><small>{e.system}</small>
             <label className="transcript-edit"><span className="sr-only">{ar?`شرح الخطوة ${i+1}`:`Step ${i+1} explanation`}</span>
               <textarea rows={1} value={e.note||""} onChange={ev=>setNote(e.id,ev.target.value)} placeholder={ar?"اشرح لماذا — بالكتابة أو بالصوت":"Explain why — type or speak"}/></label>
             {dictation.supported&&<button type="button" className={`transcript-mic ${dictation.listening&&dictateTarget===e.id?"dictating":""}`} onClick={()=>toggleDictation(e.id)} aria-pressed={dictation.listening&&dictateTarget===e.id} aria-label={dictation.listening&&dictateTarget===e.id?(ar?"أوقف الإملاء":"Stop dictation"):(ar?`أملِ شرح الخطوة ${i+1}`:`Dictate step ${i+1} explanation`)}>{dictation.listening&&dictateTarget===e.id?<MicOff/>:<Mic/>}</button>}
@@ -121,7 +121,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
             <strong>{result.steps.length}</strong><small>{ar?"خطوات":"steps"}</small>
           </div>
           <div className="rule-dots">{result.rules.map((r,i)=><span key={i} title={r}/>)}</div>
-          <div className="teach-questions">{result.questions.map(q=><label key={q.id}><span>{q.question}</span><input value={answers[q.id]||""} onChange={e=>setAnswers(v=>({...v,[q.id]:e.target.value}))} placeholder={ar?"الإجابة المعتمدة":"Verified answer"}/></label>)}</div>
+          <div className="teach-questions">{result.questions.map(q=><label key={q.id}><span><Dt t={q.question} ar={ar}/></span><input value={answers[q.id]||""} onChange={e=>setAnswers(v=>({...v,[q.id]:e.target.value}))} placeholder={ar?"الإجابة المعتمدة":"Verified answer"}/></label>)}</div>
           <button className="btn-primary w-full" disabled={busy||codified} onClick={()=>void codify()}>{codified?<Check/>:<GraduationCap/>}{codified?(ar?"دخلت عقل المؤسسة":"Added to Company Brain"):(ar?"اعتمد المهارة":"Approve & codify")}</button>
         </>}
       </article>
