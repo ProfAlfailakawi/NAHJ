@@ -1073,7 +1073,7 @@
 .risk-legend li{display:grid;grid-template-columns:14px 1fr auto 44px;align-items:center;gap:10px;font-size:13.5px;font-weight:800;color:var(--ink-2)}
 .risk-legend i{min-width:0;width:12px;height:12px;border-radius:5px;display:block}
 .risk-legend b{font-size:14px}
-.risk-legend small{color:var(--muted);font-weight:800;text-align:end}
+.risk-legend small{font-size:12px;color:var(--muted);font-weight:800;text-align:end}
 .audit-more{width:100%;margin-top:14px;justify-content:center}
 /* عمود الطابور كان يتّسع لأوسع بطاقاتٍ فيه فتخرج من حدّه تحت لوحة الحالة. */
 .work-queue,.work-queue-list,.queue-card{min-width:0}
@@ -1220,8 +1220,8 @@
 /* الأشخاص: شبكة شخص × مهارة */
 .people-matrix{grid-column:1/-1;min-width:0;max-width:100%}.people-layout>*{min-width:0}.people-matrix-scroll{position:relative;overflow-x:auto;max-width:100%}
 .people-matrix table{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%}
-.people-matrix th[scope="col"]{font-weight:800;color:var(--muted);padding:4px 6px;text-align:center;vertical-align:bottom;max-width:110px}
-.people-matrix th[scope="col"] span{display:block;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.35;min-width:68px;max-width:110px;margin-inline:auto}
+.people-matrix th[scope="col"]{font-weight:800;color:var(--muted);padding:4px 6px;text-align:center;vertical-align:bottom;max-width:128px}
+.people-matrix th[scope="col"] span{display:block;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.35;min-width:104px;max-width:128px;margin-inline:auto;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
 .people-matrix th[scope="row"]{text-align:start;font-weight:800;padding:6px 10px 6px 0;padding-inline:0 12px;white-space:nowrap}
 .people-matrix td{text-align:center;padding:5px 6px;border-top:1px solid var(--line)}
 .people-matrix td svg,.pm-legend svg{width:14px;height:14px;vertical-align:middle}
@@ -1271,20 +1271,19 @@
 
 /* Skills: الصفوف بعد الخامس في «عرض الكل» مطويّاً افتراضياً. */
 .skills-more{margin-top:8px}.skills-more>summary{cursor:pointer;list-style:none;padding:10px 12px;border-radius:14px;border:1px dashed var(--line-strong);text-align:center;font-size:13px;font-weight:900;color:var(--muted)}.skills-more>summary::-webkit-details-marker{display:none}.skills-more[open]>summary{margin-bottom:8px}
-/* Today: المدار مطويّ افتراضياً على الهاتف فقط؛ على سطح المكتب يبقى مفتوحاً والعنوان مخفياً. */
-.brain-collapse>summary{display:none;list-style:none;cursor:pointer}.brain-collapse>summary::-webkit-details-marker{display:none}
+/* Today: المدار مطويّ افتراضياً في كل العروض خلف ملخّصٍ ظاهرٍ دائماً. */
+.brain-collapse>summary{display:block;list-style:none;cursor:pointer;min-height:44px;padding:12px 16px;font-size:14px;font-weight:900;border-radius:20px;background:rgba(255,255,255,.7);border:1px solid var(--line)}.brain-collapse>summary::-webkit-details-marker{display:none}
+.brain-collapse[open]>summary{margin-bottom:8px}
 @media(max-width:620px){
-  .brain-collapse>summary{display:block;padding:14px 16px;font-size:14px;font-weight:900;border-radius:20px;background:rgba(255,255,255,.7);border:1px solid var(--line)}
-  .brain-collapse[open]>summary{margin-bottom:8px}
-  .demo-banner{flex-wrap:wrap;gap:6px 8px;padding:8px 10px}
-  .demo-banner p{flex:1 1 calc(100% - 30px);min-width:0;margin:0}
-  .demo-banner p span{display:none}
-  .demo-banner-switch{flex:1.35 1 0;min-width:84px;order:3}
-  .demo-banner select{padding:0 4px;font-size:12.5px}
+  /* شريط من سطرٍ واحد: أيقونة + مبدّل القطاع + زرّان بأيقونة فقط (الاسم للقارئ الشاشي وفي title). */
+  .demo-banner{flex-wrap:nowrap;gap:8px;padding:6px 10px}
+  .demo-banner p,.demo-banner-switch label,.demo-banner button span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;margin:0;padding:0}
+  .demo-banner-switch{flex:1 1 0;min-width:0}
+  .demo-banner select{padding:0 6px;font-size:12.5px}
   .demo-banner-switch select{min-width:0;width:100%}
-  .demo-banner-switch label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-  .demo-banner button{flex:1 1 0;min-width:0;justify-content:center;order:4;padding:0 3px;font-size:12px;white-space:nowrap}
-  .demo-banner button svg{flex:none}
-  .demo-banner button{gap:4px}
+  .demo-banner button{flex:none;width:44px;height:44px;justify-content:center;padding:0}
+  .demo-banner button svg{flex:none;width:18px}
 }
-@media(min-width:621px){.brain-collapse::details-content{content-visibility:visible;display:block}}
+
+/* Skills: تسميات درجات السُّلّم السبع فوق الأشرطة تظهر من sm فأكثر؛ تبقى في DOM للقارئ الشاشي. */
+@media(max-width:639px){.skills-axis{position:absolute;width:1px;height:1px;margin:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
