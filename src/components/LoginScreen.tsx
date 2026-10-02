@@ -56,7 +56,7 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated, demoEnabled, de
             <strong>{ar ? "نهج" : "NAHJ"}</strong>
             <small>{ar ? "نظام التعلّم التشغيلي" : "Operational Learning OS"}</small>
           </div>
-          {demoEnabled && !needsSetup && (
+          {demoEnabled && (
             <button
               type="button"
               className="demo-enter demo-enter--icon login-demo-icon"
