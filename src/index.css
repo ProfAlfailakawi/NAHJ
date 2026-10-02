@@ -1319,11 +1319,11 @@
 
 /* Control: seven ladder columns on a phone — names wrap on spaces, never mid-word. */
 .ladder-spread small{min-height:3.9em}
-.ladder-spread small em{font-size:11px;overflow-wrap:normal;word-break:keep-all;hyphens:none}
+.ladder-spread small em{font-size:12px;overflow-wrap:normal;word-break:keep-all;hyphens:none}
 @media(max-width:620px){.ladder-spread{gap:5px}}
 
 /* Practice: the per-row latency is the same value on every row, so it recedes. */
-.eval-row>b{font-size:11px;font-weight:500;opacity:.45;white-space:nowrap}
+.eval-row>b{font-size:12px;font-weight:500;opacity:.45;white-space:nowrap}
 
 /* Practice: shadow header wraps on phones instead of squeezing its note into a sliver. */
 @media(max-width:620px){
@@ -1364,3 +1364,10 @@
   .work-focus .work-focus-river>strong{flex:1 1 100%;order:-1;text-align:start}
   .work-focus .work-focus-river>.dna-steps{flex:1 1 100%}
 }
+
+/* Phones: the large data rings (Impact automation share, People coverage, Practice pass) are scaled down so a ring is a gauge, not the page. */
+@media(max-width:620px){
+  .dna-ring.impact-ring,.dna-ring.people-ring,.dna-ring.graduation-ring{inline-size:132px!important;block-size:132px!important}
+  .dna-ring.impact-ring>svg,.dna-ring.people-ring>svg,.dna-ring.graduation-ring>svg{width:100%;height:100%}
+}
+@media(max-width:620px){.graduation-stage{min-height:0;gap:18px}.control-core,.graduation-stage{padding-bottom:20px}}
