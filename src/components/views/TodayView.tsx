@@ -46,6 +46,16 @@ type Props = {
 
 export function TodayView({ lang, organization, onNavigate, approvals, proposals, workItems, onApproval, todayMetrics, memory, skills = [], practiceCount = 0, canManageAccounts = false, serverLive = false, demoActive = false, policiesActive = null, activityTrend }: Props) {
   const ar = lang === "ar";
+  /* المدار مطويّ افتراضياً على الهاتف فقط (يكرّر أرقام الخريطة أعلاه)؛ على سطح المكتب مفتوح كما كان. */
+  const [orbitOpen, setOrbitOpen] = React.useState(() => typeof window === "undefined" || !window.matchMedia("(max-width:620px)").matches);
+  /* عند تغيّر العرض (تدوير الهاتف/تكبير النافذة) يُزامَن الفتح مع نقطة الكسر حتى لا تُخفى الخريطة بلا زرٍّ لإعادة فتحها. */
+  React.useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(max-width:620px)");
+    const sync = () => setOrbitOpen(!mq.matches);
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
   const open = proposals.filter(p=>p.status==="pending");
   const active = workItems.filter(w=>w.state!=="completed").slice(0,3);
   const conflictCount = open.filter(p=>p.type==="conflict"||p.type==="process_drift").length;
@@ -85,7 +95,10 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
         singlePerson={memory?.singlePersonDependencies ?? 0} auditToday={todayMetrics?.auditEventsToday ?? 0}/>
 
       <section className="hero-grid">
-        <article className="brain-hero">
+        <article className="brain-hero-wrap">
+          <details className="brain-collapse" open={orbitOpen} onToggle={e=>setOrbitOpen(e.currentTarget.open)}>
+            <summary>{ar?"ذاكرة العمل الحيّة":"Living operational memory"}</summary>
+          <div className="brain-hero">
           <DnaHubMap
             ariaLabel={ar ? "خريطة ذاكرة العمل" : "Company Brain operational map"}
             center={{ icon: <BrainCircuit/>, ariaLabel: ar ? "ذاكرة العمل" : "Company brain" }}
@@ -103,6 +116,8 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
             action={{ icon: <ArrowUpLeft/>, label: ar?"فتح المهارات":"Open skills", onClick: ()=>onNavigate("skills") }}
             animate={serverLive && !demoActive}
           />
+          </div>
+          </details>
         </article>
         <div className="pulse-stats">
           {/* «نشاط» لا «أُنجز»: العدّ يشمل كل ما سُجِّل، لا المهام المكتملة وحدها. */}

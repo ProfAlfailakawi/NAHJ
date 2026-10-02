@@ -890,7 +890,7 @@
 .backup-form label{font-size:12px;font-weight:850;color:var(--muted)}
 .backup-form input{height:34px;border:1px solid var(--line-strong);border-radius:10px;padding:0 9px;font:inherit;font-size:13px;min-width:0;width:150px}
 .backup-form button{height:34px;border:0;border-radius:10px;background:var(--ink);color:#fff;padding:0 11px;display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:900;cursor:pointer}
-.backup-form button:disabled{opacity:.5;cursor:not-allowed}
+.backup-form button:disabled{opacity:1;background:#eef0ee;color:#6b746f;border:1px solid var(--line-strong);cursor:not-allowed}.backup-form button:disabled svg{opacity:.7}
 .backup-form svg{width:14px}
 .people-list ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
 .people-list li{padding:10px 12px;border-radius:12px;background:rgba(16,37,31,.035);display:flex;flex-direction:column;gap:2px;font-size:13px}
@@ -1218,10 +1218,10 @@
 .skel-line{height:14px}.skel-line.short{width:55%}
 .skel-ring{width:110px;height:110px;border-radius:50%;margin:8px auto}
 /* الأشخاص: شبكة شخص × مهارة */
-.people-matrix-scroll{overflow-x:auto}
+.people-matrix{grid-column:1/-1;min-width:0;max-width:100%}.people-layout>*{min-width:0}.people-matrix-scroll{position:relative;overflow-x:auto;max-width:100%}
 .people-matrix table{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%}
-.people-matrix th[scope="col"]{font-weight:800;color:var(--muted);padding:4px 6px;text-align:center;max-width:92px}
-.people-matrix th[scope="col"] span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:92px}
+.people-matrix th[scope="col"]{font-weight:800;color:var(--muted);padding:4px 6px;text-align:center;vertical-align:bottom;max-width:110px}
+.people-matrix th[scope="col"] span{display:block;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.35;min-width:68px;max-width:110px;margin-inline:auto}
 .people-matrix th[scope="row"]{text-align:start;font-weight:800;padding:6px 10px 6px 0;padding-inline:0 12px;white-space:nowrap}
 .people-matrix td{text-align:center;padding:5px 6px;border-top:1px solid var(--line)}
 .people-matrix td svg,.pm-legend svg{width:14px;height:14px;vertical-align:middle}
@@ -1268,3 +1268,23 @@
 .impact-badges small{font-size:12px;font-weight:800;color:var(--muted)}
 .top-skills .ts-bar{display:block;height:4px;margin-top:5px;border-radius:99px;background:rgba(16,37,31,.07);overflow:hidden}
 .top-skills .ts-bar i{display:block;height:100%;border-radius:99px;background:var(--moss)}
+
+/* Skills: الصفوف بعد الخامس في «عرض الكل» مطويّاً افتراضياً. */
+.skills-more{margin-top:8px}.skills-more>summary{cursor:pointer;list-style:none;padding:10px 12px;border-radius:14px;border:1px dashed var(--line-strong);text-align:center;font-size:13px;font-weight:900;color:var(--muted)}.skills-more>summary::-webkit-details-marker{display:none}.skills-more[open]>summary{margin-bottom:8px}
+/* Today: المدار مطويّ افتراضياً على الهاتف فقط؛ على سطح المكتب يبقى مفتوحاً والعنوان مخفياً. */
+.brain-collapse>summary{display:none;list-style:none;cursor:pointer}.brain-collapse>summary::-webkit-details-marker{display:none}
+@media(max-width:620px){
+  .brain-collapse>summary{display:block;padding:14px 16px;font-size:14px;font-weight:900;border-radius:20px;background:rgba(255,255,255,.7);border:1px solid var(--line)}
+  .brain-collapse[open]>summary{margin-bottom:8px}
+  .demo-banner{flex-wrap:wrap;gap:6px 8px;padding:8px 10px}
+  .demo-banner p{flex:1 1 calc(100% - 30px);min-width:0;margin:0}
+  .demo-banner p span{display:none}
+  .demo-banner-switch{flex:1.35 1 0;min-width:84px;order:3}
+  .demo-banner select{padding:0 4px;font-size:12.5px}
+  .demo-banner-switch select{min-width:0;width:100%}
+  .demo-banner-switch label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .demo-banner button{flex:1 1 0;min-width:0;justify-content:center;order:4;padding:0 3px;font-size:12px;white-space:nowrap}
+  .demo-banner button svg{flex:none}
+  .demo-banner button{gap:4px}
+}
+@media(min-width:621px){.brain-collapse::details-content{content-visibility:visible;display:block}}
