@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, CheckCircle2, Clock3, Gauge, Info, ShieldCheck, TimerReset } from "lucide-react";
 import { PageHeader, SectionTitle } from "../Primitives";
 import { DnaRing } from "../dna";
-import { riskLabel, measureBasis, trendReason, weekdayLabel } from "../../lib/labels";
+import { riskLabel, measureBasis, trendReason, weekdayLabel, hoursLabel } from "../../lib/labels";
 
 /*
  * شاشة الأثر.
@@ -99,7 +99,7 @@ export function AnalyticsView({ lang, data }: Props) {
             <em>{ar ? "منذ الاعتماد" : "SINCE ADOPTION"}</em>
             <strong>{data.kpis.totalTasksCompleted.toLocaleString("en-US")}</strong>
             <span>{ar ? "مرة تنفيذ موثّقة" : "recorded executions"}</span>
-            <span className="impact-hours"><Clock3 aria-hidden="true" /> {data.kpis.totalHoursSaved}h</span>
+            <span className="impact-hours"><Clock3 aria-hidden="true" /> {hoursLabel(data.kpis.totalHoursSaved, ar)}</span>
           </div>
           <div className="impact-badges">
             <span><ArrowUpRight /> {show(data.kpis.automationRatePercent, "%")}</span>
@@ -176,7 +176,7 @@ export function AnalyticsView({ lang, data }: Props) {
                   <span>{index + 1}</span>
                   <div>
                     <strong>{skill.name}</strong>
-                    <small>{skill.usageCount} · {skill.hoursSaved}h</small>
+                    <small>{skill.usageCount} · {hoursLabel(skill.hoursSaved, ar)}</small>
                   </div>
                   <b>{skill.successRate}%</b>
                 </div>

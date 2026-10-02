@@ -19,7 +19,7 @@ const dayOffset = (days: number) => {
   return date;
 };
 const fmt = (date: Date, ar: boolean) =>
-  date.toLocaleDateString(ar ? "ar-KW" : "en-GB", { year: "numeric", month: "short", day: "numeric" });
+  date.toLocaleDateString(ar ? "ar-KW-u-nu-latn" : "en-GB", { year: "numeric", month: "short", day: "numeric" });
 const kwd = (value: number, ar: boolean) => `${value.toLocaleString("en-US")} ${ar ? "د.ك" : "KWD"}`;
 
 const PLANS = [

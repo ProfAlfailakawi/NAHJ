@@ -17,7 +17,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { Connector } from "../../types";
-import { PageHeader, SectionTitle } from "../Primitives";
+import { Dt, PageHeader, SectionTitle } from "../Primitives";
 import { ConnectionConstellation } from "../Visuals";
 import { DnaLive, DnaStatusHeader } from "../dna";
 import { apiOrNull } from "../../lib/api";
@@ -127,7 +127,7 @@ export function ConnectionsView({ lang, connectors, testingId, onTest, isDemo = 
         icon={<Cloud />}
         tone={cloud?.connected ? "accent" : "slate"}
         title={<>
-          {ar ? "المرآة السحابية (Firestore)" : "Cloud mirror (Firestore)"}
+          {ar ? <span title="Firebase Firestore">المرآة السحابية</span> : "Cloud mirror (Firestore)"}
           <DnaLive on={Boolean(cloud?.connected)} className="cloud-live" label={cloud === null
             ? (ar ? "جارٍ قراءة الحالة" : "Reading state")
             : cloud.connected
@@ -148,7 +148,7 @@ export function ConnectionsView({ lang, connectors, testingId, onTest, isDemo = 
       >
         <div className="cloud-facts">
           <span><Server aria-hidden="true" />{ar ? "المشروع" : "Project"}: {isDemo ? (ar ? "صندوق العرض (معزول)" : "Demo sandbox (isolated)") : cloud?.projectId || (ar ? "غير مضبوط" : "unset")}</span>
-          <span><RefreshCw aria-hidden="true" />{ar ? "آخر مزامنة ناجحة" : "Last successful sync"}: {!isDemo && cloud?.lastSyncTime ? new Date(cloud.lastSyncTime).toLocaleString(ar ? "ar-KW" : "en-GB") : (ar ? "لا شيء" : "none")}</span>
+          <span><RefreshCw aria-hidden="true" />{ar ? "آخر مزامنة ناجحة" : "Last successful sync"}: {!isDemo && cloud?.lastSyncTime ? new Date(cloud.lastSyncTime).toLocaleString(ar ? "ar-KW-u-nu-latn" : "en-GB") : (ar ? "لا شيء" : "none")}</span>
         </div>
         {!isDemo && cloud?.error && (
           <div className="cloud-note warn">
@@ -167,7 +167,7 @@ export function ConnectionsView({ lang, connectors, testingId, onTest, isDemo = 
 
       <div className="connections-layout">
         <section className="connection-map surface">
-          <ConnectionConstellation statuses={status} />
+          <ConnectionConstellation statuses={status} ar={ar} />
         </section>
 
         <section className="connection-list surface-strong">
@@ -186,7 +186,7 @@ export function ConnectionsView({ lang, connectors, testingId, onTest, isDemo = 
                     <Icon />
                   </span>
                   <div>
-                    <strong>{c.name}</strong>
+                    <strong><Dt t={c.name} ar={ar} /></strong>
                     <small>
                       {connectorTypeLabel(c.type, ar)} · {syncLabel(c.lastSync, ar)}
                     </small>

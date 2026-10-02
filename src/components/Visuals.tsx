@@ -1,3 +1,4 @@
+import { LADDER_NAME_AR } from "../lib/labels";
 import React from "react";
 import {
   BrainCircuit, BookOpenCheck, CalendarDays, CircleDollarSign, FileCheck2, Fingerprint,
@@ -24,11 +25,11 @@ function VisualNode({ className, icon, tone, label }: { className: string; icon:
   );
 }
 
-export function LearningLens({ progress = 76, label }: { progress?: number; label?: string }) {
+export function LearningLens({ progress = 76, label, ar = true }: { progress?: number; label?: string; ar?: boolean }) {
   const circumference = 2 * Math.PI * 42;
   const dash = Math.max(0, Math.min(100, progress)) / 100 * circumference;
   return (
-    <div className="learning-lens" aria-label={`Learning coverage ${progress}%`}>
+    <div className="learning-lens" aria-label={ar ? `تغطية التعلّم ${progress}%` : `Learning coverage ${progress}%`}>
       <svg viewBox="0 0 120 120" aria-hidden="true">
         <circle cx="60" cy="60" r="47" fill="none" stroke="rgba(16,37,31,.055)" strokeWidth="1"/>
         <circle cx="60" cy="60" r="42" fill="none" stroke="rgba(16,37,31,.08)" strokeWidth="5"/>
@@ -40,25 +41,25 @@ export function LearningLens({ progress = 76, label }: { progress?: number; labe
   );
 }
 
-export function TeachStageVisual({ active = false, eventCount = 0 }: { active?: boolean; eventCount?: number }) {
+export function TeachStageVisual({ active = false, eventCount = 0, ar = true }: { active?: boolean; eventCount?: number; ar?: boolean }) {
   return (
-    <div className={`teach-stage-visual ${active ? "active" : ""}`} aria-label="Teach mode capture">
+    <div className={`teach-stage-visual ${active ? "active" : ""}`} aria-label={ar ? "التقاط وضع التعليم" : "Teach mode capture"}>
       <div className="teach-radar r1"/><div className="teach-radar r2"/><div className="teach-radar r3"/>
       <div className="teach-core"><GraduationCap/></div>
-      <div className="teach-source source-a" title="Conversation"><MessageCircleMore/></div>
-      <div className="teach-source source-b" title="Documents"><FileCheck2/></div>
-      <div className="teach-source source-c" title="Calendar"><CalendarDays/></div>
-      <div className="teach-source source-d" title="Systems"><Route/></div>
+      <div className="teach-source source-a" title={ar ? "المحادثة" : "Conversation"}><MessageCircleMore/></div>
+      <div className="teach-source source-b" title={ar ? "المستندات" : "Documents"}><FileCheck2/></div>
+      <div className="teach-source source-c" title={ar ? "التقويم" : "Calendar"}><CalendarDays/></div>
+      <div className="teach-source source-d" title={ar ? "الأنظمة" : "Systems"}><Route/></div>
       <div className="teach-wave" aria-hidden="true">{Array.from({length:18}).map((_,i)=><i key={i} style={{height:`${9 + ((i*13)%28)}px`}}/>)}</div>
       <span className="teach-count">{eventCount}</span>
     </div>
   );
 }
 
-export function SkillRunway({ level, reliability }: { level: number; reliability: number }) {
-  const stages = ["Observe","Practice","Shadow","Suggest","Prepare","Approval","Auto"];
+export function SkillRunway({ level, reliability, ar = true }: { level: number; reliability: number; ar?: boolean }) {
+  const stages = ar ? LADDER_NAME_AR : ["Observe","Practice","Shadow","Suggest","Prepare","Approval","Auto"];
   return (
-    <div className="skill-runway" aria-label={`Autonomy level ${level}`}>
+    <div className="skill-runway" aria-label={ar ? `مستوى الاستقلالية ${level}` : `Autonomy level ${level}`}>
       <div className="runway-line"><div style={{width:`${Math.min(100,(level/6)*100)}%`}}/></div>
       <div className="runway-stages">
         {stages.map((_,i)=><span key={i} className={i<=level?"done":""} title={stages[i]}><i>{i<level?"✓":i===level?"●":""}</i></span>)}
@@ -68,13 +69,13 @@ export function SkillRunway({ level, reliability }: { level: number; reliability
   );
 }
 
-export function ConnectionConstellation({ statuses }: { statuses: {healthy:number; degraded:number; disconnected:number} }) {
+export function ConnectionConstellation({ statuses, ar = true }: { statuses: {healthy:number; degraded:number; disconnected:number}; ar?: boolean }) {
   const nodes = [
-    {x:66,y:58,icon:<CalendarDays/>,tone:"sky" as Tone,label:"Calendar"},
-    {x:318,y:50,icon:<Fingerprint/>,tone:"violet" as Tone,label:"Identity"},
-    {x:54,y:250,icon:<CircleDollarSign/>,tone:"amber" as Tone,label:"Payments"},
-    {x:330,y:252,icon:<FileCheck2/>,tone:"moss" as Tone,label:"Documents"},
-    {x:193,y:300,icon:<MessageCircleMore/>,tone:"rose" as Tone,label:"Channels"},
+    {x:66,y:58,icon:<CalendarDays/>,tone:"sky" as Tone,label:ar?"التقويم":"Calendar"},
+    {x:318,y:50,icon:<Fingerprint/>,tone:"violet" as Tone,label:ar?"الهوية":"Identity"},
+    {x:54,y:250,icon:<CircleDollarSign/>,tone:"amber" as Tone,label:ar?"الدفع":"Payments"},
+    {x:330,y:252,icon:<FileCheck2/>,tone:"moss" as Tone,label:ar?"المستندات":"Documents"},
+    {x:193,y:300,icon:<MessageCircleMore/>,tone:"rose" as Tone,label:ar?"القنوات":"Channels"},
   ];
   return (
     <div className="connection-constellation">
@@ -110,9 +111,9 @@ export function MiniProcessGlyph() {
   );
 }
 
-export function EvidenceSplit({ a = 78, b = 22 }: { a?: number; b?: number }) {
+export function EvidenceSplit({ a = 78, b = 22, ar = true }: { a?: number; b?: number; ar?: boolean }) {
   return (
-    <div className="evidence-split" aria-label={`Method A ${a} percent, method B ${b} percent`}>
+    <div className="evidence-split" aria-label={ar ? `الطريقة أ ${a}٪، الطريقة ب ${b}٪` : `Method A ${a} percent, method B ${b} percent`}>
       <div className="evidence-track"><span className="a" style={{width:`${a}%`}}/><span className="b" style={{width:`${b}%`}}/></div>
       <div className="evidence-dots"><span><i className="a"/>{a}%</span><span><i className="b"/>{b}%</span></div>
     </div>

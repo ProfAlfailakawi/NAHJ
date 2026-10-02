@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useId, useState } from "react";
 import { AlertTriangle, UserPlus, Users } from "lucide-react";
 import { api, ApiError, apiOrNull } from "../../lib/api";
-import { PageHeader, SectionTitle } from "../Primitives";
+import { Dt, PageHeader, SectionTitle } from "../Primitives";
 import { DnaRing } from "../dna";
 
 /*
@@ -92,7 +92,7 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
           <ul className="spof-list">
             {coverage?.singlePoints.map(point => (
               <li key={point.id}>
-                <div><AlertTriangle aria-hidden="true" /><span><strong>{point.name}</strong><small>{ar ? `يحملها: ${point.ownerName}` : `Held by: ${point.ownerName}`}</small></span></div>
+                <div><AlertTriangle aria-hidden="true" /><span><strong><Dt t={point.name} ar={ar} /></strong><small>{ar ? `يحملها: ${point.ownerName}` : `Held by: ${point.ownerName}`}</small></span></div>
                 {canAssign && <BackupForm skillId={point.id} ar={ar} onAssigned={assigned} notify={notify} />}
               </li>
             ))}

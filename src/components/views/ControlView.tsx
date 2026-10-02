@@ -3,7 +3,7 @@ import { FileCheck2, Info, KeyRound, PauseCircle, ShieldAlert, ShieldCheck, Sire
 import { PageHeader, SectionTitle } from "../Primitives";
 import { GovernanceShield } from "../Visuals";
 import type { Measure } from "./AnalyticsView";
-import { measureBasis } from "../../lib/labels";
+import { measureBasis, levelKeyLabel } from "../../lib/labels";
 
 /*
  * شاشة الحوكمة.
@@ -146,7 +146,7 @@ export function ControlView({ lang, paused, pause, onPause, governance }: Props)
             </span>
             <span>
               <i style={{ width: autonomyTotal ? `${Math.round(((autonomy.L0 || 0) + (autonomy.L1 || 0) + (autonomy.L2 || 0)) / autonomyTotal * 100)}%` : "0%" }} />
-              <b>{ar ? "مهارات تحت الملاحظة (L0–L2)" : "Under observation (L0–L2)"}</b>
+              <b>{ar ? "مهارات تحت الملاحظة (المستويات 0–2)" : "Under observation (L0–L2)"}</b>
             </span>
             <span>
               <i style={{ width: governance ? `${governance.riskDistribution.total ? Math.round((governance.riskDistribution.high + governance.riskDistribution.critical) / governance.riskDistribution.total * 100) : 0}%` : "0%" }} />
@@ -174,7 +174,7 @@ export function ControlView({ lang, paused, pause, onPause, governance }: Props)
                 <div key={level} className={count ? "has" : ""}>
                   <i style={{ height: `${autonomyTotal ? Math.max(4, (count / autonomyTotal) * 100) : 4}%` }} />
                   <b>{count}</b>
-                  <small>{level}</small>
+                  <small title={levelKeyLabel(level, ar)}>{ar ? level.slice(1) : level}</small>
                 </div>
               );
             })}

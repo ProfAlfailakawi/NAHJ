@@ -1,3 +1,4 @@
+import { formattedMoney } from "../../lib/labels";
 import React, { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle, Building2, CalendarClock, CheckCircle2, Clock3, HandCoins, RefreshCw, Wallet,
@@ -26,15 +27,15 @@ interface Props {
 }
 
 const shortDate = (value: string | null | undefined) =>
-  value ? new Date(value).toLocaleDateString("ar-KW", { year: "numeric", month: "short", day: "numeric" }) : "—";
+  value ? new Date(value).toLocaleDateString("ar-KW-u-nu-latn", { year: "numeric", month: "short", day: "numeric" }) : "—";
 
 const modelSummary = (portal: PartnerPortal) => {
   const { model, rateBps, fixedAmount, currency, durationMonths } = portal.partner;
   const base = model === "percent_of_contract"
     ? `${(rateBps / 100).toFixed(2)}% من قيمة كل دورة`
     : model === "fixed_per_cycle"
-      ? `${money(fixedAmount, currency)} عن كل دورة`
-      : `${money(fixedAmount, currency)} مرة واحدة عند التعاقد`;
+      ? `${money(fixedAmount, currency, true)} عن كل دورة`
+      : `${money(fixedAmount, currency, true)} مرة واحدة عند التعاقد`;
   return durationMonths > 0 ? `${base} — لمدّة ${durationMonths} شهراً من بدء العقد` : `${base} — ما دام العميل مشتركاً`;
 };
 
@@ -90,9 +91,9 @@ export function PartnerPortalView({ lang, notify }: Props) {
 
       <div className="stat-grid">
         <Stat label={ar ? "شركاتك" : "Companies"} value={clients.length} tone="sky" icon={<Building2 />} />
-        <Stat label={ar ? "إجمالي ما استُحقّ" : "Accrued"} value={totals.formatted.accrued} tone="violet" icon={<HandCoins />} />
-        <Stat label={ar ? "ما قُبض" : "Paid"} value={totals.formatted.paid} tone="moss" icon={<CheckCircle2 />} />
-        <Stat label={ar ? "المستحقّ لك الآن" : "Due to you"} value={totals.formatted.due} tone={totals.due > 0 ? "amber" : "moss"} icon={<Wallet />} />
+        <Stat label={ar ? "إجمالي ما استُحقّ" : "Accrued"} value={formattedMoney(totals.formatted.accrued, ar)} tone="violet" icon={<HandCoins />} />
+        <Stat label={ar ? "ما قُبض" : "Paid"} value={formattedMoney(totals.formatted.paid, ar)} tone="moss" icon={<CheckCircle2 />} />
+        <Stat label={ar ? "المستحقّ لك الآن" : "Due to you"} value={formattedMoney(totals.formatted.due, ar)} tone={totals.due > 0 ? "amber" : "moss"} icon={<Wallet />} />
       </div>
 
       {/* الاتفاق مكتوبٌ على الشاشة، فلا يبقى في الذاكرة وحدها. */}
@@ -123,7 +124,7 @@ export function PartnerPortalView({ lang, notify }: Props) {
                   </button>
 
                   <div className="partner-client-meta">
-                    <span>{ar ? "قيمة الدورة" : "Cycle value"}: <b className="mono">{money(client.contractValue, client.currency)}</b></span>
+                    <span>{ar ? "قيمة الدورة" : "Cycle value"}: <b className="mono">{money(client.contractValue, client.currency, ar)}</b></span>
                     <span>{ar ? "بدأ" : "Started"}: <b>{shortDate(client.startedAt)}</b></span>
                     <span>{ar ? "ينتهي" : "Ends"}: <b>{shortDate(client.endsAt)}</b></span>
                     <span className={client.daysToRenewal <= 30 ? "tone-text-amber" : ""}>
@@ -139,7 +140,7 @@ export function PartnerPortalView({ lang, notify }: Props) {
                         clientCommissions.map(commission => (
                           <div key={commission.id} className="partner-commission-row">
                             <span>{shortDate(commission.periodStart)} → {shortDate(commission.periodEnd)}</span>
-                            <span className="mono">{money(commission.amount, commission.currency)}</span>
+                            <span className="mono">{money(commission.amount, commission.currency, ar)}</span>
                             <span><i className={`ledger-badge tone-${commission.status === "paid" ? "moss" : commission.status === "void" ? "muted" : "amber"}`}>
                               {COMMISSION_STATUS_AR[commission.status]}
                             </i></span>
@@ -172,7 +173,7 @@ export function PartnerPortalView({ lang, notify }: Props) {
               <div key={commission.id} className="ledger-row four static">
                 <span>{shortDate(commission.periodStart)}</span>
                 <span>{clients.find(client => client.id === commission.clientId)?.name || "—"}</span>
-                <span className="mono">{money(commission.amount, commission.currency)}</span>
+                <span className="mono">{money(commission.amount, commission.currency, ar)}</span>
                 <span><i className={`ledger-badge tone-${commission.status === "paid" ? "moss" : commission.status === "void" ? "muted" : "amber"}`}>
                   {COMMISSION_STATUS_AR[commission.status]}
                 </i></span>

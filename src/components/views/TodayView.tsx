@@ -7,7 +7,8 @@ import type { ApprovalRequest, LearningProposal, Organization, Skill, WorkItem }
 import type { SectionId } from "../Shell";
 import { workStepText, workSteps } from "./WorkView";
 import { DnaHubMap, DnaStepper } from "../dna";
-import { PageHeader, SectionTitle, Stat } from "../Primitives";
+import { Dt, PageHeader, SectionTitle, Stat } from "../Primitives";
+import { hoursLabel } from "../../lib/labels";
 import { Term } from "../Explain";
 import { workStatePlain } from "../../lib/glossary";
 
@@ -96,7 +97,7 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
         <div className="pulse-stats">
           {/* «نشاط» لا «أُنجز»: العدّ يشمل كل ما سُجِّل، لا المهام المكتملة وحدها. */}
           <Stat label={ar?"نشاط اليوم":"ACTIVITY TODAY"} value={todayMetrics?.auditEventsToday ?? 0} tone="moss" icon={<Activity/>}/>
-          <Stat label={ar?"وقت مستعاد":"TIME BACK"} value={`${todayMetrics?.hoursSavedThisMonth ?? organization.hoursSavedMonth}h`} tone="moss" icon={<Clock3/>}/>
+          <Stat label={ar?"وقت مستعاد":"TIME BACK"} value={hoursLabel(todayMetrics?.hoursSavedThisMonth ?? organization.hoursSavedMonth, ar)} tone="moss" icon={<Clock3/>}/>
           <Stat label={ar?"تعلّم":"LEARNING"} value={open.length} tone="moss" icon={<Sparkles/>}/>
           <Stat label={ar?"قرارك":"NEEDS YOU"} value={approvals.filter(a=>a.status==="pending").length+conflictCount} tone="moss" icon={<ShieldCheck/>}/>
         </div>
@@ -109,14 +110,14 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
             {approvals.filter(a=>a.status==="pending").length===0&&open.length===0&&<p className="empty-note">{ar?"لا شيء ينتظرك الآن. ما يحتاج قرارك يظهر هنا.":"Nothing needs you right now."}</p>}
             {approvals.filter(a=>a.status==="pending").slice(0,1).map(a=><button key={a.id} className="decision-card approval" onClick={()=>onApproval(a.id)}>
               <span className="decision-icon"><ShieldCheck/></span>
-              <span><strong>{ar?"قرارٌ ينتظر موافقتك":"Awaiting your approval"}</strong><small>{a.workTitle}</small></span>
+              <span><strong>{ar?"قرارٌ ينتظر موافقتك":"Awaiting your approval"}</strong><small><Dt t={a.workTitle} ar={ar}/></small></span>
               <ArrowUpLeft/>
             </button>)}
             {open.slice(0,2).map(p=>{
               const isConflict=p.type==="conflict"||p.type==="process_drift";
               return <button key={p.id} className={`decision-card ${isConflict?"warning":"insight"}`} onClick={()=>onNavigate("learn")}>
                 <span className="decision-icon">{isConflict?<AlertTriangle/>:<Lightbulb/>}</span>
-                <span><strong>{p.title}</strong><small>{p.observedCasesCount} {ar?"حالة":"cases"}</small></span>
+                <span><strong><Dt t={p.title} ar={ar}/></strong><small>{p.observedCasesCount} {ar?"حالة":"cases"}</small></span>
                 <ArrowUpLeft/>
               </button>
             })}
@@ -130,7 +131,7 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
             {active.map((w,i)=><button key={w.id} className="work-mini" onClick={()=>onNavigate("work")}>
               <div><span className={`risk-dot risk-${w.riskLevel}`}/><b>{w.code}</b></div>
               {/* `studentName` حقلٌ تعليمي في شاشة عامّة — يعمل في مدرسة ويختفي في عيادة. */}
-              <strong>{w.contactName || w.title}</strong>
+              <strong><Dt t={w.contactName || w.title} ar={ar}/></strong>
               <small className="work-mini-state">{workStatePlain(w.state, ar)}</small>
               <DnaStepper size="xs" steps={workSteps(w.state,ar)} stateText={workStepText(ar)} ariaLabel={workStatePlain(w.state, ar)}/>
             </button>)}

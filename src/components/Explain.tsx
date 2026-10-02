@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BookOpen, GraduationCap, HelpCircle, X } from "lucide-react";
 import { AUTONOMY_LADDER, GLOSSARY, glossaryMap, ladderStep } from "../lib/glossary";
+import { LADDER_NAME_AR, levelLabel } from "../lib/labels";
 
 /*
  * طبقة الشرح.
@@ -43,7 +44,7 @@ export function Term({ k, children }: { k: string; children?: React.ReactNode })
       </button>
       {open && (
         <span className="term-pop" role="dialog">
-          <b>{entry.term} <i>{entry.termEn}</i></b>
+          <b title={entry.termEn}>{entry.term}</b>
           <span>{entry.plain}</span>
           <em>{entry.why}</em>
         </span>
@@ -56,8 +57,8 @@ export function Term({ k, children }: { k: string; children?: React.ReactNode })
 export function AutonomyBadge({ level, compact = false }: { level: number; compact?: boolean }) {
   const step = ladderStep(level);
   return (
-    <span className={`autonomy-badge ${compact ? "compact" : ""}`} title={`${step.code} — ${step.yourPart}`}>
-      <i>L{step.level}</i>
+    <span className={`autonomy-badge ${compact ? "compact" : ""}`} title={`${step.plain} — ${step.yourPart} (${step.code})`}>
+      <i>{levelLabel(step.level)}</i>
       {!compact && <span>{step.plain}</span>}
     </span>
   );
@@ -109,12 +110,12 @@ export function HelpPanel({ open, onClose }: { open: boolean; onClose: () => voi
           <div className="ladder-list">
             {AUTONOMY_LADDER.map(step => (
               <div key={step.level}>
-                <i>L{step.level}</i>
+                <i>{step.level}</i>
                 <div>
                   <strong>{step.plain}</strong>
                   <small>{step.yourPart}</small>
                 </div>
-                <em>{step.code}</em>
+                <em title={step.code}>{LADDER_NAME_AR[step.level]}</em>
               </div>
             ))}
           </div>
@@ -125,7 +126,7 @@ export function HelpPanel({ open, onClose }: { open: boolean; onClose: () => voi
           <div className="glossary-list">
             {GLOSSARY.map(entry => (
               <div key={entry.key}>
-                <strong>{entry.term} <i>{entry.termEn}</i></strong>
+                <strong title={entry.termEn}>{entry.term}</strong>
                 <p>{entry.plain}</p>
                 <small>{entry.why}</small>
               </div>

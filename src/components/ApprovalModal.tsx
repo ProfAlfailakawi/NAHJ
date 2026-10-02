@@ -2,7 +2,8 @@ import React, { useEffect, useId, useState } from "react";
 import { Check, FileCheck2, Hand, ShieldCheck, X } from "lucide-react";
 import type { ApprovalRequest } from "../types";
 import { apiOrNull } from "../lib/api";
-import { fieldLabel, provenanceLabel, reasonLabel, riskLabel, ROLE_LABEL_AR } from "../lib/labels";
+import { fieldLabel, provenanceLabel, reasonLabel, riskLabel, ROLE_LABEL_AR, dataText } from "../lib/labels";
+import { Dt } from "./Primitives";
 import { Dialog } from "./Dialog";
 import { WORK_STATE_PLAIN } from "../lib/glossary";
 
@@ -75,8 +76,8 @@ export function ApprovalModal({ lang, approval, busy = false, onClose, onApprove
       className="approval-sheet decision-sheet"
     >
       <div className="approval-object">
-        <strong>{approval.workTitle}</strong>
-        <p>{approval.reasonDescription}</p>
+        <strong><Dt t={approval.workTitle} ar={ar} /></strong>
+        <p><Dt t={approval.reasonDescription} ar={ar} /></p>
         <div>
           <span title={approval.reasonCode}><FileCheck2 aria-hidden="true" />{reasonLabel(approval.reasonCode, ar)}</span>
           <span className={`risk-chip risk-${approval.riskLevel}`}>{risk}</span>
@@ -90,7 +91,7 @@ export function ApprovalModal({ lang, approval, busy = false, onClose, onApprove
           <section>
             <h3>{ar ? "المهارة التي ستنفّذ" : "Skill that will execute"}</h3>
             {record.skill
-              ? <p><strong>{record.skill.name}</strong> · {ar ? "الإصدار" : "version"} v{record.skill.version}{record.skill.changeSummary ? ` — ${record.skill.changeSummary}` : ""}</p>
+              ? <p><strong><Dt t={record.skill.name} ar={ar} /></strong> · {ar ? "الإصدار" : "version"} v{record.skill.version}{record.skill.changeSummary ? ` — ${dataText(record.skill.changeSummary, ar)}` : ""}</p>
               : <p className="decision-muted">{ar ? "الطلب غير مرتبط بمهارة مسجّلة." : "Not linked to a recorded skill."}</p>}
           </section>
           <section>

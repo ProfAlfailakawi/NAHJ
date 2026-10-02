@@ -231,6 +231,71 @@ export const ACTION_LABEL_AR: Record<string, string> = {
   lookupOrder: "الاستعلام عن طلب",
   readInventory: "قراءة المخزون",
   routeToQuality: "تحويل إلى الجودة",
+  /* أسماء الأدوات كما تكتبها المهارات في السجل: تظهر بالعربية، والاسم الأصلي في التلميح. */
+  sendSurvey: "إرسال استبيان رضا",
+  readDoctorDecision: "قراءة قرار الطبيب",
+  createPatientFile: "إنشاء ملف مريض",
+  draftAppeal: "مسودة اعتراض",
+  checkAuthorization: "فحص موافقة التأمين",
+  listPendingAuthorizations: "عرض الموافقات المعلّقة",
+  sendPreparationGuide: "إرسال دليل التحضير",
+  listTomorrowAppointments: "عرض مواعيد الغد",
+  readLabOrder: "قراءة طلب المختبر",
+  draftLetter: "مسودة خطاب",
+  readReferralOrder: "قراءة أمر التحويل",
+  draftRenewalOffer: "مسودة عرض تجديد",
+  readCourtNotices: "قراءة إخطارات المحكمة",
+  assignLawyer: "إسناد محامٍ",
+  readNotificationDate: "قراءة تاريخ التبليغ",
+  readCaseEvents: "قراءة أحداث القضية",
+  computeInvoice: "احتساب الفاتورة",
+  readEngagementTerms: "قراءة شروط التعاقد",
+  calculateCourtFee: "احتساب رسوم المحكمة",
+  archiveDocument: "أرشفة مستند",
+  readCaseValue: "قراءة قيمة القضية",
+  runConflictCheck: "فحص تعارض المصالح",
+  requestDocument: "طلب مستند",
+  listHearings: "عرض الجلسات",
+  createClientRecord: "إنشاء ملف عميل",
+  requestPartnerApproval: "طلب اعتماد الشريك",
+  bookSlot: "حجز موعد",
+  readContainers: "قراءة الحاويات",
+  checkDrivingHours: "فحص ساعات القيادة",
+  listDrivers: "عرض السائقين",
+  matchRestrictedList: "مطابقة قائمة المقيّدات",
+  sendProof: "إرسال إثبات التسليم",
+  readCargoDescription: "قراءة وصف البضاعة",
+  sendConfirmation: "إرسال تأكيد",
+  settleClaim: "تسوية مطالبة",
+  fetchSignature: "جلب توقيع الاستلام",
+  readShipment: "قراءة بيانات الشحنة",
+  computeCompensation: "احتساب التعويض",
+  readPickupRequest: "قراءة طلب الاستلام",
+  assignVehicle: "إسناد مركبة",
+  rescheduleDelivery: "إعادة جدولة التسليم",
+  computeStatement: "احتساب كشف الحساب",
+  readUnit: "قراءة بيانات الوحدة",
+  compareQuotes: "مقارنة عروض الأسعار",
+  dispatchTechnician: "إرسال فنّي",
+  readInspection: "قراءة تقرير المعاينة",
+  bookInspection: "حجز معاينة",
+  readNotice: "قراءة الإشعار",
+  proposeSchedule: "اقتراح جدول",
+  listExpiringLeases: "عرض العقود المنتهية قريباً",
+  readArrears: "قراءة المتأخرات",
+  collectDocuments: "جمع المستندات",
+  requestApproval: "طلب اعتماد",
+  readDues: "قراءة المستحقات",
+  createTenantFile: "إنشاء ملف مستأجر",
+  readBalance: "قراءة الرصيد",
+  classifyComplaint: "تصنيف الشكوى",
+  readLoyaltyBalance: "قراءة رصيد الولاء",
+  summarizeShift: "تلخيص الوردية",
+  readDispute: "قراءة النزاع",
+  readBatch: "قراءة بيانات الدفعة",
+  compileEvidence: "تجميع الأدلة",
+  readShiftOrders: "قراءة طلبات الوردية",
+  listBuyers: "عرض المشترين",
 };
 
 /* «POL_MED_02» حدثٌ سُمّي برمز قاعدته: يُعرض الرمز بصيغته المعتادة بعد كلمة «قاعدة». */
@@ -290,6 +355,8 @@ export const ACTOR_AR: Record<string, string> = {
   "Campus Tour Subskill": "مهارة الجولة التعريفية",
   "Vision OCR Engine": "محرّك قراءة المستندات",
   "Skill Executor": "منفّذ المهارات",
+  "Shadow Evaluation Engine": "محرّك التقييم بالظل",
+  "Practice Test Suite": "مجموعة اختبارات التدرّب",
 };
 const ACTOR_EN: Record<string, string> = {
   "نهج": "NAHJ", "محرك السياسات": "Policy engine", "محرّك السياسات": "Policy engine", "النظام": "System",
@@ -425,3 +492,64 @@ export const decisionLabel = (code: string | undefined | null, ar: boolean): str
   const hit = DECISION_LABEL[raw];
   return hit ? hit[ar ? 0 : 1] : raw;
 };
+
+/*
+ * الأرقام والوحدات والمستويات بصيغةٍ عربية للعرض فقط.
+ *
+ * «L5» و«389.7h» و«35ms» رموزٌ يكتبها المهندس. المستوى يُقرأ «مستوى 5»، والساعة «ساعة»،
+ * والزمن «مللي ثانية». القيمة المخزّنة لا تتغيّر، ولا يُترجَم إلا ما نعرفه.
+ */
+/** أسماء درجات سُلّم الاستقلالية (Observe…Autopilot) بالعربية، بترتيب المستوى 0–6. */
+export const LADDER_NAME_AR = ["مشاهدة", "تدرّب", "ظل", "اقتراح", "تجهيز", "اعتماد", "تنفيذ آلي"];
+export const levelLabel = (level: number | string, ar = true): string => (ar ? `مستوى ${level}` : `L${level}`);
+export const hoursLabel = (hours: number | string, ar = true): string => (ar ? `${hours} ساعة` : `${hours}h`);
+/** «35ms» ← «35 مللي ثانية». ما لا يطابق النمط يبقى كما جاء. */
+export const latencyLabel = (value: string | number | undefined | null, ar = true): string => {
+  const raw = String(value ?? "");
+  const m = /^(\d+(?:\.\d+)?)\s?ms$/i.exec(raw);
+  return ar && m ? `${m[1]} مللي ثانية` : raw;
+};
+/** رمز العملة في العرض العربي: «KWD» ← «د.ك». */
+export const CURRENCY_AR: Record<string, string> = { KWD: "د.ك", USD: "دولار", SAR: "ر.س", AED: "د.إ", QAR: "ر.ق", BHD: "د.ب", OMR: "ر.ع", EUR: "يورو" };
+export const currencyLabel = (code: string | undefined | null, ar = true): string => {
+  const raw = String(code ?? "");
+  return (ar && CURRENCY_AR[raw.toUpperCase()]) || raw;
+};
+/** مبلغ ينسّقه الخادم («395.000 KWD») ← «395.000 د.ك» في العرض العربي. */
+export const formattedMoney = (value: string | undefined | null, ar = true): string => {
+  const raw = String(value ?? "");
+  return ar ? raw.replace(/\s([A-Z]{3})$/, (_m, code: string) => ` ${currencyLabel(code, true)}`) : raw;
+};
+/** مفتاح مستوى من الخادم («L5») ← «مستوى 5». */
+export const levelKeyLabel = (key: string, ar = true): string => {
+  const m = /^L(\d+)$/.exec(String(key));
+  return ar && m ? `مستوى ${m[1]}` : key;
+};
+
+/*
+ * نصوص البيانات التي تحمل مصطلحاً إنجليزياً بين قوسين.
+ *
+ * «قائمة انتظار KG2 (Waiting List)» نصٌّ عربيٌّ كاملٌ أُلحق به شرحٌ إنجليزي. العرض يحذف الشرح
+ * المكرَّر ويعرّب ما بقي، والنص الأصلي يبقى في تلميح العنصر (انظر `Dt`). لا يُلمس ما لا نعرفه.
+ * أسماء المنتجات والجهات (Google Calendar، K-Net، Future SIS Core…) تبقى كما هي.
+ */
+const DATA_PHRASES: [RegExp, string][] = [
+  [/\s*\((?:Waiting List|Brother\/Sister Priority|First Come, First Served|Campus Tour|Refund|Underage Check|Expired Refund|Prompt Injection Shield|Firebase Firestore|Firestore|Teach|Family Hub CRM|Doc Vault & Vision)\)/g, ""],
+  [/\s*\(Happy Path - KG2\)/g, " (الروضة الثانية)"],
+  [/"Teach AI"/g, "«علّم»"],
+  [/\(مرحلة الروضة KG\)/g, "(مرحلة الروضة)"],
+  [/\(KG\)/g, "(الروضة)"],
+  [/لـ\s?KG2\b/g, "للروضة الثانية"],
+  [/\bKG1\/KG2\b/g, "الروضة الأولى والثانية"],
+  [/\bKG1\b/g, "الروضة الأولى"],
+  [/\bKG2\b/g, "الروضة الثانية"],
+  [/نظام\s+SIS(?![A-Za-z0-9-]| Core)/g, "نظام السجلات"],
+  [/(?<![A-Za-z0-9-] )(?<![A-Za-z0-9-])SIS(?![A-Za-z0-9-]| Core)/g, "نظام السجلات"],
+];
+export function dataText(value: string | undefined | null, ar = true): string {
+  const raw = String(value ?? "");
+  if (!ar || !/[\u0600-\u06FF]/.test(raw)) return raw;
+  let out = raw;
+  for (const [pattern, replacement] of DATA_PHRASES) out = out.replace(pattern, replacement);
+  return out.replace(/\s{2,}/g, " ").trim() || raw;
+}
