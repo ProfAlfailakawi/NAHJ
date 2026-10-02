@@ -1220,8 +1220,8 @@
 /* الأشخاص: شبكة شخص × مهارة */
 .people-matrix{grid-column:1/-1;min-width:0;max-width:100%}.people-layout>*{min-width:0}.people-matrix-scroll{position:relative;overflow-x:auto;max-width:100%}
 .people-matrix table{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%}
-.people-matrix th[scope="col"]{font-weight:800;color:var(--muted);padding:4px 6px;text-align:center;vertical-align:bottom;max-width:110px}
-.people-matrix th[scope="col"] span{display:block;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.35;min-width:68px;max-width:110px;margin-inline:auto}
+.people-matrix th[scope="col"]{font-weight:800;color:var(--muted);padding:4px 6px;text-align:center;vertical-align:bottom;max-width:128px}
+.people-matrix th[scope="col"] span{display:block;white-space:normal;overflow-wrap:anywhere;word-break:normal;line-height:1.35;min-width:104px;max-width:128px;margin-inline:auto;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
 .people-matrix th[scope="row"]{text-align:start;font-weight:800;padding:6px 10px 6px 0;padding-inline:0 12px;white-space:nowrap}
 .people-matrix td{text-align:center;padding:5px 6px;border-top:1px solid var(--line)}
 .people-matrix td svg,.pm-legend svg{width:14px;height:14px;vertical-align:middle}
