@@ -1187,7 +1187,7 @@
 .trace-ladder i svg{width:11px;height:11px;color:var(--moss)}
 /* الرسم المصغّر داخل البطاقة الإحصائية */
 .stat-tile{position:relative}
-.stat-tile .stat-spark{position:absolute;inset-inline-end:12px;inset-block-end:9px;display:flex;opacity:.9;pointer-events:none}
+.stat-tile .stat-spark{grid-column:2;grid-row:3;justify-self:start;display:flex;margin-top:4px;opacity:.9;pointer-events:none;max-width:100%;overflow:hidden}
 /* شريط الذاكرة المكدّس */
 .memory-bar-wrap{grid-column:1/-1;display:grid;gap:6px}
 .memory-bar{display:flex;gap:2px;height:10px;border-radius:99px;overflow:hidden;background:rgba(16,37,31,.06)}
@@ -1287,3 +1287,6 @@
 
 /* Skills: تسميات درجات السُّلّم السبع فوق الأشرطة تظهر من sm فأكثر؛ تبقى في DOM للقارئ الشاشي. */
 @media(max-width:639px){.skills-axis{position:absolute;width:1px;height:1px;margin:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
+
+/* Today (desktop): the four pulse stats sit in one row under the orbit summary instead of a tall narrow column that left a void beside it. */
+@media(min-width:1181px){.hero-grid{grid-template-columns:minmax(0,1fr)}.hero-grid>.pulse-stats{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:auto}}
