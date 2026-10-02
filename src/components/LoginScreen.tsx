@@ -56,6 +56,18 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated, demoEnabled, de
             <strong>{ar ? "نهج" : "NAHJ"}</strong>
             <small>{ar ? "نظام التعلّم التشغيلي" : "Operational Learning OS"}</small>
           </div>
+          {demoEnabled && !needsSetup && (
+            <button
+              type="button"
+              className="demo-enter demo-enter--icon login-demo-icon"
+              onClick={onEnterDemo}
+              disabled={demoBusy}
+              title={demoBusy ? (ar ? "جارٍ تجهيز التجربة..." : "Preparing demo...") : (ar ? "جرّب نهج بدون تسجيل — بيئة تجريبية معزولة" : "Try NAHJ without signing in — isolated sandbox")}
+              aria-label={ar ? "جرّب نهج بدون تسجيل" : "Try NAHJ without signing in"}
+            >
+              <FlaskConical aria-hidden="true" />
+            </button>
+          )}
         </div>
 
         <p className="login-hint">
@@ -137,15 +149,6 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated, demoEnabled, de
           </div>
         )}
       </form>
-      {demoEnabled && (
-        <div className="login-demo-outside">
-          <button type="button" className="demo-enter" onClick={onEnterDemo} disabled={demoBusy}>
-            <FlaskConical aria-hidden="true" />
-            <span>{demoBusy ? (ar ? "جارٍ تجهيز التجربة..." : "Preparing demo...") : (ar ? "جرّب نهج بدون تسجيل" : "Try NAHJ without signing in")}</span>
-          </button>
-          <small>{ar ? "بيئة تجريبية معزولة ببيانات افتراضية" : "An isolated sandbox with sample data"}</small>
-        </div>
-      )}
     </div>
   );
 }
