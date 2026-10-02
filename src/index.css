@@ -1271,3 +1271,10 @@
 
 /* Skills: الصفوف بعد الخامس في «عرض الكل» مطويّاً افتراضياً. */
 .skills-more{margin-top:8px}.skills-more>summary{cursor:pointer;list-style:none;padding:10px 12px;border-radius:14px;border:1px dashed var(--line-strong);text-align:center;font-size:13px;font-weight:900;color:var(--muted)}.skills-more>summary::-webkit-details-marker{display:none}.skills-more[open]>summary{margin-bottom:8px}
+/* Today: المدار مطويّ افتراضياً على الهاتف فقط؛ على سطح المكتب يبقى مفتوحاً والعنوان مخفياً. */
+.brain-collapse>summary{display:none;list-style:none;cursor:pointer}.brain-collapse>summary::-webkit-details-marker{display:none}
+
+@media(max-width:620px){
+  .brain-collapse>summary{display:block;padding:14px 16px;font-size:14px;font-weight:900;border-radius:20px;background:rgba(255,255,255,.7);border:1px solid var(--line)}
+  .brain-collapse[open]>summary{margin-bottom:8px}
+}
