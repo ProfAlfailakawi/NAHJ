@@ -1087,7 +1087,7 @@
   .demo-banner-switch{flex:1 1 100%}
   .demo-banner-switch select{flex:1}
 }
-@media(max-width:620px){.work-filters button{min-height:40px}.work-more,.audit-more{min-height:44px}}
+@media(max-width:620px){.work-filters{display:grid;grid-template-columns:1fr 1fr}.work-filters button{min-height:44px;justify-content:center}.work-more,.audit-more{min-height:44px}}
 
 /* =====================================================================
    جولة الهدوء البصري — لوحة واحدة هادئة، واللون للحالة وحدها.
@@ -1254,8 +1254,8 @@
 .rule-list ul{margin:6px 0 0;padding-inline-start:18px;color:var(--ink);line-height:1.6}
 /* العمل: قمع بالأعداد */
 .work-funnel{display:grid;gap:4px;margin:2px 0 12px}
-.work-funnel>div{display:grid;grid-template-columns:minmax(96px,34%) 1fr 2.2em;align-items:center;gap:8px;font-size:12px}
-.work-funnel small{font-size:12px;font-weight:800;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.work-funnel>div{display:grid;grid-template-columns:minmax(112px,40%) 1fr 2.2em;align-items:center;gap:8px;font-size:12px}
+.work-funnel small{font-size:12px;font-weight:800;color:var(--muted);line-height:1.25;min-width:0;overflow-wrap:anywhere}
 .work-funnel span{height:7px;border-radius:99px;background:rgba(16,37,31,.06);overflow:hidden;display:block}
 .work-funnel i{display:block;height:100%;border-radius:99px;background:var(--moss)}
 .work-funnel .esc i{background:var(--rose)}
