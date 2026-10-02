@@ -890,7 +890,7 @@
 .backup-form label{font-size:12px;font-weight:850;color:var(--muted)}
 .backup-form input{height:34px;border:1px solid var(--line-strong);border-radius:10px;padding:0 9px;font:inherit;font-size:13px;min-width:0;width:150px}
 .backup-form button{height:34px;border:0;border-radius:10px;background:var(--ink);color:#fff;padding:0 11px;display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:900;cursor:pointer}
-.backup-form button:disabled{opacity:.5;cursor:not-allowed}
+.backup-form button:disabled{opacity:1;background:#eef0ee;color:#6b746f;border:1px solid var(--line-strong);cursor:not-allowed}.backup-form button:disabled svg{opacity:.7}
 .backup-form svg{width:14px}
 .people-list ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
 .people-list li{padding:10px 12px;border-radius:12px;background:rgba(16,37,31,.035);display:flex;flex-direction:column;gap:2px;font-size:13px}
