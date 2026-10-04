@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FlaskConical, LogIn, TriangleAlert } from "lucide-react";
+import { FlaskConical, LogIn, Play, TriangleAlert } from "lucide-react";
 import { NahjMark } from "./Brand";
 import { ApiError, authApi } from "../lib/api";
 
@@ -142,6 +142,19 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated, demoEnabled, de
 
         {!needsSetup && marketing && (
           <div className="login-links-row">
+            {demoEnabled && (
+              <button
+                type="button"
+                className="login-demo-cta"
+                onClick={onEnterDemo}
+                disabled={demoBusy}
+              >
+                <Play aria-hidden="true" />
+                {demoBusy
+                  ? ar ? "جارٍ تجهيز التجربة..." : "Preparing demo..."
+                  : ar ? "جرّب العرض التوضيحي" : "Try the interactive demo"}
+              </button>
+            )}
             <div className="login-links">
               <a href="/">{ar ? "عن نهج" : "About NAHJ"}</a>
               <a href="/pricing">{ar ? "الباقات والأسعار" : "Plans & pricing"}</a>
