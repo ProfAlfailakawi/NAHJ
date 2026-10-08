@@ -29,7 +29,7 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
   const matches=(w:WorkItem)=>filter==="all"||(filter==="live"?w.state!=="completed"&&w.state!=="waiting_approval":filter==="approval"?w.state==="waiting_approval"||w.state==="escalated":w.state==="completed");
   const filtered=useMemo(()=>items.filter(matches),[items,filter]); // eslint-disable-line react-hooks/exhaustive-deps
   const counts={all:items.length,live:items.filter(w=>w.state!=="completed"&&w.state!=="waiting_approval").length,approval:items.filter(w=>w.state==="waiting_approval"||w.state==="escalated").length,done:items.filter(w=>w.state==="completed").length};
-  const tabs:[typeof filter,string][]=[["all",ar?"الكل":"All"],["live",ar?"جارية بلا قرار":"Running, no decision"],["approval",ar?"تحتاج قراراً":"Needs a decision"],["done",ar?"مكتملة":"Completed"]];
+  const tabs:[typeof filter,string][]=[["all",ar?"الكل":"All"],["live",ar?"جارية دون انتظار موافقة":"Running, not awaiting approval"],["approval",ar?"تحتاج قراراً":"Needs a decision"],["done",ar?"مكتملة":"Completed"]];
   return <div className="page-enter">
     <PageHeader eyebrow={ar?"العمل / مباشر":"WORK / LIVE"} title={ar?"العمل يتحرك أمامك.":"Watch the work move."} hint={ar?"كل حالة لها مسار، قرار، مصدر، وإنسان يستطيع الاستلام فورًا.":"Every case has a path, evidence, and a human takeover switch."}/>
     <div className="work-layout">
