@@ -29,12 +29,12 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
   const matches=(w:WorkItem)=>filter==="all"||(filter==="live"?w.state!=="completed"&&w.state!=="waiting_approval":filter==="approval"?w.state==="waiting_approval"||w.state==="escalated":w.state==="completed");
   const filtered=useMemo(()=>items.filter(matches),[items,filter]); // eslint-disable-line react-hooks/exhaustive-deps
   const counts={all:items.length,live:items.filter(w=>w.state!=="completed"&&w.state!=="waiting_approval").length,approval:items.filter(w=>w.state==="waiting_approval"||w.state==="escalated").length,done:items.filter(w=>w.state==="completed").length};
-  const tabs:[typeof filter,string][]=[["all",ar?"الكل":"All"],["live",ar?"جارية":"Running"],["approval",ar?"تحتاج قراراً":"Needs a decision"],["done",ar?"مكتملة":"Completed"]];
+  const tabs:[typeof filter,string][]=[["all",ar?"الكل":"All"],["live",ar?"جارية دون انتظار موافقة":"Running, not awaiting approval"],["approval",ar?"تحتاج قراراً":"Needs a decision"],["done",ar?"مكتملة":"Completed"]];
   return <div className="page-enter">
     <PageHeader eyebrow={ar?"العمل / مباشر":"WORK / LIVE"} title={ar?"العمل يتحرك أمامك.":"Watch the work move."} hint={ar?"كل حالة لها مسار، قرار، مصدر، وإنسان يستطيع الاستلام فورًا.":"Every case has a path, evidence, and a human takeover switch."}/>
     <div className="work-layout">
       <section className="work-queue surface">
-        <SectionTitle title={ar?"الجاري":"Live"} meta={`${items.filter(i=>i.state!=="completed").length}`}/>
+        <SectionTitle title={ar?"الجاري":"Live"} meta={ar?`${items.filter(i=>i.state!=="completed").length} لم تكتمل بعد`:`${items.filter(i=>i.state!=="completed").length} not completed`}/>
         {items.length>0&&(()=>{const stages=[...WORK_FLOW,...(items.some(w=>w.state==="escalated")?["escalated"]:[])];const max=Math.max(1,...stages.map(st=>items.filter(w=>w.state===st).length));
           return <div className="work-funnel" role="list" aria-label={ar?"عدد الحالات في كل مرحلة":"Cases per stage"}>
             {stages.map(st=>{const n=items.filter(w=>w.state===st).length;return <div role="listitem" key={st} className={`${n?"has":""} ${st==="escalated"?"esc":""}`}><small>{workStatePlain(st,ar)}</small><span aria-hidden="true"><i style={{width:`${n?Math.max(4,n/max*100):0}%`}}/></span><b>{n}</b></div>})}
