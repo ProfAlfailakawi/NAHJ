@@ -133,7 +133,7 @@ export function AnalyticsView({ lang, data }: Props) {
                 <div key={point.day} role="listitem" className={point.events === max && max > 0 ? "is-peak" : ""}
                   title={`${weekdayLabel(point.day, point.label, ar)}: ${point.events} ${ar ? "حدث" : "events"}`}
                   aria-label={`${weekdayLabel(point.day, point.label, ar)}: ${point.events} ${ar ? "حدث" : "events"}`}>
-                  <span style={{ height: `${Math.max(6, (point.events / max) * 100)}%` }} />
+                  <span style={{ height: `calc((100% - 46px) * ${Math.max(0.06, point.events / max)})` }} />
                   <b>{point.events}</b>
                   <small title={weekdayLabel(point.day, point.label, ar)}>{weekdayLabel(point.day, point.label, ar)}</small>
                 </div>

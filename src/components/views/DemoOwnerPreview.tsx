@@ -92,7 +92,7 @@ export function DemoOwnerPreview({ lang, kind }: { lang: "ar" | "en"; kind: "own
             <SectionTitle title={t("الباقات", "Plans")} />
             <div className="demo-ledger"><table>
               <thead><tr><th>{t("الباقة", "Plan")}</th><th>{t("شهرياً", "Monthly")}</th><th>{t("المقاعد", "Seats")}</th><th>{t("مؤسسات", "Organisations")}</th></tr></thead>
-              <tbody>{PLANS.map(plan => <tr key={plan.en}><td>{ar ? plan.ar : plan.en}</td><td>{kwd(plan.monthly, ar)}</td><td>{plan.seats}</td><td>{plan.orgs}</td></tr>)}</tbody>
+              <tbody>{PLANS.map(plan => <tr key={plan.en}><td data-l={t("الباقة", "Plan")}>{ar ? plan.ar : plan.en}</td><td data-l={t("شهرياً", "Monthly")}>{kwd(plan.monthly, ar)}</td><td data-l={t("المقاعد", "Seats")}>{plan.seats}</td><td data-l={t("مؤسسات", "Organisations")}>{plan.orgs}</td></tr>)}</tbody>
             </table></div>
           </section>
           <section className="surface-strong owner-block">
@@ -101,8 +101,8 @@ export function DemoOwnerPreview({ lang, kind }: { lang: "ar" | "en"; kind: "own
               <thead><tr><th>{t("المؤسسة", "Organisation")}</th><th>{t("القطاع", "Sector")}</th><th>{t("الباقة", "Plan")}</th><th>{t("الحالة", "Status")}</th><th>{t("التجديد", "Renewal")}</th></tr></thead>
               <tbody>{ORGS.map(org => (
                 <tr key={org.en}>
-                  <td>{ar ? org.ar : org.en}</td><td>{org.sector[ar ? 0 : 1]}</td><td>{ar ? PLANS[org.plan].ar : PLANS[org.plan].en}</td>
-                  <td>{STATUS_LABEL[org.status][ar ? 0 : 1]}</td><td>{fmt(dayOffset(org.renew), ar)}</td>
+                  <td data-l={t("المؤسسة", "Organisation")}>{ar ? org.ar : org.en}</td><td data-l={t("القطاع", "Sector")}>{org.sector[ar ? 0 : 1]}</td><td data-l={t("الباقة", "Plan")}>{ar ? PLANS[org.plan].ar : PLANS[org.plan].en}</td>
+                  <td data-l={t("الحالة", "Status")}>{STATUS_LABEL[org.status][ar ? 0 : 1]}</td><td data-l={t("التجديد", "Renewal")}>{fmt(dayOffset(org.renew), ar)}</td>
                 </tr>))}</tbody>
             </table></div>
           </section>
@@ -110,7 +110,7 @@ export function DemoOwnerPreview({ lang, kind }: { lang: "ar" | "en"; kind: "own
             <SectionTitle title={t("آخر الفواتير", "Recent invoices")} />
             <div className="demo-ledger"><table>
               <thead><tr><th>{t("الرقم", "No.")}</th><th>{t("المؤسسة", "Organisation")}</th><th>{t("المبلغ", "Amount")}</th><th>{t("الإصدار", "Issued")}</th><th>{t("الحالة", "Status")}</th></tr></thead>
-              <tbody>{invoices.map(inv => <tr key={inv.no}><td>{inv.no}</td><td>{inv.org}</td><td>{kwd(inv.amount, ar)}</td><td>{fmt(inv.issued, ar)}</td><td>{invoiceState[inv.state][ar ? 0 : 1]}</td></tr>)}</tbody>
+              <tbody>{invoices.map(inv => <tr key={inv.no}><td data-l={t("الرقم", "No.")}>{inv.no}</td><td data-l={t("المؤسسة", "Organisation")}>{inv.org}</td><td data-l={t("المبلغ", "Amount")}>{kwd(inv.amount, ar)}</td><td data-l={t("الإصدار", "Issued")}>{fmt(inv.issued, ar)}</td><td data-l={t("الحالة", "Status")}>{invoiceState[inv.state][ar ? 0 : 1]}</td></tr>)}</tbody>
             </table></div>
           </section>
         </>
@@ -127,7 +127,7 @@ export function DemoOwnerPreview({ lang, kind }: { lang: "ar" | "en"; kind: "own
             <div className="demo-ledger"><table>
               <thead><tr><th>{t("المسوّق", "Partner")}</th><th>{t("الرمز", "Code")}</th><th>{t("طلبات", "Leads")}</th><th>{t("اشتراكات", "Converted")}</th><th>{t("النسبة", "Rate")}</th><th>{t("مستحق", "Due")}</th><th>{t("مدفوع", "Paid")}</th></tr></thead>
               <tbody>{PARTNERS.map(p => (
-                <tr key={p.code}><td>{ar ? p.ar : p.en}</td><td>{p.code}</td><td>{p.leads}</td><td>{p.won}</td><td>{p.rate}%</td><td>{kwd(p.pending, ar)}</td><td>{kwd(p.paid, ar)}</td></tr>))}</tbody>
+                <tr key={p.code}><td data-l={t("المسوّق", "Partner")}>{ar ? p.ar : p.en}</td><td data-l={t("الرمز", "Code")}>{p.code}</td><td data-l={t("طلبات", "Leads")}>{p.leads}</td><td data-l={t("اشتراكات", "Converted")}>{p.won}</td><td data-l={t("النسبة", "Rate")}>{p.rate}%</td><td data-l={t("مستحق", "Due")}>{kwd(p.pending, ar)}</td><td data-l={t("مدفوع", "Paid")}>{kwd(p.paid, ar)}</td></tr>))}</tbody>
             </table></div>
           </section>
         </>
