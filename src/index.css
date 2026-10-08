@@ -1450,3 +1450,6 @@
   .people-matrix th[scope="row"]{padding-inline:0 8px}
   .people-matrix td{padding:5px 3px}
 }
+/* Teach step notes: show a wrapped placeholder or text fully on phones */
+.transcript-edit textarea{field-sizing:content}
+@media (max-width:520px){.transcript-edit textarea{min-height:56px}}
