@@ -1462,3 +1462,7 @@
 
 /* Collapsed folds (Billing plan features): spacing under the summary. */
 .skills-more.eval-fold>.feature-grid{margin-top:10px}
+
+/* Practice (wide screens): the two folded decks hug their content instead of stretching beside the tall ring. */
+.graduation-grid>.eval-deck,.graduation-grid>.shadow-deck{align-self:start}
+@media(min-width:1181px){.graduation-grid{grid-template-rows:auto 1fr}}
