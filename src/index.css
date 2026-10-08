@@ -1259,7 +1259,7 @@
 /* العمل: قمع بالأعداد */
 .work-funnel{display:grid;gap:4px;margin:2px 0 12px}
 .work-funnel>div{display:grid;grid-template-columns:minmax(112px,40%) 1fr 2.2em;align-items:center;gap:8px;font-size:12px}
-.work-funnel small{font-size:12px;font-weight:800;color:var(--muted);line-height:1.25;min-width:0;overflow-wrap:anywhere}
+.work-funnel small{font-size:12px;font-weight:800;color:var(--muted);line-height:1.25;min-width:0}
 .work-funnel span{height:7px;border-radius:99px;background:rgba(16,37,31,.06);overflow:hidden;display:block}
 .work-funnel i{display:block;height:100%;border-radius:99px;background:var(--moss)}
 .work-funnel .esc i{background:var(--rose)}
@@ -1402,3 +1402,42 @@
 
 /* Governance halo: ".ring-1/.ring-3" collide with Tailwind ring utilities, which painted heavy dark outlines; they are plain rings here. */
 .governance-shield .shield-ring{box-shadow:none}
+
+/* Analytics week bars: bar height is exactly proportional (the span no longer shrinks against the labels under it). */
+.weekly-visual .bars span{flex:none}
+
+/* Billing: export buttons sit in a tidy grid on phones; money tiles shrink so the unit stays on the line. */
+@media(max-width:620px){
+  .export-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .export-actions button{justify-content:center;min-height:44px}
+  .export-actions button.btn-primary{grid-column:1/-1}
+  .sub-stats .stat-tile strong{font-size:clamp(18px,5.4vw,24px);min-width:0}
+}
+
+/* Simulator trace (phones): compact orb and a two-column stage ladder instead of one tall stack. */
+@media(max-width:900px){
+  .sim-trace{min-height:0}
+  .sim-trace .trace-orb{width:60px;height:60px;border-radius:22px}
+  .sim-trace .trace-ladder{grid-template-columns:repeat(2,minmax(0,1fr));margin-top:16px}
+  .sim-trace .trace-ladder>div{min-width:0}
+  .sim-trace .trace-ladder small{min-width:0;overflow-wrap:anywhere;line-height:1.25}
+}
+
+/* Demo owner preview ledgers (phones): each row becomes a small card of label/value pairs. The header row stays in the DOM, visually hidden. */
+@media(max-width:640px){
+  .demo-ledger{overflow-x:visible}
+  .demo-ledger table{min-width:0;display:block}
+  .demo-ledger thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .demo-ledger tbody{display:grid;gap:8px}
+  .demo-ledger tr{display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.55)}
+  .demo-ledger td{display:flex;flex-direction:column;gap:1px;padding:3px 0;border:0;white-space:normal;font-size:13px;font-weight:800;min-width:0}
+  .demo-ledger td::before{content:attr(data-l);font-size:12px;font-weight:700;color:var(--muted)}
+}
+
+/* Skills (narrow phones): the skill name wraps instead of being cut with an ellipsis. */
+@media(max-width:400px){.skill-lane-head strong{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.4}}
+
+/* Impact (phones): the single column may shrink below its content instead of pushing the cards wider than the screen at 320px. */
+@media(max-width:900px){.impact-layout{grid-template-columns:minmax(0,1fr)}.impact-layout>*{min-width:0}}
+@media(max-width:360px){.sub-stats{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:400px){.weekly-visual .bars{gap:3px;justify-content:space-between}.weekly-visual .bars>div{min-width:0}}
