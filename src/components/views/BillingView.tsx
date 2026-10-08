@@ -363,6 +363,8 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
         <section className="surface-strong sub-block">
           <SectionTitle title={ar ? `ما تشمله باقة «${plan.nameAr}»` : `What "${plan.nameEn}" includes`} icon={<Layers />}
             meta={plan.taglineAr && ar ? plan.taglineAr : plan.taglineEn} />
+          <details className="skills-more eval-fold">
+          <summary>{ar ? `عرض الكل (${FEATURE_ORDER.length})` : `Show all (${FEATURE_ORDER.length})`}</summary>
           <div className="feature-grid">
             {FEATURE_ORDER.map(key => {
               const on = Boolean(features[key]);
@@ -374,6 +376,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
               );
             })}
           </div>
+          </details>
           {subscription && (subscription.discountBps > 0 || subscription.taxBps > 0) && (
             <div className="sub-terms">
               {subscription.discountBps > 0 && <span>{ar ? "خصم تعاقدي" : "Contract discount"}: <b>{(subscription.discountBps / 100).toFixed(2)}%</b></span>}

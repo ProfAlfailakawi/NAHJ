@@ -1459,3 +1459,6 @@
 /* Teach step notes: show a wrapped placeholder or text fully on phones */
 .transcript-edit textarea{field-sizing:content}
 @media (max-width:520px){.transcript-edit textarea{min-height:56px}}
+
+/* Collapsed folds (Billing plan features): spacing under the summary. */
+.skills-more.eval-fold>.feature-grid{margin-top:10px}
