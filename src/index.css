@@ -1411,7 +1411,8 @@
   .export-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
   .export-actions button{justify-content:center;min-height:44px}
   .export-actions button.btn-primary{grid-column:1/-1}
-  .sub-stats .stat-tile strong{font-size:clamp(18px,5.4vw,24px);min-width:0}
+  .sub-stats .stat-tile{grid-template-areas:"icon label" "value value";row-gap:8px}
+  .sub-stats .stat-tile strong{font-size:clamp(17px,5vw,22px);min-width:0;white-space:nowrap}
 }
 
 /* Simulator trace (phones): compact orb and a two-column stage ladder instead of one tall stack. */
@@ -1441,3 +1442,11 @@
 @media(max-width:900px){.impact-layout{grid-template-columns:minmax(0,1fr)}.impact-layout>*{min-width:0}}
 @media(max-width:360px){.sub-stats{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:400px){.weekly-visual .bars{gap:3px;justify-content:space-between}.weekly-visual .bars>div{min-width:0}}
+
+/* People matrix (narrow phones): tighter columns so a couple of skills fit without sideways scrolling, and long skill names may use more lines. */
+@media(max-width:400px){
+  .people-matrix th[scope="col"]{padding:4px 3px}
+  .people-matrix th[scope="col"] span{min-width:62px;max-width:96px;-webkit-line-clamp:4;line-clamp:4}
+  .people-matrix th[scope="row"]{padding-inline:0 8px}
+  .people-matrix td{padding:5px 3px}
+}
