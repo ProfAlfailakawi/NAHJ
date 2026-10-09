@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { DEFAULT_CURRENCY, formatMoney, listPlans, type Plan, type PlanFeatures } from "./billing.ts";
-import { contactEmail, renderLandingPage, renderPrivacyPage, renderTermsPage } from "./marketingPages.ts";
+import { contactEmail, page, renderLandingPage, renderPrivacyPage, renderTermsPage } from "./marketingPages.ts";
 import { authCookieNames } from "./auth.ts";
 import { listSectors } from "./packs/index.ts";
 import { createLead, LeadError } from "./leads.ts";
@@ -132,44 +132,37 @@ export function publicPlans(): PublicPlanView[] {
 /* -------------------------------------------------------------- الصفحة */
 
 const STYLE = `
-  :root { --ink:#10251f; --muted:#6b7f79; --line:#e3ebe8; --moss:#2f6b57; --amber:#8a6a1f; --bg:#f7faf9; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font-family:system-ui,"Segoe UI",Tahoma,sans-serif; line-height:1.8; }
-  .wrap { max-width:1100px; margin:0 auto; padding:48px 20px 80px; }
-  header h1 { font-size:34px; margin:0 0 8px; letter-spacing:-.5px; }
-  header p { color:var(--muted); margin:0; max-width:680px; font-size:16px; }
-  .cycle { display:flex; gap:8px; margin:28px 0 20px; flex-wrap:wrap; }
-  .cycle button { border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:999px;
-    padding:8px 18px; font:inherit; font-size:14px; cursor:pointer; }
-  .cycle button[aria-pressed="true"] { background:var(--ink); color:#fff; border-color:var(--ink); }
-  .plans { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; }
-  .plan { background:#fff; border:1px solid var(--line); border-radius:22px; padding:22px; }
-  .plan h2 { margin:0 0 4px; font-size:20px; }
-  .plan .tag { color:var(--muted); font-size:14px; min-height:22px; }
-  .cta { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin:32px 0 8px; }
-  .cta a { padding:12px 20px; border-radius:999px; border:1px solid var(--line); background:#fff; color:var(--ink); text-decoration:none; font-weight:700; }
-  .cta a.primary { background:var(--ink); color:#fff; border-color:var(--ink); }
-  .price { font-size:30px; font-weight:800; margin:14px 0 2px; letter-spacing:-1px; }
-  .per { color:var(--muted); font-size:13px; }
-  .setup { color:var(--muted); font-size:13px; margin-top:6px; }
-  .limits { list-style:none; padding:0; margin:16px 0; border-top:1px solid var(--line); }
-  .limits li { display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--line); font-size:14px; }
+  .pricing { padding:56px 0 8px; }
+  .pricing .eyebrow { display:inline-block; font-size:14px; font-weight:800; color:var(--moss); background:var(--moss-soft); padding:6px 12px; border-radius:999px; }
+  .pricing h1 { font-size:clamp(32px, 5.4vw, 50px); line-height:1.25; margin:16px 0 12px; font-weight:900; letter-spacing:-.4px; }
+  .pricing .lead { color:var(--muted); max-width:720px; margin:0; font-size:clamp(17px, 2.2vw, 20px); }
+  .cycle { display:inline-flex; gap:4px; margin:30px 0 22px; padding:5px; border:1px solid var(--line); background:var(--card); border-radius:999px; flex-wrap:wrap; }
+  .cycle button { border:0; background:transparent; color:var(--muted); border-radius:999px; padding:9px 22px; font:inherit; font-size:15px; font-weight:800; cursor:pointer; min-height:44px; transition:background .2s, color .2s; }
+  .cycle button:hover { color:var(--ink); }
+  .cycle button[aria-pressed="true"] { background:var(--ink); color:var(--bg); }
+  .cycle button:focus-visible { outline:3px solid var(--moss); outline-offset:2px; }
+  .plans { display:grid; grid-template-columns:repeat(auto-fit, minmax(235px, 1fr)); gap:14px; }
+  .plan { display:flex; flex-direction:column; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:24px 20px; transition:transform .25s, box-shadow .25s, border-color .25s; }
+  .plan:hover { transform:translateY(-4px); box-shadow:var(--shadow); border-color:color-mix(in srgb, var(--moss) 50%, var(--line)); }
+  .plan h2 { margin:0 0 4px; font-size:24px; font-weight:900; }
+  .plan .tag { color:var(--muted); font-size:15px; min-height:26px; }
+  .price { font-size:clamp(26px, 2.5vw, 31px); font-weight:900; margin:18px 0 0; line-height:1.2; color:var(--moss); font-variant-numeric:tabular-nums; }
+  .per { color:var(--muted); font-size:14px; min-height:22px; }
+  .setup { color:var(--muted); font-size:14px; margin-top:6px; }
+  .limits { list-style:none; padding:0; margin:18px 0; border-top:1px solid var(--line); }
+  .limits li { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--line); font-size:15px; }
+  .limits li span { color:var(--muted); }
   .limits b { font-variant-numeric:tabular-nums; }
   .feat { list-style:none; padding:0; margin:0; }
-  .feat li { padding:6px 0; font-size:14px; display:flex; gap:8px; align-items:flex-start; }
-  .dot { width:8px; height:8px; border-radius:50%; margin-top:8px; flex:none; background:var(--moss); }
+  .feat li { padding:5px 0; font-size:15px; display:flex; gap:10px; align-items:flex-start; line-height:1.7; }
+  .dot { width:9px; height:9px; border-radius:50%; margin-top:9px; flex:none; background:var(--moss); }
   .dot.simulated, .dot.planned { background:var(--amber); }
-  .state { font-size:12px; color:var(--amber); }
-  .honest { margin-top:36px; background:#fff; border:1px solid var(--line); border-radius:22px; padding:22px; }
-  .honest h3 { margin:0 0 10px; font-size:18px; }
-  .honest li { font-size:14px; margin-bottom:6px; }
-  footer { margin-top:32px; color:var(--muted); font-size:13px; }
-  @media (max-width:900px) { footer a { display:inline-flex; align-items:center; min-height:44px; padding:0 6px; } }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#0e1614; --ink:#eaf2ef; --line:#22332e; --muted:#9bb0aa; }
-    .plan, .honest { background:#121d1a; }
-    .cycle button { background:#121d1a; color:var(--ink); }
-  }
+  .state { font-size:13px; color:var(--amber); font-weight:700; }
+  .pricing-note { margin:28px 0 0; color:var(--muted); font-size:15px; }
+  .honest-wrap { margin-top:36px; }
+  .honest h3 { margin:0; font-size:21px; font-weight:900; }
+  .honest .why { color:var(--muted); font-size:15px; margin:14px 0 0; }
+  .p-cta { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin:40px 0 0; }
 `;
 
 /**
@@ -204,22 +197,12 @@ export function renderPricingPage(): string {
       </ul>
     </article>`).join("");
 
-  return `<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>نهج — الباقات والأسعار</title>
-<meta name="description" content="باقات نهج وأسعارها، وما هو مبنيٌّ منها وما هو في خارطة الطريق.">
-<link rel="icon" href="data:,">
-<style>${STYLE}</style>
-</head>
-<body>
+  const body = `
 <div class="wrap">
-  <header>
+  <section class="pricing">
+    <span class="eyebrow">الباقات والأسعار</span>
     <h1>نهج — الباقات</h1>
-    <p>عقلٌ تشغيلي يتعلّم من موظفيكم وهم يعملون، ولا ينفّذ إجراءً إلا بصلاحيةٍ استحقّها في التدرّب. الأسعار أدناه هي التي يُفوتَر بها فعلاً.</p>
-  </header>
+    <p class="lead">عقلٌ تشغيلي يتعلّم من موظفيكم وهم يعملون، ولا ينفّذ إجراءً إلا بصلاحيةٍ استحقّها في التدرّب. الأسعار أدناه هي التي يُفوتَر بها فعلاً.</p>
 
   ${plans.length ? `
   <div class="cycle" role="group" aria-label="دورة الفوترة">
@@ -229,27 +212,27 @@ export function renderPricingPage(): string {
   </div>
   <div class="plans">${cards}</div>` : `
   <div class="honest"><p>لا باقات علنية منشورة بعد. تواصل معنا لنعرض عليك عرضاً مفصّلاً.</p></div>`}
+  </section>
 
   <!--
     القسم الذي يمنع النقض بعد الشراء.
     من يكتشف بعد التوقيع أن «التكامل» لم يكن مبنياً لا يجدّد.
   -->
-  <section class="honest">
+  <section class="honest honest-wrap">
     <h3>ما هو مبنيٌّ اليوم، وما ليس بعد</h3>
     <ul>
-      <li><strong>مبنيّ:</strong> التعلّم من العمل، والحوكمة والموافقات وسقوف الاستقلالية، وسجلّ تدقيق لا يُعدَّل، والقياس المشتقّ، والاشتراك والفوترة والتحصيل الإلكتروني، والتصدير والنسخ الاحتياطي.</li>
-      <li><strong>محاكاة معلنة:</strong> موصلات الأنظمة الخارجية — تظهر داخل المنتج بوسم «محاكاة»، ولا تُخرج طلباً إلى أي نظام. أول وصلة حقيقية تُبنى مع أول عميل وبقراره.</li>
-      <li><strong>خارطة الطريق:</strong> الواجهة البرمجية للتطبيقات، والدخول الموحّد، وعلامة المؤسسة.</li>
+      <li><strong class="chip">مبنيّ:</strong><span>التعلّم من العمل، والحوكمة والموافقات وسقوف الاستقلالية، وسجلّ تدقيق لا يُعدَّل، والقياس المشتقّ، والاشتراك والفوترة والتحصيل الإلكتروني، والتصدير والنسخ الاحتياطي.</span></li>
+      <li><strong class="chip sim">محاكاة معلنة:</strong><span>موصلات الأنظمة الخارجية — تظهر داخل المنتج بوسم «محاكاة»، ولا تُخرج طلباً إلى أي نظام. أول وصلة حقيقية تُبنى مع أول عميل وبقراره.</span></li>
+      <li><strong class="chip soon">خارطة الطريق:</strong><span>الواجهة البرمجية للتطبيقات، والدخول الموحّد، وعلامة المؤسسة.</span></li>
     </ul>
-    <p style="color:var(--muted);font-size:14px;margin:8px 0 0">نكتب هذا قبل البيع لا بعده: البيع الذي يُنقض في أول تجديد أغلى من بيعٍ لم يقع.</p>
+    <p class="why">نكتب هذا قبل البيع لا بعده: البيع الذي يُنقض في أول تجديد أغلى من بيعٍ لم يقع.</p>
   </section>
 
-  <section class="cta">
-    <a class="primary" href="/#contact">اطلب عرضاً توضيحياً</a>
-    ${contact ? `<a href="mailto:${escapeHtml(contact)}?subject=${encodeURIComponent("طلب عرض — نهج")}">تواصل معنا: ${escapeHtml(contact)}</a>` : ""}
-  </section>
-
-  <footer><a href="/">الرئيسية</a> · <a href="/terms">شروط الاستخدام</a> · <a href="/privacy">سياسة الخصوصية</a><br>الأسعار بالدينار الكويتي وتشمل ما هو مذكور أعلاه. ${contact ? `للتعاقد أو لعرضٍ مخصّص راسلنا على ${escapeHtml(contact)}.` : "للتعاقد أو لعرضٍ مخصّص تواصل معنا."}</footer>
+  <div class="p-cta">
+    <a class="btn primary" href="/#contact">اطلب عرضاً توضيحياً</a>
+    ${contact ? `<a class="btn" href="mailto:${escapeHtml(contact)}?subject=${encodeURIComponent("طلب عرض — نهج")}">تواصل معنا: ${escapeHtml(contact)}</a>` : ""}
+  </div>
+  <p class="pricing-note">الأسعار بالدينار الكويتي وتشمل ما هو مذكور أعلاه. ${contact ? `للتعاقد أو لعرضٍ مخصّص راسلنا على ${escapeHtml(contact)}.` : "للتعاقد أو لعرضٍ مخصّص تواصل معنا."}</p>
 </div>
 <script>
   /* تبديل الدورة يقرأ الأسعار المرسومة في الصفحة — لا طلب شبكة بعد التحميل. */
@@ -267,9 +250,18 @@ export function renderPricingPage(): string {
       });
     });
   });
-</script>
-</body>
-</html>`;
+</script>`;
+
+  return page({
+    title: "نهج — الباقات والأسعار",
+    description: "باقات نهج وأسعارها، وما هو مبنيٌّ منها وما هو في خارطة الطريق.",
+    path: "/pricing",
+    body,
+    style: STYLE,
+    index: false,
+    /* الصفحة مكتفية بذاتها ولا تطلب من الشبكة شيئاً — فلا خطّ خارجي هنا. */
+    fonts: false,
+  });
 }
 
 /* ------------------------------------------------------------ المسارات */

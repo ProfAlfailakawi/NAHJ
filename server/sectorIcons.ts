@@ -18,3 +18,9 @@ export function sectorIconSvg(code: string): string {
   const inner = ICONS[code] || ICONS.general;
   return `<span class="sector-icon" style="background:${TONES[code] || TONES.general}"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg></span>`;
 }
+
+/** الرمز وحده بلا خلفية مدمجة — لون الخلفية والرمز من رموز الصفحة فيصحّ في الوضع الداكن. */
+export function sectorGlyph(code: string): string {
+  const inner = ICONS[code] || ICONS.general;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+}

@@ -1,6 +1,6 @@
 import { listSectors, getSectorPack, EDUCATION_CODE } from "./packs/index.ts";
 import { escapeHtml, publicPlans, CUSTOM_PRICE } from "./publicPages.ts";
-import { sectorIconSvg } from "./sectorIcons.ts";
+import { sectorGlyph } from "./sectorIcons.ts";
 
 /*
  * الصفحات التسويقية: الهبوط، والشروط، والخصوصية.
@@ -34,10 +34,10 @@ function legalName(): string {
 
 /* ------------------------------------------------------------ الإطار */
 
-const BASE_STYLE = `
-  :root { --ink:#10251f; --muted:#5d716b; --line:#e2e8e4; --moss:#2f7d65; --moss-soft:#e7f1ec; --amber:#b9852f; --bg:#f4f1e8; --card:#fffdf7; }
+export const BASE_STYLE = `
+  :root { --ink:#10251f; --muted:#5d716b; --line:#e2e8e4; --moss:#2f7d65; --moss-soft:#e7f1ec; --amber:#b9852f; --amber-soft:#f6ecd6; --sky:#4a63cf; --sky-soft:#e8ecfb; --coral:#c2553f; --violet:#7357c4; --err:#b3392b; --bg:#f4f1e8; --card:#fffdf7; --r:20px; --shadow:0 18px 40px -26px rgba(16,37,31,.45); }
   @media (prefers-color-scheme: dark) {
-    :root { --ink:#eef3f0; --muted:#a4b3ad; --line:#2a3833; --moss:#6fc3a3; --moss-soft:#17302a; --amber:#e0b36a; --bg:#0f1714; --card:#16211d; }
+    :root { --ink:#eef3f0; --muted:#a4b3ad; --line:#2a3833; --moss:#6fc3a3; --moss-soft:#17302a; --amber:#e0b36a; --amber-soft:#2e2815; --sky:#8ea2f0; --sky-soft:#1b2342; --coral:#ef8f78; --violet:#b3a0ee; --err:#ff9b8c; --bg:#0f1714; --card:#16211d; --shadow:0 18px 40px -26px rgba(0,0,0,.8); }
   }
   * { box-sizing:border-box; }
   html { scroll-behavior:smooth; }
@@ -55,8 +55,20 @@ const BASE_STYLE = `
   .top nav a { white-space:nowrap; }
   /* الترويسة لاصقة: القفز إلى قسمٍ لا يُخفي عنوانه تحتها. */
   [id] { scroll-margin-top:84px; }
-  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 22px; border-radius:14px; font-weight:800; text-decoration:none; border:1px solid var(--line); background:var(--card); color:var(--ink); font-size:16px; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 22px; border-radius:14px; font-weight:800; text-decoration:none; border:1px solid var(--line); background:var(--card); color:var(--ink); font-size:16px; font-family:inherit; cursor:pointer; transition:transform .2s, box-shadow .2s, border-color .2s, background .2s; }
+  .btn:hover { transform:translateY(-2px); box-shadow:var(--shadow); border-color:var(--moss); }
   .btn.primary { background:var(--ink); color:var(--bg); border-color:var(--ink); }
+  .btn.primary:hover { border-color:var(--ink); }
+  .btn:disabled { opacity:.6; cursor:progress; transform:none; box-shadow:none; }
+  .chip { display:inline-flex; align-items:center; gap:6px; font-weight:800; font-size:13.5px; line-height:1.4; padding:3px 12px; border-radius:999px; background:var(--moss-soft); color:var(--moss); white-space:nowrap; }
+  .chip::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+  .chip.sim { background:var(--amber-soft); color:var(--amber); }
+  .chip.soon { background:var(--sky-soft); color:var(--sky); }
+  .honest { background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:24px; }
+  .honest ul { margin:12px 0 0; padding:0; list-style:none; display:grid; gap:12px; }
+  .honest li { display:grid; grid-template-columns:auto 1fr; gap:4px 14px; align-items:start; }
+  .honest li > strong { grid-column:1; }
+  @media (max-width:560px) { .honest li { grid-template-columns:1fr; } }
   .btn:focus-visible, .top nav a:focus-visible, .sector a:focus-visible { outline:3px solid var(--moss); outline-offset:2px; }
   footer { border-top:1px solid var(--line); margin-top:72px; padding:32px 0 48px; color:var(--muted); font-size:15px; }
   footer .wrap { display:flex; flex-wrap:wrap; gap:14px 26px; align-items:center; }
@@ -72,11 +84,12 @@ const BASE_STYLE = `
   }
   @media (max-width:900px) { footer nav { gap:4px 8px; } footer nav a { display:inline-flex; align-items:center; min-height:44px; padding:0 6px; } }
   @media (max-width:380px) { .top nav a.keep[href="/pricing"] { display:none; } }
+  @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } *, *::before, *::after { transition-duration:.01ms !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; } }
 `;
 
-const MARK = `<svg viewBox="0 0 72 72" fill="none" aria-hidden="true"><rect x="2" y="2" width="68" height="68" rx="23" fill="var(--card)" stroke="var(--line)"/><path d="M18 18v12c0 7.2 5.8 13 13 13h9c7.8 0 14 6.2 14 14v3" stroke="var(--ink)" stroke-width="4.6" stroke-linecap="round"/><path d="M18 18h10M44 16h10v10" stroke="var(--moss)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18" cy="18" r="5" fill="#e0a04b"/><circle cx="54" cy="60" r="5" fill="#5e79e6"/><circle cx="38" cy="43" r="4.8" fill="var(--moss)"/></svg>`;
+export const MARK = `<svg viewBox="0 0 72 72" fill="none" aria-hidden="true"><rect x="2" y="2" width="68" height="68" rx="23" fill="var(--card)" stroke="var(--line)"/><path d="M18 18v12c0 7.2 5.8 13 13 13h9c7.8 0 14 6.2 14 14v3" stroke="var(--ink)" stroke-width="4.6" stroke-linecap="round"/><path d="M18 18h10M44 16h10v10" stroke="var(--moss)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18" cy="18" r="5" fill="#e0a04b"/><circle cx="54" cy="60" r="5" fill="#5e79e6"/><circle cx="38" cy="43" r="4.8" fill="var(--moss)"/></svg>`;
 
-function page(options: { title: string; description: string; path: string; body: string; style?: string; index?: boolean }): string {
+export function page(options: { title: string; description: string; path: string; body: string; style?: string; index?: boolean; fonts?: boolean }): string {
   const base = (process.env.NAHJ_PUBLIC_URL || "").replace(/\/+$/, "");
   const contact = contactEmail();
   return `<!doctype html>
@@ -96,8 +109,8 @@ function page(options: { title: string; description: string; path: string; body:
 ${base ? `<link rel="canonical" href="${escapeHtml(base + options.path)}">` : ""}
 ${options.index === false ? `<meta name="robots" content="noindex">` : ""}
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+${options.fonts === false ? "" : `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">`}
 <style>${BASE_STYLE}${options.style || ""}</style>
 </head>
 <body>
@@ -130,8 +143,39 @@ ${options.index === false ? `<meta name="robots" content="noindex">` : ""}
 /* أمثلة حزمة التعليم — مبذورةٌ في seedData لا في حزمة، فتُكتب هنا بالاسم. */
 const EDUCATION_EXAMPLES = ["التسجيل والقبول", "الرسوم والاستثناءات", "حجز المقابلات"];
 
+/* لون كل قطاع من رموز الصفحة نفسها (يتبدّل في الوضع الداكن تلقائياً). */
+const SECTOR_ACCENT: Record<string, string> = {
+  education: "var(--sky)", clinic: "var(--moss)", law: "var(--violet)", retail: "var(--coral)",
+  logistics: "var(--amber)", realestate: "var(--sky)", general: "var(--muted)",
+};
+const accentOf = (code: string) => SECTOR_ACCENT[code] || "var(--moss)";
+
+const ARROW = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>`;
+const icon = (paths: string) => `<span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths}</svg></span>`;
+const TRUST_ICONS = {
+  approve: icon('<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>'),
+  ledger: icon('<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h6"/><path d="M8 13h8"/><path d="M8 17h5"/>'),
+  arabic: icon('<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>'),
+  data: icon('<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>'),
+};
+const LOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`;
+
 const LANDING_STYLE = `
-  .hero { padding:72px 0 40px; }
+  .hero { padding:64px 0 32px; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); gap:24px 40px; align-items:center; }
+  .hero-visual { display:flex; justify-content:center; }
+  .orbit { --s:clamp(250px, 32vw, 410px); position:relative; width:var(--s); aspect-ratio:1; flex:none; }
+  .orbit-glow { position:absolute; inset:-14%; border-radius:50%; background:radial-gradient(closest-side, color-mix(in srgb, var(--moss) 24%, transparent), color-mix(in srgb, var(--amber) 8%, transparent) 62%, transparent 76%); }
+  .orbit-ring { position:absolute; inset:7%; border-radius:50%; border:1.5px dashed color-mix(in srgb, var(--moss) 38%, var(--line)); }
+  .orbit-ring.inner { inset:27%; border-style:solid; border-color:var(--line); }
+  .orbit-spin { position:absolute; inset:0; animation:orbitSpin 90s linear infinite; }
+  .orb { position:absolute; top:50%; inset-inline-start:50%; width:0; height:0; transform:rotate(var(--a)) translateY(calc(var(--s) * -.43)) rotate(calc(var(--a) * -1)); }
+  .orb > span { position:absolute; left:-24px; top:-24px; width:48px; height:48px; display:grid; place-items:center; border-radius:16px; background:var(--card); border:1px solid var(--line); color:var(--accent, var(--moss)); box-shadow:var(--shadow); animation:orbitSpin 90s linear infinite reverse; }
+  .orb svg { width:24px; height:24px; }
+  .orbit-core { position:absolute; inset:34%; display:grid; place-items:center; border-radius:50%; background:var(--card); border:1px solid var(--line); box-shadow:0 0 0 10px color-mix(in srgb, var(--moss) 10%, transparent), var(--shadow); }
+  .orbit-core svg { width:62%; height:62%; }
+  @keyframes orbitSpin { to { transform:rotate(360deg); } }
+  @media (max-width:560px) { .hero .actions .btn { flex:1 1 100%; } }
+  @media (max-width:900px) { .hero { grid-template-columns:1fr; padding-top:40px; } .hero-visual { order:2; } .orbit { --s:min(300px, 78vw); } }
   .hero .eyebrow { display:inline-block; font-size:14px; font-weight:800; color:var(--moss); background:var(--moss-soft); padding:6px 12px; border-radius:999px; }
   .hero h1 { font-size:clamp(34px, 6vw, 58px); line-height:1.25; margin:18px 0 16px; font-weight:900; letter-spacing:-.5px; max-width:900px; }
   .hero p.lead { font-size:clamp(18px, 2.4vw, 21px); color:var(--muted); max-width:720px; margin:0 0 28px; }
@@ -141,16 +185,22 @@ const LANDING_STYLE = `
   h2 { font-size:clamp(26px, 4vw, 36px); margin:0 0 10px; font-weight:900; }
   .sub { color:var(--muted); margin:0 0 28px; max-width:720px; }
   .sectors { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:16px; }
-  .sector { display:flex; flex-direction:column; gap:10px; background:var(--card); border:1px solid var(--line); border-radius:20px; padding:22px; }
+  .sector { --accent:var(--moss); position:relative; display:flex; flex-direction:column; gap:10px; background:linear-gradient(to bottom, color-mix(in srgb, var(--accent) 9%, var(--card)), var(--card) 62%); border:1px solid var(--line); border-radius:var(--r); padding:22px; transition:transform .25s, box-shadow .25s, border-color .25s; }
+  .sector:hover, .sector:focus-within { transform:translateY(-4px); box-shadow:var(--shadow); border-color:color-mix(in srgb, var(--accent) 55%, var(--line)); }
   .sector .head { display:flex; align-items:center; gap:12px; }
   .sector .logo { line-height:0; }
-  .sector .sector-icon { display:grid; place-items:center; width:52px; height:52px; border-radius:16px; color:var(--moss); }
+  .sector .sector-icon { display:grid; place-items:center; width:52px; height:52px; border-radius:16px; color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, var(--card)); border:1px solid color-mix(in srgb, var(--accent) 22%, var(--line)); }
   .sector h3 { margin:0; font-size:20px; font-weight:900; }
   .sector .org { font-size:14px; color:var(--muted); }
   .sector p { margin:0; color:var(--muted); font-size:15.5px; }
   .sector ul { margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:6px; }
-  .sector li { font-size:13.5px; font-weight:700; background:var(--moss-soft); color:var(--moss); padding:4px 10px; border-radius:999px; }
-  .sector a { margin-top:auto; }
+  .sector li { font-size:13.5px; font-weight:700; background:color-mix(in srgb, var(--accent) 12%, var(--card)); color:var(--accent); padding:4px 10px; border-radius:999px; }
+  .sector a.more { margin-top:auto; padding-top:6px; display:inline-flex; align-items:center; gap:8px; font-weight:800; font-size:15.5px; color:var(--accent); text-decoration:none; }
+  .sector a.more::after { content:""; position:absolute; inset:0; border-radius:inherit; }
+  .sector a.more svg { width:18px; height:18px; transition:transform .2s; }
+  .sector:hover a.more svg { transform:translateX(-5px); }
+  .sector a.more:focus-visible { outline:none; }
+  .sector a.more:focus-visible::after { outline:3px solid var(--moss); outline-offset:2px; }
   .steps { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:16px; counter-reset:step; }
   .step { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:22px; }
   .step b { display:grid; place-items:center; width:40px; height:40px; border-radius:12px; background:var(--ink); color:var(--bg); font-size:18px; margin-bottom:12px; }
@@ -187,32 +237,51 @@ const LANDING_STYLE = `
   .levels span { font-size:14px; padding:6px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); }
   .levels span b { color:var(--moss); margin-inline-end:6px; }
   .trust { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px; }
-  .trust div { border-inline-start:3px solid var(--moss); padding:4px 14px; }
+  .trust > div { background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:20px; transition:transform .25s, box-shadow .25s; }
+  .trust > div:hover { transform:translateY(-3px); box-shadow:var(--shadow); }
+  .trust .ico { display:grid; place-items:center; width:46px; height:46px; border-radius:14px; background:var(--moss-soft); color:var(--moss); margin-bottom:12px; }
+  .trust .ico svg { width:24px; height:24px; }
   .trust h3 { margin:0 0 4px; font-size:18px; }
   .trust p { margin:0; color:var(--muted); font-size:15.5px; }
-  .honest { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:24px; }
-  .honest ul { margin:10px 0 0; padding-inline-start:20px; }
-  .honest li { margin-bottom:8px; }
-  .faq details { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 20px; margin-bottom:10px; }
-  .faq summary { font-weight:800; cursor:pointer; font-size:17px; }
-  .faq p { margin:10px 0 0; color:var(--muted); }
-  .contact { display:grid; grid-template-columns:1fr 1.2fr; gap:28px; align-items:start; background:var(--card); border:1px solid var(--line); border-radius:24px; padding:28px; margin-top:24px; }
+  .honest h2 { font-size:clamp(22px, 3vw, 28px); }
+  .faq details { background:var(--card); border:1px solid var(--line); border-radius:16px; margin-bottom:10px; transition:border-color .2s, box-shadow .2s; }
+  .faq details[open] { border-color:color-mix(in srgb, var(--moss) 45%, var(--line)); box-shadow:var(--shadow); }
+  .faq summary { position:relative; list-style:none; font-weight:800; cursor:pointer; font-size:17px; padding:16px 20px; padding-inline-end:58px; border-radius:16px; }
+  .faq summary::-webkit-details-marker { display:none; }
+  .faq summary::before, .faq summary::after { content:""; position:absolute; inset-inline-end:22px; top:50%; width:16px; height:2.5px; margin-top:-1.25px; border-radius:2px; background:var(--moss); transition:transform .3s; }
+  .faq summary::after { transform:rotate(90deg); }
+  .faq details[open] summary::after { transform:rotate(180deg); }
+  .faq details[open] summary::before { transform:rotate(180deg); }
+  .faq summary:focus-visible { outline:3px solid var(--moss); outline-offset:2px; }
+  .faq p { margin:0; padding:0 20px 18px; color:var(--muted); animation:faqIn .3s ease; }
+  @keyframes faqIn { from { opacity:0; transform:translateY(-6px); } }
+  .contact { display:grid; grid-template-columns:1fr 1.2fr; gap:28px; align-items:start; background:var(--card); border:1px solid var(--line); border-radius:24px; padding:32px; margin-top:24px; box-shadow:var(--shadow); }
   .contact .direct { font-weight:700; }
   .contact .direct a { color:var(--moss); }
   .contact form { display:grid; gap:12px; }
   .contact label { display:grid; gap:6px; font-weight:700; font-size:15px; }
   .contact label small { color:var(--muted); font-weight:600; }
-  .contact input, .contact select, .contact textarea { font:inherit; font-weight:500; padding:11px 13px; border-radius:12px; border:1px solid var(--line); background:var(--bg); color:var(--ink); }
-  .contact input:focus-visible, .contact select:focus-visible, .contact textarea:focus-visible { outline:3px solid var(--moss); outline-offset:1px; }
+  .contact input, .contact select, .contact textarea { font:inherit; font-weight:500; padding:12px 14px; border-radius:12px; border:1.5px solid var(--line); background:color-mix(in srgb, var(--bg) 70%, var(--card)); color:var(--ink); width:100%; transition:border-color .2s, box-shadow .2s, background .2s; }
+  .contact input:hover, .contact select:hover, .contact textarea:hover { border-color:color-mix(in srgb, var(--moss) 45%, var(--line)); }
+  .contact input:focus, .contact select:focus, .contact textarea:focus { outline:none; border-color:var(--moss); background:var(--card); box-shadow:0 0 0 4px color-mix(in srgb, var(--moss) 22%, transparent); }
+  .contact input:focus-visible, .contact select:focus-visible, .contact textarea:focus-visible { outline:2px solid transparent; }
+  .contact .trust-cue { display:flex; align-items:center; gap:8px; margin:0; font-size:14px; color:var(--muted); }
+  .contact .trust-cue svg { width:18px; height:18px; flex:none; color:var(--moss); }
   .contact .hp { position:absolute; inset-inline-start:-9999px; width:1px; height:1px; overflow:hidden; }
   .form-status { margin:0; min-height:1.6em; font-weight:700; }
   .form-status.ok { color:var(--moss); }
-  .form-status.err { color:#c0392b; }
+  .form-status.err { color:var(--err); }
   @media (max-width:820px) { .contact { grid-template-columns:1fr; padding:20px; } }
-  .final { text-align:center; background:var(--ink); color:var(--bg); border-radius:28px; padding:48px 24px; margin-top:24px; }
-  .final h2 { color:var(--bg); }
-  .final p { opacity:.8; margin:0 auto 24px; max-width:620px; }
-  .final .btn { background:var(--bg); color:var(--ink); border-color:var(--bg); }
+  .final { position:relative; overflow:hidden; text-align:center; background:var(--ink); color:var(--bg); border-radius:28px; padding:64px 24px; margin-top:24px; }
+  .final::before { content:""; position:absolute; inset:-40% 20% auto; height:90%; border-radius:50%; background:radial-gradient(closest-side, color-mix(in srgb, var(--moss) 42%, transparent), transparent); pointer-events:none; }
+  .final > * { position:relative; }
+  .final h2 { color:var(--bg); font-size:clamp(28px, 4.4vw, 42px); }
+  .final p { opacity:.82; margin:0 auto 28px; max-width:620px; }
+  .final .btn { background:var(--bg); color:var(--ink); border-color:var(--bg); padding:18px 40px; font-size:19px; border-radius:16px; }
+  .final .btn:hover { border-color:var(--bg); }
+  /* ظهور الأقسام عند التمرير: يبدأ السكربت وحده؛ بلا سكربت أو مع تقليل الحركة تبقى كلها ظاهرة. */
+  html.rv .rv-hide { opacity:0; transform:translateY(22px); }
+  html.rv .rv-hide, html.rv .rv-in { transition:opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
 `;
 
 export function renderLandingPage(): string {
@@ -236,18 +305,22 @@ export function renderLandingPage(): string {
       ? EDUCATION_EXAMPLES
       : (getSectorPack(sector.code)?.skills || []).slice(0, 3).map(skill => skill.name);
     return `
-    <article class="sector">
-      <div class="head"><span class="logo" aria-hidden="true">${sectorIconSvg(sector.code)}</span>
+    <article class="sector" style="--accent:${accentOf(sector.code)}">
+      <div class="head"><span class="logo" aria-hidden="true"><span class="sector-icon">${sectorGlyph(sector.code)}</span></span>
         <div><h3>${escapeHtml(sector.nameAr)}</h3><div class="org">مثال: ${escapeHtml(sector.organizationName)}</div></div></div>
       <p>${escapeHtml(sector.descriptionAr)}</p>
       <ul aria-label="أمثلة على ما يتولّاه">${examples.map(example => `<li>${escapeHtml(example)}</li>`).join("")}</ul>
-      <a class="btn primary" href="?sector=${encodeURIComponent(sector.code)}#contact" data-sector="${escapeHtml(sector.code)}" aria-label="اطلب عرضاً لقطاع ${escapeHtml(sector.nameAr)}">اطلب عرضاً لقطاعك</a>
+      <a class="more" href="?sector=${encodeURIComponent(sector.code)}#contact" data-sector="${escapeHtml(sector.code)}" aria-label="اطلب عرضاً لقطاع ${escapeHtml(sector.nameAr)}">اطلب عرضاً لقطاعك ${ARROW}</a>
     </article>`;
   }).join("");
+
+  const orbitItems = sectors.slice(0, 6).map((sector, index, list) =>
+    `<i class="orb" style="--a:${Math.round(index * 360 / list.length)}deg;--accent:${accentOf(sector.code)}"><span>${sectorGlyph(sector.code)}</span></i>`).join("");
 
   const body = `
 <div class="wrap">
   <section class="hero">
+    <div class="hero-copy">
     <span class="eyebrow">لكل مؤسسة — عيادة، مكتب، متجر، شركة، مدرسة</span>
     <h1>موظفوك يعرفون كيف يُنجَز العمل.<br>نهج يتعلّمه منهم، ثم يُنجزه معهم.</h1>
     <p class="lead">نهج نظامٌ عربيّ يراقب كيف يعمل فريقك، ويحوّل خبرته إلى إجراءاتٍ مكتوبة، ثم يتدرّب عليها حتى يُثبت أنه يُتقنها — ولا ينفّذ إلا ما أذنتَ له به، ويطلب موافقتك في كل قرارٍ حسّاس.</p>
@@ -256,6 +329,15 @@ export function renderLandingPage(): string {
       <a class="btn" href="/pricing">الباقات والأسعار</a>
     </div>
     <div class="note">نعرضه عليك على مثالٍ من قطاعك، ثم نُعِدّ مؤسستك ونبدأ${from ? ` · الباقات تبدأ من ${escapeHtml(from)} شهرياً` : ""}</div>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+      <div class="orbit">
+        <div class="orbit-glow"></div>
+        <div class="orbit-ring"></div><div class="orbit-ring inner"></div>
+        <div class="orbit-spin">${orbitItems}</div>
+        <div class="orbit-core">${MARK}</div>
+      </div>
+    </div>
   </section>
 
   <section id="sectors" aria-labelledby="sectors-title">
@@ -292,10 +374,10 @@ export function renderLandingPage(): string {
   <section aria-labelledby="trust-title">
     <h2 id="trust-title">لماذا تثق به</h2>
     <div class="trust">
-      <div><h3>أنت من يعتمد</h3><p>كل قرارٍ حسّاس يصل إلى الشخص الذي تحدّده لائحتك، ولا يُنفَّذ قبل موافقته.</p></div>
-      <div><h3>سجلٌّ لا يُعدَّل</h3><p>كل إجراء له أثرٌ مكتوب يُراجَع في أي وقت — للتدقيق والالتزام.</p></div>
-      <div><h3>عربيّ أولاً</h3><p>مبنيّ للعربية ولهجات المنطقة من أول يوم، لا مترجماً عن منتجٍ أجنبي.</p></div>
-      <div><h3>بياناتك لك</h3><p>تصدّر كل بياناتك متى شئت، ونسخٌ احتياطية دورية.</p></div>
+      <div>${TRUST_ICONS.approve}<h3>أنت من يعتمد</h3><p>كل قرارٍ حسّاس يصل إلى الشخص الذي تحدّده لائحتك، ولا يُنفَّذ قبل موافقته.</p></div>
+      <div>${TRUST_ICONS.ledger}<h3>سجلٌّ لا يُعدَّل</h3><p>كل إجراء له أثرٌ مكتوب يُراجَع في أي وقت — للتدقيق والالتزام.</p></div>
+      <div>${TRUST_ICONS.arabic}<h3>عربيّ أولاً</h3><p>مبنيّ للعربية ولهجات المنطقة من أول يوم، لا مترجماً عن منتجٍ أجنبي.</p></div>
+      <div>${TRUST_ICONS.data}<h3>بياناتك لك</h3><p>تصدّر كل بياناتك متى شئت، ونسخٌ احتياطية دورية.</p></div>
     </div>
   </section>
 
@@ -303,9 +385,9 @@ export function renderLandingPage(): string {
     <div class="honest">
       <h2 id="honest-title">ما هو جاهز اليوم، وما ليس بعد</h2>
       <ul>
-        <li><strong>جاهز:</strong> التعلّم من العمل، والتدرّب والظل، والموافقات ودرجات الصلاحية، وسجلّ التدقيق، ولوحة الأثر، والاشتراك والفوترة، والتصدير.</li>
-        <li><strong>محاكاة معلنة:</strong> الربط بأنظمتكم القائمة (أنظمة المواعيد، والطلبات، والملفات) يظهر في المنتج بوسم «محاكاة». أول ربطٍ حقيقي يُبنى مع أول عميلٍ في قطاعه وبقراره.</li>
-        <li><strong>قريباً:</strong> قناة واتساب الحقيقية، والدخول الموحّد، والواجهة البرمجية.</li>
+        <li><strong class="chip">جاهز:</strong><span> التعلّم من العمل، والتدرّب والظل، والموافقات ودرجات الصلاحية، وسجلّ التدقيق، ولوحة الأثر، والاشتراك والفوترة، والتصدير.</span></li>
+        <li><strong class="chip sim">محاكاة معلنة:</strong><span>الربط بأنظمتكم القائمة (أنظمة المواعيد، والطلبات، والملفات) يظهر في المنتج بوسم «محاكاة». أول ربطٍ حقيقي يُبنى مع أول عميلٍ في قطاعه وبقراره.</span></li>
+        <li><strong class="chip soon">قريباً:</strong><span> قناة واتساب الحقيقية، والدخول الموحّد، والواجهة البرمجية.</span></li>
       </ul>
     </div>
   </section>
@@ -334,6 +416,7 @@ export function renderLandingPage(): string {
       <label>ما الذي تريد أن يتولّاه نهج؟ <small>(اختياري)</small><textarea name="message" rows="3" maxlength="1000"></textarea></label>
       <label class="hp" aria-hidden="true">الموقع<input name="website" tabindex="-1" autocomplete="off"></label>
       <button class="btn primary" type="submit">أرسل الطلب</button>
+      <p class="trust-cue">${LOCK}<span>بياناتك لا تُستعمل إلا للتواصل معك بشأن طلبك.</span></p>
       <p class="form-status" role="status" aria-live="polite"></p>
     </form>
   </section>
@@ -381,6 +464,24 @@ export function renderLandingPage(): string {
 </script>
 <script>
   (function () {
+    /* ظهور الأقسام عند التمرير. بلا سكربت أو مع «تقليل الحركة» تبقى ظاهرةً كلها. */
+    if (!window.IntersectionObserver) return;
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var list = Array.prototype.slice.call(document.querySelectorAll("main section:not(.hero)"));
+    var below = list.filter(function (el) { return el.getBoundingClientRect().top > window.innerHeight * 0.9; });
+    if (!below.length) return;
+    document.documentElement.classList.add("rv");
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.remove("rv-hide"); entry.target.classList.add("rv-in"); io.unobserve(entry.target);
+      });
+    }, { threshold: .08 });
+    below.forEach(function (el) { el.classList.add("rv-hide"); io.observe(el); });
+  })();
+</script>
+<script>
+  (function () {
     var form = document.getElementById("lead-form");
     if (!form) return;
     /* القطاع من البطاقة التي ضُغطت — يوفّر على الزائر اختياره مرة ثانية. */
@@ -421,14 +522,34 @@ export function renderLandingPage(): string {
 /* ------------------------------------------------- الشروط والخصوصية */
 
 const DOC_STYLE = `
-  article.doc { max-width:780px; margin:0 auto; padding:48px 20px 0; }
-  article.doc h1 { font-size:34px; margin:0 0 6px; }
+  .doc-layout { max-width:1040px; margin:0 auto; padding:48px 20px 0; display:grid; grid-template-columns:230px minmax(0,1fr); gap:44px; align-items:start; }
+  .toc { position:sticky; top:90px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:16px 12px; }
+  .toc b { display:block; font-size:14px; color:var(--muted); padding:0 10px 8px; }
+  .toc ol { list-style:none; margin:0; padding:0; display:grid; gap:2px; }
+  .toc a { display:block; text-decoration:none; font-weight:700; font-size:15px; line-height:1.5; padding:7px 10px; border-radius:10px; color:var(--ink); }
+  .toc a:hover { background:var(--moss-soft); color:var(--moss); }
+  .toc a:focus-visible { outline:3px solid var(--moss); outline-offset:1px; }
+  article.doc { max-width:780px; min-width:0; }
+  article.doc h1 { font-size:clamp(28px, 4vw, 38px); margin:0 0 6px; line-height:1.3; }
   article.doc .updated { color:var(--muted); font-size:14px; margin:0 0 28px; }
-  article.doc h2 { font-size:21px; margin:30px 0 8px; }
+  article.doc h2 { font-size:22px; margin:34px 0 8px; padding-top:6px; }
   article.doc p, article.doc li { color:var(--ink); }
+  article.doc a { color:var(--moss); font-weight:700; }
   article.doc ul { padding-inline-start:22px; }
   article.doc .box { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 20px; margin:18px 0; }
+  @media (max-width:900px) { .doc-layout { grid-template-columns:1fr; gap:20px; padding-top:32px; } .toc { position:static; } .toc ol { grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); } }
 `;
+
+/** يعطي كل عنوانٍ فرعيّ معرّفاً ويبني فهرساً يقفز إليه — النصّ نفسه لا يتغيّر. */
+function withToc(articleHtml: string): string {
+  const items: string[] = [];
+  const html = articleHtml.replace(/<h2>([^<]+)<\/h2>/g, (_m, title: string) => {
+    const id = `s${items.length + 1}`;
+    items.push(`<li><a href="#${id}">${title}</a></li>`);
+    return `<h2 id="${id}">${title}</h2>`;
+  });
+  return `<div class="doc-layout"><nav class="toc" aria-label="محتويات الصفحة"><b>محتويات الصفحة</b><ol>${items.join("")}</ol></nav>${html}</div>`;
+}
 
 const UPDATED = "23 سبتمبر 2026";
 
@@ -474,7 +595,7 @@ export function renderTermsPage(): string {
   <h2>9. التواصل</h2>
   <p>${contact ? `لأي استفسار: <a href="mailto:${escapeHtml(contact)}">${escapeHtml(contact)}</a>.` : "لأي استفسار تواصل معنا عبر القناة المذكورة في عقد اشتراكك."}</p>
 </article>`;
-  return page({ title: "شروط الاستخدام — نهج", description: "شروط استخدام منصة نهج.", path: "/terms", body, style: DOC_STYLE });
+  return page({ title: "شروط الاستخدام — نهج", description: "شروط استخدام منصة نهج.", path: "/terms", body: withToc(body), style: DOC_STYLE });
 }
 
 export function renderPrivacyPage(): string {
@@ -519,5 +640,5 @@ export function renderPrivacyPage(): string {
   <h2>8. التواصل</h2>
   <p>${contact ? `لأي طلب يتعلّق بالخصوصية: <a href="mailto:${escapeHtml(contact)}">${escapeHtml(contact)}</a>.` : "لأي طلب يتعلّق بالخصوصية تواصل معنا عبر القناة المذكورة في عقد اشتراكك."}</p>
 </article>`;
-  return page({ title: "سياسة الخصوصية — نهج", description: "كيف تجمع منصة نهج البيانات وتستخدمها وتحميها.", path: "/privacy", body, style: DOC_STYLE });
+  return page({ title: "سياسة الخصوصية — نهج", description: "كيف تجمع منصة نهج البيانات وتستخدمها وتحميها.", path: "/privacy", body: withToc(body), style: DOC_STYLE });
 }
