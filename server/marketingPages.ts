@@ -176,6 +176,7 @@ const LANDING_STYLE = `
   @keyframes gatePulse { 50% { transform:scale(1.12); } }
   .trail-say { margin:34px 0 0; min-height:3.4em; text-align:center; font-weight:800; font-size:clamp(18px, 2.6vw, 22px); transition:opacity .35s; }
   .trail-say.out { opacity:0; }
+  .trail.reset .trail-fill, .trail.reset .trail-node { transition:none; }
   .step { transition:border-color .5s, transform .5s, box-shadow .5s; }
   .trail.live ~ .steps .step { opacity:.55; }
   .trail.live ~ .steps .step.on { opacity:1; border-color:var(--moss); transform:translateY(-4px); box-shadow:0 10px 24px -14px var(--moss); }
@@ -360,6 +361,8 @@ export function renderLandingPage(): string {
     var i = -1, timer = null;
     function show(k) {
       var st = stages[k];
+      /* أول مرحلة تبدأ من الصفر فوراً: لا تراجعٌ متحرك من L6 إلى L1. */
+      if (k === 0) { trail.classList.add("reset"); fill.style.width = "0%"; nodes.forEach(function (n) { n.classList.remove("lit", "now"); }); void trail.offsetWidth; trail.classList.remove("reset"); }
       trail.classList.add("live");
       nodes.forEach(function (n, j) { n.classList.toggle("lit", j <= st.at); n.classList.toggle("now", j === st.at); });
       fill.style.width = (st.at / 6 * 100) + "%";
