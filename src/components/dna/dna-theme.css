@@ -17,12 +17,12 @@
 }
 /* The site keeps every text at 12px or more. */
 .dna .dna-tileb, .dna .dna-bdg, .dna .dna-hubv, .dna-ringc small, .dna-segb .dna-count,
-.dna-steps[data-size='sm'] .dna-lbl, .dna .dna-over { font-size: 12px; }
+.dna-steps[data-size='sm'] .dna-lbl, .dna .dna-over { font-size:13px; }
 .dna svg { max-width: none; }
 /* Impact hero ring and hours line. */
 .impact-hero .impact-ring{margin:auto}
 .impact-hero .impact-ring .dna-ringc{font-size:34px;font-weight:800}
-.impact-hero .impact-ring .dna-ringc small{font-size:12px}
+.impact-hero .impact-ring .dna-ringc small{font-size:13px}
 .impact-hero-copy .impact-hours{display:inline-flex;align-items:center;gap:5px}
 .impact-hero-copy .impact-hours svg{width:14px;height:14px}
 /* Company brain map fills the hero card. */
@@ -45,16 +45,16 @@
 .work-focus-river>strong{position:static;flex:none}
 .queue-card .dna-steps,.work-mini .dna-steps{margin-top:10px}
 .work-focus .work-timeline{margin-top:14px}
-.work-tl-badge{display:inline-block;margin-inline-start:6px;padding:0 7px;border-radius:99px;background:var(--mint);color:var(--moss-dark);font-size:12px;font-weight:700}
+.work-tl-badge{display:inline-block;margin-inline-start:6px;padding:0 7px;border-radius:99px;background:var(--mint);color:var(--moss-dark);font-size:13px;font-weight:700}
 /* Connections: cloud mirror card. */
 .cloud-card{margin-bottom:24px;padding:18px 20px}
 .cloud-card .dna-htitle{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .cloud-card .cloud-sync{min-height:44px}
 .cloud-card .cloud-sync svg{width:16px;height:16px}
 .cloud-facts{display:flex;flex-wrap:wrap;gap:8px}
-.cloud-facts>span{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;background:var(--paper);border:1px solid var(--line);font-size:12px;color:var(--muted)}
+.cloud-facts>span{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;background:var(--paper);border:1px solid var(--line);font-size:13px;color:var(--muted)}
 .cloud-facts svg,.cloud-note svg{width:14px;height:14px;flex:none}
-.cloud-note{display:flex;align-items:flex-start;gap:6px;margin-top:8px;font-size:12px;font-weight:600}
+.cloud-note{display:flex;align-items:flex-start;gap:6px;margin-top:8px;font-size:13px;font-weight:600}
 .cloud-note.warn{color:#8a5a12}
 .cloud-note.ok{color:var(--moss-dark)}
 .brain-hero:before{display:none}
@@ -69,7 +69,7 @@
 .apphub-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:132px;height:132px;border-radius:50%;background:var(--white);border:1px solid var(--line);box-shadow:var(--shadow-1);display:grid;place-content:center;justify-items:center;gap:1px;color:var(--moss)}
 .apphub-core svg{width:20px;height:20px}
 .apphub-core strong{font-size:32px;line-height:1.1;font-weight:800;color:var(--ink)}
-.apphub-core small{font-size:12px;color:var(--muted)}
+.apphub-core small{font-size:13px;color:var(--muted)}
 .apphub-node{position:absolute;transform:translate(-50%,-50%);width:92px;min-height:44px;padding:0;border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;color:var(--ink)}
 .apphub-disc{position:relative;width:56px;height:56px;border-radius:50%;background:var(--white);border:1px solid var(--line-strong);display:grid;place-items:center;color:var(--moss);transition:box-shadow .18s var(--ease)}
 .apphub-disc .apphub-ico{width:22px;height:22px;stroke-width:1.25}
@@ -78,13 +78,13 @@
 .apphub-node.attn .apphub-disc{border-color:var(--amber);color:#9a6a1c}
 .apphub-node.sel .apphub-disc{box-shadow:0 0 0 4px var(--mint)}
 .apphub-node:focus-visible{outline:2px solid var(--moss);outline-offset:2px;border-radius:14px}
-.apphub-label{font-size:12px;font-weight:700;white-space:nowrap}
+.apphub-label{font-size:13px;font-weight:700;white-space:nowrap}
 .apphub-val{font-size:14px;font-weight:800;white-space:nowrap}
 .apphub-focus{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:24px;background:var(--white);border:1px solid var(--line);box-shadow:var(--shadow-1)}
-.apphub-focus em{font-style:normal;font-size:12px;color:var(--muted)}
+.apphub-focus em{font-style:normal;font-size:13px;color:var(--muted)}
 .apphub-focus h3{margin:2px 0 0;font-size:20px;font-weight:800}
 .apphub-big{display:block;margin-top:10px;font-size:40px;line-height:1.1;font-weight:800}
-.apphub-focus p{margin:6px 0 0;font-size:12px;color:var(--muted)}
+.apphub-focus p{margin:6px 0 0;font-size:13px;color:var(--muted)}
 .apphub-open{align-self:flex-start;min-height:44px;padding:0 16px;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-strong);border-radius:99px;background:transparent;font-weight:700;cursor:pointer}
 .apphub-open svg{width:16px;height:16px}
 @media(max-width:900px){

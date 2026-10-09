@@ -137,7 +137,7 @@ export function Shell({
                       «Firebase: <اسم المشروع>» دائماً — يزعم وصلاً سحابياً ترفضه قواعد
                       الأمان أصلاً، ويكشف اسم مشروعٍ داخلي أمام من يُعرض عليه المنتج.
                       وتفصيل حالة المرآة السحابية في شاشة الربط، مقروءاً من حالتها. */}
-                  <span className={`org-pill ${demoActive ? "is-demo" : "is-live"} hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px] font-medium border`}>
+                  <span className={`org-pill ${demoActive ? "is-demo" : "is-live"} hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[13px] font-medium border`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${demoActive ? "bg-amber-400" : "bg-emerald-400"}`}></span>
                     {demoActive ? (ar?"بلا اتصال بأي قاعدة بيانات":"No database connection") : (ar?"مخزن المحرّك المحلي":"Local engine store")}
                   </span>
