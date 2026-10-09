@@ -266,6 +266,7 @@ const LANDING_STYLE = `
   .contact input:focus, .contact select:focus, .contact textarea:focus { outline:none; border-color:var(--moss); background:var(--card); box-shadow:0 0 0 4px color-mix(in srgb, var(--moss) 22%, transparent); }
   .contact input:focus-visible, .contact select:focus-visible, .contact textarea:focus-visible { outline:2px solid transparent; }
   .contact .trust-cue { display:flex; align-items:center; gap:8px; margin:0; font-size:14px; color:var(--muted); }
+  .contact .trust-cue a { font-weight:700; color:var(--muted); }
   .contact .trust-cue svg { width:18px; height:18px; flex:none; color:var(--moss); }
   .contact .hp { position:absolute; inset-inline-start:-9999px; width:1px; height:1px; overflow:hidden; }
   .form-status { margin:0; min-height:1.6em; font-weight:700; }
@@ -281,6 +282,7 @@ const LANDING_STYLE = `
   .final .btn:hover { border-color:var(--bg); }
   /* ظهور الأقسام عند التمرير: يبدأ السكربت وحده؛ بلا سكربت أو مع تقليل الحركة تبقى كلها ظاهرة. */
   html.rv .rv-hide { opacity:0; transform:translateY(22px); }
+  @media print { html.rv .rv-hide, html.rv .rv-in { opacity:1 !important; transform:none !important; transition:none !important; } }
   html.rv .rv-hide, html.rv .rv-in { transition:opacity .7s ease, transform .7s cubic-bezier(.2,.7,.2,1); }
 `;
 
@@ -416,7 +418,7 @@ export function renderLandingPage(): string {
       <label>ما الذي تريد أن يتولّاه نهج؟ <small>(اختياري)</small><textarea name="message" rows="3" maxlength="1000"></textarea></label>
       <label class="hp" aria-hidden="true">الموقع<input name="website" tabindex="-1" autocomplete="off"></label>
       <button class="btn primary" type="submit">أرسل الطلب</button>
-      <p class="trust-cue">${LOCK}<span>بياناتك لا تُستعمل إلا للتواصل معك بشأن طلبك.</span></p>
+      <p class="trust-cue">${LOCK}<a href="/privacy">سياسة الخصوصية</a></p>
       <p class="form-status" role="status" aria-live="polite"></p>
     </form>
   </section>
@@ -464,20 +466,29 @@ export function renderLandingPage(): string {
 </script>
 <script>
   (function () {
-    /* ظهور الأقسام عند التمرير. بلا سكربت أو مع «تقليل الحركة» تبقى ظاهرةً كلها. */
-    if (!window.IntersectionObserver) return;
+    /* ظهور الأقسام عند التمرير. الإخفاء لا يُطبَّق إلا بعد التأكد من وجود المراقب؛ وبلا سكربت أو مع «تقليل الحركة» أو الطباعة تبقى الأقسام ظاهرة. */
+    if (!("IntersectionObserver" in window)) return;
     if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     var list = Array.prototype.slice.call(document.querySelectorAll("main section:not(.hero)"));
     var below = list.filter(function (el) { return el.getBoundingClientRect().top > window.innerHeight * 0.9; });
     if (!below.length) return;
+    var fired = false;
+    function revealAll() { below.forEach(function (el) { el.classList.remove("rv-hide"); el.classList.add("rv-in"); }); }
+    var io;
+    try {
+      io = new IntersectionObserver(function (entries) {
+        fired = true;
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.remove("rv-hide"); entry.target.classList.add("rv-in"); io.unobserve(entry.target);
+        });
+      }, { threshold: .08 });
+    } catch (e) { return; }
     document.documentElement.classList.add("rv");
-    var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.remove("rv-hide"); entry.target.classList.add("rv-in"); io.unobserve(entry.target);
-      });
-    }, { threshold: .08 });
     below.forEach(function (el) { el.classList.add("rv-hide"); io.observe(el); });
+    /* احتياط: إن لم يُطلق المراقب ردّه قط فلا قسمَ يبقى مخفياً. */
+    setTimeout(function () { if (!fired) revealAll(); }, 2000);
+    window.addEventListener("beforeprint", revealAll);
   })();
 </script>
 <script>
