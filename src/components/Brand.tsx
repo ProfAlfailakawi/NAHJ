@@ -22,8 +22,8 @@ export function BrandLockup({ compact = false, inverted = false }: { compact?: b
       <NahjMark size={compact ? 37 : 44} inverted={inverted} />
       {!compact && (
         <div className="leading-none">
-          <div className={`text-[18px] font-black ${inverted ? "text-white" : "text-[var(--ink)]"}`}>نَهْج</div>
-          <div className={`text-[9px] font-black tracking-[.19em] mt-1.5 ${inverted ? "text-white/50" : "text-[var(--muted)]"}`}>NAHJ</div>
+          <div className={`text-[18px] font-bold ${inverted ? "text-white" : "text-[var(--ink)]"}`}>نَهْج</div>
+          <div className={`text-[9px] font-bold tracking-[.19em] mt-1.5 ${inverted ? "text-white/50" : "text-[var(--muted)]"}`}>NAHJ</div>
         </div>
       )}
     </div>
