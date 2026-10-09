@@ -156,6 +156,33 @@ const LANDING_STYLE = `
   .step b { display:grid; place-items:center; width:40px; height:40px; border-radius:12px; background:var(--ink); color:var(--bg); font-size:18px; margin-bottom:12px; }
   .step h3 { margin:0 0 6px; font-size:19px; }
   .step p { margin:0; color:var(--muted); font-size:15.5px; }
+  /* مسار الثقة: رمزٌ يصعد درجات الصلاحية ويقف عند بوابة موافقتك. الحالة الافتراضية مكتملة؛ السكربت وحده يبدأ الحركة. */
+  .trail { position:relative; margin:6px 0 30px; padding:30px 8px 8px; }
+  .trail-line { position:relative; height:44px; margin:0 22px; }
+  .trail-line::before { content:""; position:absolute; inset-inline:0; top:20px; height:4px; border-radius:2px; background:var(--line); }
+  .trail-fill { position:absolute; inset-inline-start:0; top:20px; height:4px; border-radius:2px; background:linear-gradient(to left, var(--moss), var(--amber)); width:100%; transition:width .9s cubic-bezier(.5,.1,.2,1); }
+  .trail-node { position:absolute; top:10px; width:24px; height:24px; margin-inline-start:-12px; border-radius:50%; background:var(--card); border:3px solid var(--line); transition:border-color .5s, background .5s, transform .5s; }
+  .trail-node.lit { border-color:var(--moss); background:var(--moss-soft); }
+  .trail-node.now { transform:scale(1.25); background:var(--moss); border-color:var(--moss); }
+  .trail-node span { position:absolute; top:34px; inset-inline-start:50%; transform:translateX(-50%); font-size:13px; font-weight:800; color:var(--muted); direction:ltr; }
+  .trail-node.lit span { color:var(--ink); }
+  .trail-node:nth-child(3) { inset-inline-start:0%; } .trail-node:nth-child(4) { inset-inline-start:16.666%; } .trail-node:nth-child(5) { inset-inline-start:33.333%; }
+  .trail-node:nth-child(6) { inset-inline-start:50%; } .trail-node:nth-child(7) { inset-inline-start:66.666%; } .trail-node:nth-child(8) { inset-inline-start:83.333%; } .trail-node:nth-child(9) { inset-inline-start:100%; }
+  .trail-gate { position:absolute; top:-26px; inset-inline-start:58.333%; margin-inline-start:-14px; width:28px; height:70px; opacity:1; transition:opacity .4s; }
+  .trail-gate::before { content:""; position:absolute; inset-inline-start:12px; top:0; width:4px; height:100%; border-radius:2px; background:var(--amber); }
+  .trail-gate::after { content:""; position:absolute; top:-6px; inset-inline-start:4px; width:20px; height:10px; border-radius:6px; background:var(--amber); }
+  .trail.live .trail-gate { opacity:.28; }
+  .trail.live .trail-gate.hold { opacity:1; animation:gatePulse 1.1s ease-in-out infinite; }
+  @keyframes gatePulse { 50% { transform:scale(1.12); } }
+  .trail-say { margin:34px 0 0; min-height:3.4em; text-align:center; font-weight:800; font-size:clamp(18px, 2.6vw, 22px); transition:opacity .35s; }
+  .trail-say.out { opacity:0; }
+  .trail.reset .trail-fill, .trail.reset .trail-node { transition:none; }
+  .step { transition:border-color .5s, transform .5s, box-shadow .5s; }
+  .trail.live ~ .steps .step { opacity:.55; }
+  .trail.live ~ .steps .step.on { opacity:1; border-color:var(--moss); transform:translateY(-4px); box-shadow:0 10px 24px -14px var(--moss); }
+  .trail.live ~ .steps .step.on b { background:var(--moss); }
+  @media (max-width:560px) { .trail-node span { font-size:11px; } .trail-line { margin:0 16px; } }
+  @media (prefers-reduced-motion:reduce) { .trail *, .step { transition:none !important; animation:none !important; } }
   .levels { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
   .levels span { font-size:14px; padding:6px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); }
   .levels span b { color:var(--moss); margin-inline-end:6px; }
@@ -240,6 +267,14 @@ export function renderLandingPage(): string {
   <section id="how" aria-labelledby="how-title">
     <h2 id="how-title">كيف يعمل — في أربع خطوات</h2>
     <p class="sub">لا يُمنح نهج الثقة؛ يكسبها خطوةً بخطوة، وتبقى أنت صاحب القرار في كل مرحلة.</p>
+    <figure class="trail" id="trail" aria-label="نهج يصعد درجات الصلاحية من L0 إلى L6، ويقف عند بوابة موافقتك قبل القرارات الحسّاسة">
+      <div class="trail-line" aria-hidden="true">
+        <div class="trail-fill"></div>
+        <i class="trail-gate"></i>
+        <i class="trail-node lit"><span>L0</span></i><i class="trail-node lit"><span>L1</span></i><i class="trail-node lit"><span>L2</span></i><i class="trail-node lit"><span>L3</span></i><i class="trail-node lit"><span>L4</span></i><i class="trail-node lit"><span>L5</span></i><i class="trail-node lit"><span>L6</span></i>
+      </div>
+      <figcaption class="trail-say" aria-live="off">يكسب الثقة درجةً درجة، وتبقى البوابة بيدك.</figcaption>
+    </figure>
     <div class="steps">
       <div class="step"><b>1</b><h3>يتعلّم</h3><p>موظفك يُريه كيف يُنجز مهمةً مرة واحدة، ونهج يكتبها إجراءً واضحاً ويسأل عمّا لم يفهمه.</p></div>
       <div class="step"><b>2</b><h3>يتدرّب</h3><p>يُختبر على حالاتٍ مكتوبة، ثم يعمل «في الظل» بجوار الموظف: يقترح ولا ينفّذ، ويُقارَن قراره بقرار الإنسان.</p></div>
@@ -309,6 +344,41 @@ export function renderLandingPage(): string {
     <a class="btn" href="#contact">اطلب عرضاً</a>
   </section>
 </div>
+<script>
+  (function () {
+    var trail = document.getElementById("trail");
+    if (!trail || !window.IntersectionObserver) return;
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var nodes = trail.querySelectorAll(".trail-node"), fill = trail.querySelector(".trail-fill"), gate = trail.querySelector(".trail-gate");
+    var say = trail.querySelector(".trail-say"), cards = document.querySelectorAll("#how .step");
+    /* كل مرحلة: أعلى درجة وصل إليها، وهل البوابة مغلقة، وما يُقال بكلامٍ بسيط. */
+    var stages = [
+      { at: 1, hold: false, text: "يبدأ بالمراقبة فقط. لا ينفّذ شيئاً." },
+      { at: 2, hold: false, text: "يتدرّب بجانب موظفك، ويقارن قراره بقراره." },
+      { at: 3, hold: true,  text: "قبل أي قرارٍ حسّاس، ينتظر موافقتك." },
+      { at: 6, hold: false, text: "يعمل ضمن حدوده، ويسجّل كل شيء. وزرّ واحد يوقفه." }
+    ];
+    var i = -1, timer = null;
+    function show(k) {
+      var st = stages[k];
+      /* أول مرحلة تبدأ من الصفر فوراً: لا تراجعٌ متحرك من L6 إلى L1. */
+      if (k === 0) { trail.classList.add("reset"); fill.style.width = "0%"; nodes.forEach(function (n) { n.classList.remove("lit", "now"); }); void trail.offsetWidth; trail.classList.remove("reset"); }
+      trail.classList.add("live");
+      nodes.forEach(function (n, j) { n.classList.toggle("lit", j <= st.at); n.classList.toggle("now", j === st.at); });
+      fill.style.width = (st.at / 6 * 100) + "%";
+      gate.classList.toggle("hold", st.hold);
+      cards.forEach(function (c, j) { c.classList.toggle("on", j === k); });
+      say.classList.add("out");
+      setTimeout(function () { say.textContent = st.text; say.classList.remove("out"); }, 250);
+    }
+    function tick() { i = (i + 1) % stages.length; show(i); }
+    function start() { if (!timer) { tick(); timer = setInterval(tick, i === stages.length - 1 ? 3600 : 3000); } }
+    function stop() { clearInterval(timer); timer = null; }
+    new IntersectionObserver(function (entries) { entries[0].isIntersecting ? start() : stop(); }, { threshold: .4 }).observe(trail);
+    trail.addEventListener("mouseenter", stop);
+    trail.addEventListener("mouseleave", function () { if (document.documentElement.scrollTop >= 0) start(); });
+  })();
+</script>
 <script>
   (function () {
     var form = document.getElementById("lead-form");
