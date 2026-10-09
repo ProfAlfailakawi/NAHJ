@@ -4,6 +4,7 @@ import {
   AlertTriangle, Building2, CalendarClock, CheckCircle2, Clock3, HandCoins, RefreshCw, Wallet,
 } from "lucide-react";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
+import { SectorIcon } from "../SectorIcon";
 import {
   CLIENT_STATUS_AR, COMMISSION_MODEL_AR, COMMISSION_STATUS_AR, money, partnersApi,
   type PartnerPortal,
@@ -25,6 +26,16 @@ interface Props {
   lang: "ar" | "en";
   notify: (text: string, error?: boolean) => void;
 }
+
+const SECTOR_AR: Record<string, string> = {
+  education: "تعليم ومدارس", clinic: "عيادة ومركز طبي", law: "مكتب محاماة", retail: "تجزئة ومطاعم",
+  logistics: "شحن ولوجستيات", realestate: "عقارات وإدارة أملاك", general: "نشاط عام",
+};
+
+/* حالة فارغة: رمزٌ ونصٌّ بدل سطرٍ مجرّد. */
+const EmptyNote = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
+  <div className="partner-empty">{icon}<p>{children}</p></div>
+);
 
 const shortDate = (value: string | null | undefined) =>
   value ? new Date(value).toLocaleDateString("ar-KW-u-nu-latn", { year: "numeric", month: "short", day: "numeric" }) : "—";
@@ -89,6 +100,23 @@ export function PartnerPortalView({ lang, notify }: Props) {
         action={<button className="btn-secondary" onClick={() => void load()}><RefreshCw /> {ar ? "تحديث" : "Refresh"}</button>}
       />
 
+      {/* المبلغ المستحقّ لك الآن هو أهمّ رقمٍ هنا — يتصدّر الصفحة، وتحته نسبة ما قُبض مما استُحقّ. */}
+      <section className={`partner-hero ${totals.due > 0 ? "has-due" : ""}`} aria-label={ar ? "المستحقّ لك الآن" : "Due to you now"}>
+        <div className="partner-hero-main">
+          <span>{ar ? "المستحقّ لك الآن" : "Due to you now"}</span>
+          <strong className="mono">{formattedMoney(totals.formatted.due, ar)}</strong>
+        </div>
+        <div className="partner-hero-split">
+          <div className="partner-hero-bar" role="img" aria-label={ar ? `قُبض ${totals.accrued > 0 ? Math.round(totals.paid / totals.accrued * 100) : 0}% مما استُحقّ` : "Share paid"}>
+            <i style={{ width: `${totals.accrued > 0 ? Math.min(100, Math.round(totals.paid / totals.accrued * 100)) : 0}%` }} />
+          </div>
+          <div className="partner-hero-legend">
+            <span><i className="paid" />{ar ? "ما قُبض" : "Paid"} <b className="mono">{formattedMoney(totals.formatted.paid, ar)}</b></span>
+            <span><i className="accrued" />{ar ? "إجمالي ما استُحقّ" : "Accrued"} <b className="mono">{formattedMoney(totals.formatted.accrued, ar)}</b></span>
+          </div>
+        </div>
+      </section>
+
       <div className="stat-grid">
         <Stat label={ar ? "شركاتك" : "Companies"} value={clients.length} tone="sky" icon={<Building2 />} />
         <Stat label={ar ? "إجمالي ما استُحقّ" : "Accrued"} value={formattedMoney(totals.formatted.accrued, ar)} tone="violet" icon={<HandCoins />} />
@@ -106,7 +134,7 @@ export function PartnerPortalView({ lang, notify }: Props) {
       <section className="surface-strong sub-block">
         <SectionTitle title={ar ? "شركاتك" : "Your companies"} icon={<Building2 />} meta={`${clients.length}`} />
         {!clients.length ? (
-          <p className="sub-empty-line">{ar ? "لا شركات مسجّلة تحتك بعد." : "No companies assigned yet."}</p>
+          <EmptyNote icon={<Building2 />}>{ar ? "لا شركات مسجّلة تحتك بعد." : "No companies assigned yet."}</EmptyNote>
         ) : (
           <div className="partner-clients">
             {clients.map(client => {
@@ -115,9 +143,10 @@ export function PartnerPortalView({ lang, notify }: Props) {
               return (
                 <article key={client.id} className={`partner-client status-${client.status}`}>
                   <button className="partner-client-head" onClick={() => setOpenClient(open ? null : client.id)}>
+                    <SectorIcon code={client.sector} size="sm" />
                     <div>
                       <strong>{client.name}</strong>
-                      <small>{client.sector || "—"}</small>
+                      <small>{SECTOR_AR[client.sector] || client.sector || "—"}</small>
                     </div>
                     <span className={`client-badge status-${client.status}`}>{CLIENT_STATUS_AR[client.status]}</span>
                     <span className="partner-client-amount mono">{client.commissionFormatted}</span>
@@ -135,7 +164,7 @@ export function PartnerPortalView({ lang, notify }: Props) {
                   {open && (
                     <div className="partner-client-detail">
                       {!clientCommissions.length ? (
-                        <p className="sub-empty-line">{ar ? "لا عمولات مستحقّة بعد على هذه الشركة." : "No commissions yet."}</p>
+                        <EmptyNote icon={<Clock3 />}>{ar ? "لا عمولات مستحقّة بعد على هذه الشركة." : "No commissions yet."}</EmptyNote>
                       ) : (
                         clientCommissions.map(commission => (
                           <div key={commission.id} className="partner-commission-row">
@@ -160,7 +189,7 @@ export function PartnerPortalView({ lang, notify }: Props) {
       <section className="surface-strong sub-block">
         <SectionTitle title={ar ? "كشف العمولات" : "Commission statement"} icon={<Clock3 />} meta={`${commissions.length}`} />
         {!commissions.length ? (
-          <p className="sub-empty-line">{ar ? "لا عمولات بعد." : "No commissions yet."}</p>
+          <EmptyNote icon={<HandCoins />}>{ar ? "لا عمولات بعد." : "No commissions yet."}</EmptyNote>
         ) : (
           <div className="ledger compact">
             <div className="ledger-head four">
