@@ -889,7 +889,7 @@ button.dna-hubn:focus-visible .dna-hubt { transform:translateY(-2px); }
 }
 .dna-hubn[data-state='attention'] .dna-hubv {
   background:var(--dna-danger);
-  color:#ffffff;
+  color:var(--on-accent, #ffffff);
   box-shadow:0 0 0 2px var(--dna-surface);
 }
 .dna-hubn[data-state='off'] .dna-hubt {

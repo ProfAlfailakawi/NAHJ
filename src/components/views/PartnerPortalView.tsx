@@ -146,7 +146,7 @@ export function PartnerPortalView({ lang, notify }: Props) {
                     <SectorIcon code={client.sector} size="sm" />
                     <div>
                       <strong>{client.name}</strong>
-                      <small>{SECTOR_AR[client.sector] || client.sector || "—"}</small>
+                      <small>{(ar && SECTOR_AR[client.sector]) || client.sector || "—"}</small>
                     </div>
                     <span className={`client-badge status-${client.status}`}>{CLIENT_STATUS_AR[client.status]}</span>
                     <span className="partner-client-amount mono">{client.commissionFormatted}</span>

@@ -7,7 +7,7 @@
   --dna-muted: var(--muted);
   --dna-line: var(--line);
   --dna-line-2: var(--line-strong);
-  --dna-accent: var(--moss);
+  --dna-accent: var(--moss-text);
   --dna-accent-soft: var(--mint);
   --dna-on-accent: #ffffff;
   --dna-core: #10251f;
