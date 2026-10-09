@@ -31,8 +31,8 @@ export function LearningLens({ progress = 76, label, ar = true }: { progress?: n
   return (
     <div className="learning-lens" aria-label={ar ? `تغطية التعلّم ${progress}%` : `Learning coverage ${progress}%`}>
       <svg viewBox="0 0 120 120" aria-hidden="true">
-        <circle cx="60" cy="60" r="47" fill="none" stroke="rgba(16,37,31,.055)" strokeWidth="1"/>
-        <circle cx="60" cy="60" r="42" fill="none" stroke="rgba(16,37,31,.08)" strokeWidth="5"/>
+        <circle cx="60" cy="60" r="47" fill="none" stroke="color-mix(in srgb,var(--ink) 5.5%,transparent)" strokeWidth="1"/>
+        <circle cx="60" cy="60" r="42" fill="none" stroke="color-mix(in srgb,var(--ink) 8%,transparent)" strokeWidth="5"/>
         <circle cx="60" cy="60" r="42" fill="none" stroke="var(--moss)" strokeWidth="5" strokeLinecap="round" strokeDasharray={`${dash} ${circumference}`} transform="rotate(-90 60 60)" className="lens-progress"/>
       </svg>
       {/* الرقم يظهر مرة واحدة: داخل الحلقة، لا فوق قوسها ولا مكرَّراً تحتها. */}
@@ -80,9 +80,9 @@ export function ConnectionConstellation({ statuses, ar = true }: { statuses: {he
   return (
     <div className="connection-constellation">
       <svg viewBox="0 0 390 330" fill="none" aria-hidden="true">
-        {nodes.map((n,i)=><path key={i} d={`M195 165 C${(195+n.x)/2} ${(165+n.y)/2-30} ${n.x} ${n.y} ${n.x} ${n.y}`} stroke="rgba(16,37,31,.11)" strokeWidth="1.5" strokeDasharray="5 6"/>) }
-        <circle cx="195" cy="165" r="69" fill="rgba(224,240,231,.66)" stroke="rgba(47,125,101,.14)"/>
-        <circle cx="195" cy="165" r="43" fill="var(--ink)"/>
+        {nodes.map((n,i)=><path key={i} d={`M195 165 C${(195+n.x)/2} ${(165+n.y)/2-30} ${n.x} ${n.y} ${n.x} ${n.y}`} stroke="color-mix(in srgb,var(--ink) 11%,transparent)" strokeWidth="1.5" strokeDasharray="5 6"/>) }
+        <circle cx="195" cy="165" r="69" fill="color-mix(in srgb,var(--mint) 70%,transparent)" stroke="color-mix(in srgb,var(--moss) 18%,transparent)"/>
+        <circle cx="195" cy="165" r="43" fill="var(--ink-bg)"/>
       </svg>
       <div className="constellation-core"><Orbit/></div>
       {nodes.map((n,i)=><div key={i} className="constellation-node" style={{left:`calc(${n.x/3.9}% - 25px)`,top:`calc(${n.y/3.3}% - 25px)`,background:nodeTones[n.tone].bg,color:nodeTones[n.tone].fg}} title={n.label}>{n.icon}</div>)}
@@ -108,9 +108,9 @@ export function GovernanceShield({ paused = false }: { paused?: boolean }) {
 export function MiniProcessGlyph() {
   return (
     <svg viewBox="0 0 260 86" className="mini-process-glyph" fill="none" aria-hidden="true">
-      <path d="M18 43h44c19 0 20-23 39-23h42c20 0 21 46 42 46h57" stroke="rgba(16,37,31,.14)" strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M18 43h44c19 0 20-23 39-23h42c20 0 21 46 42 46h57" stroke="color-mix(in srgb,var(--ink) 14%,transparent)" strokeWidth="2.5" strokeLinecap="round"/>
       {[18,62,101,143,185,242].map((x,i)=><circle key={x} cx={x} cy={[43,43,20,20,66,66][i]} r={i===5?8:5} fill={i===5?"var(--ink)":"var(--white)"} stroke={i===5?"var(--ink)":"rgba(16,37,31,.25)"} strokeWidth="2"/>)}
-      <circle cx="242" cy="66" r="2.5" fill="#dff0e7"/>
+      <circle cx="242" cy="66" r="2.5" fill="var(--mint)"/>
     </svg>
   );
 }
