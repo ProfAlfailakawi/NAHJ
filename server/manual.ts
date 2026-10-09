@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { openDatabase } from "./persistence.ts";
 import type { Skill, SkillStep, SkillException } from "../src/types/index.ts";
+import { FONT_FACE_CSS } from "./fontFace.ts";
 
 /*
  * دليل الإجراء المطبوع — لكل إصدارٍ من المهارة، موقَّعاً.
@@ -147,7 +148,8 @@ export function renderManualHtml(
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(title)} — v${version}</title>
 <style>
-body{font-family:"IBM Plex Sans Arabic","Noto Sans Arabic","Segoe UI",Tahoma,sans-serif;color:#10251f;background:#fff;margin:0;padding:32px;line-height:1.75;font-size:14px}
+${FONT_FACE_CSS}
+body{font-family:"Cairo","Segoe UI",Tahoma,sans-serif;color:#10251f;background:#fff;margin:0;padding:32px;line-height:1.75;font-size:14px}
 header{border-bottom:2px solid #10251f;padding-bottom:12px;margin-bottom:20px}
 h1{margin:0;font-size:22px}h2{font-size:16px;margin:24px 0 8px;color:#205d4b}
 .meta{color:#5e6862;font-size:13px}.en{color:#5e6862;font-size:13px}

@@ -259,8 +259,6 @@ export function renderPricingPage(): string {
     body,
     style: STYLE,
     index: false,
-    /* الصفحة مكتفية بذاتها ولا تطلب من الشبكة شيئاً — فلا خطّ خارجي هنا. */
-    fonts: false,
   });
 }
 

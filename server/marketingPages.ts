@@ -1,6 +1,7 @@
 import { listSectors, getSectorPack, EDUCATION_CODE } from "./packs/index.ts";
 import { escapeHtml, publicPlans, CUSTOM_PRICE } from "./publicPages.ts";
 import { sectorGlyph } from "./sectorIcons.ts";
+import { FONT_FACE_CSS, FONT_PRELOAD_LINK } from "./fontFace.ts";
 
 /*
  * الصفحات التسويقية: الهبوط، والشروط، والخصوصية.
@@ -34,7 +35,7 @@ function legalName(): string {
 
 /* ------------------------------------------------------------ الإطار */
 
-export const BASE_STYLE = `
+export const BASE_STYLE = `${FONT_FACE_CSS}
   :root { --ink:#10251f; --muted:#5d716b; --line:#e2e8e4; --moss:#2f7d65; --moss-soft:#e7f1ec; --amber:#b9852f; --amber-soft:#f6ecd6; --sky:#4a63cf; --sky-soft:#e8ecfb; --coral:#c2553f; --violet:#7357c4; --err:#b3392b; --bg:#f4f1e8; --card:#fffdf7; --r:20px; --shadow:0 18px 40px -26px rgba(16,37,31,.45); }
   @media (prefers-color-scheme: dark) {
     :root { --ink:#eef3f0; --muted:#a4b3ad; --line:#2a3833; --moss:#6fc3a3; --moss-soft:#17302a; --amber:#e0b36a; --amber-soft:#2e2815; --sky:#8ea2f0; --sky-soft:#1b2342; --coral:#ef8f78; --violet:#b3a0ee; --err:#ff9b8c; --bg:#0f1714; --card:#16211d; --shadow:0 18px 40px -26px rgba(0,0,0,.8); }
@@ -89,7 +90,7 @@ export const BASE_STYLE = `
 
 export const MARK = `<svg viewBox="0 0 72 72" fill="none" aria-hidden="true"><rect x="2" y="2" width="68" height="68" rx="23" fill="var(--card)" stroke="var(--line)"/><path d="M18 18v12c0 7.2 5.8 13 13 13h9c7.8 0 14 6.2 14 14v3" stroke="var(--ink)" stroke-width="4.6" stroke-linecap="round"/><path d="M18 18h10M44 16h10v10" stroke="var(--moss)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18" cy="18" r="5" fill="#e0a04b"/><circle cx="54" cy="60" r="5" fill="#5e79e6"/><circle cx="38" cy="43" r="4.8" fill="var(--moss)"/></svg>`;
 
-export function page(options: { title: string; description: string; path: string; body: string; style?: string; index?: boolean; fonts?: boolean }): string {
+export function page(options: { title: string; description: string; path: string; body: string; style?: string; index?: boolean }): string {
   const base = (process.env.NAHJ_PUBLIC_URL || "").replace(/\/+$/, "");
   const contact = contactEmail();
   return `<!doctype html>
@@ -109,8 +110,7 @@ export function page(options: { title: string; description: string; path: string
 ${base ? `<link rel="canonical" href="${escapeHtml(base + options.path)}">` : ""}
 ${options.index === false ? `<meta name="robots" content="noindex">` : ""}
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-${options.fonts === false ? "" : `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">`}
+${FONT_PRELOAD_LINK}
 <style>${BASE_STYLE}${options.style || ""}</style>
 </head>
 <body>
