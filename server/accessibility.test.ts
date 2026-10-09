@@ -70,8 +70,31 @@ test("page eyebrows are translated in Arabic", () => {
   }
 });
 
-test("only the fonts in use are loaded", () => {
+test("only the fonts in use are loaded, self-hosted, with no external font host", () => {
+  /*
+   * يحمي هذا الفحص: (١) ألا يُحمَّل خطٌّ لا تستعمله أي قاعدة — فلكل خطٍّ معرَّف تعريفُ @font-face
+   * وقاعدةُ font-family تستعمله؛ (٢) ألا يخرج طلبٌ إلى خادم خطوطٍ خارجي لا من الواجهة ولا من
+   * الصفحات المرسومة من الخادم (خصوصيةُ الزائر وصفحاتٌ مكتفية بذاتها). كان يمنع Cairo لأنه يُحمَّل
+   * من Google ولا تستعمله قاعدة؛ وصار مستضافاً ذاتياً وتستعمله الواجهة والصفحات كلها.
+   */
   const html = read("index.html");
-  assert.doesNotMatch(html, /family=Cairo/, "Cairo is loaded but no CSS rule uses it");
-  assert.match(html, /Plus\+Jakarta\+Sans:wght@400\.\.800/);
+  const css = read("src/index.css");
+  assert.doesNotMatch(html, /fonts\.(googleapis|gstatic)\.com/, "index.html requests an external font host");
+  assert.match(html, /<link rel="preload" href="\/fonts\/cairo-arabic\.woff2" as="font" type="font\/woff2" crossorigin/);
+  for (const file of ["server/marketingPages.ts", "server/publicPages.ts", "server/manual.ts", "server/fontFace.ts"]) {
+    assert.doesNotMatch(read(file), /fonts\.(googleapis|gstatic)\.com/, `${file} requests an external font host`);
+  }
+  const faces = [...css.matchAll(/@font-face\{font-family:'([^']+)'[^}]*src:url\((\/fonts\/[^)]+\.woff2)\)/g)];
+  assert.ok(faces.length >= 4, "the self-hosted @font-face rules are missing");
+  const families = new Set(faces.map(m => m[1]));
+  assert.deepEqual([...families].sort(), ["Cairo", "Plus Jakarta Sans"]);
+  for (const [, family, url] of faces) {
+    assert.ok(fs.existsSync(`public${url}`), `${url} is declared but missing from public/`);
+    assert.match(css, new RegExp(`font-family:[^;}]*"${family}"`), `${family} is loaded but no CSS rule uses it`);
+  }
+  assert.match(css, /font-display:swap/);
+  /* الصفحات المرسومة من الخادم تعلن التعريفات نفسها، فلا تعتمد على الشبكة. */
+  const serverFaces = read("server/fontFace.ts");
+  for (const [, , url] of faces) assert.ok(serverFaces.includes(url), `${url} is not declared for the server-rendered pages`);
+  assert.match(read("server/marketingPages.ts"), /font-family:"Cairo"/);
 });

@@ -13,15 +13,11 @@
     <meta property="og:image" content="/og.png" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta name="twitter:card" content="summary" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!--
-      الخطوط: كان يُحمَّل Cairo بستة أوزان ولا تستعمله أي قاعدة CSS (الواجهة العربية على
-      IBM Plex Sans Arabic/Noto من الجهاز)، وPlus Jakarta Sans بخمسة ملفات ثابتة. بقي
-      Plus Jakarta Sans وحده — للواجهة الإنجليزية — ملفاً متغيّراً واحداً يغطي 400–800،
-      وهي الأوزان التي تطلبها القواعد فعلاً (ما فوق 800 يُقرَّب إلى 800 كما كان).
+      الخطوط: مستضافة ذاتياً (public/fonts، ترخيص OFL) — Cairo متغيّر 200–1000 للعربية واللاتينية،
+      وPlus Jakarta Sans للواجهة الإنجليزية. لا طلب إلى خادم خطوط خارجي؛ والتعريفات في src/index.css.
     -->
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400..800&display=swap" rel="stylesheet" />
+    <link rel="preload" href="/fonts/cairo-arabic.woff2" as="font" type="font/woff2" crossorigin />
     <style>
       html,body,#root{min-height:100%;margin:0}body{background:#f4f1e8}
       #nahj-splash{position:fixed;inset:0;z-index:9999;background:#f4f1e8;display:grid;place-items:center;transition:opacity .38s ease,visibility .38s ease}

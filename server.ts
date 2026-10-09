@@ -293,6 +293,8 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
+    /* الخطوط المستضافة ذاتياً: أسماء الملفات ثابتة، فتُخزَّن سنة. */
+    app.use("/fonts", express.static(path.join(distPath, "fonts"), { maxAge: "365d", immutable: true }));
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       const indexPath = path.join(distPath, "index.html");
