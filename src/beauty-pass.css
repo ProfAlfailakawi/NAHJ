@@ -22,9 +22,24 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  @keyframes bpTileIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes bpTileIn { from { opacity: 0; transform: translateY(10px); } }
   .guard-tile { animation: bpTileIn 0.5s var(--ease) backwards; }
-  .guard-tile:nth-child(2) { animation-delay: 0.06s; }
-  .guard-tile:nth-child(3) { animation-delay: 0.12s; }
-  .guard-tile:nth-child(n + 4) { animation-delay: 0.18s; }
+}
+
+/* phones: the emergency button lives in the dock row (beside the dock) instead of floating over page content.
+   Offset and spacing only; same button, same handler. Below 380px the existing floating placement is kept. */
+@media (max-width: 900px) and (min-width: 380px) {
+  /* the button is rendered only for accounts that can pause the autopilot, so reserve its slot only then */
+  :root:has(.emergency-fab) .mobile-dock { inset-inline-end: 72px; }
+  .emergency-fab {
+    inset-inline-end: 12px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+  }
+}
+@media (max-width: 379px) {
+  .emergency-fab { inset-inline-end: 8px; width: 40px; height: 40px; min-width: 40px; border-radius: 14px; }
+  .apphub-stage { margin-inline: 14px; }
 }
