@@ -258,8 +258,8 @@ const LANDING_STYLE = `
   .sector a.more:focus-visible { outline:none; }
   .sector a.more:focus-visible::after { outline:3px solid var(--moss); outline-offset:2px; }
   .steps { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:16px; counter-reset:step; }
-  .step { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:22px; }
-  .step b { display:grid; place-items:center; width:40px; height:40px; border-radius:12px; background:var(--ink); color:var(--bg); font-size:18px; margin-bottom:12px; }
+  .step { background:linear-gradient(180deg, color-mix(in srgb, var(--moss) 7%, var(--card)), var(--card) 55%); border:1px solid var(--line); border-radius:20px; padding:22px; box-shadow:0 12px 28px -22px var(--moss); }
+  .step b { display:grid; place-items:center; width:40px; height:40px; border-radius:12px; background:linear-gradient(145deg, var(--ink), color-mix(in srgb, var(--moss) 55%, var(--ink))); color:var(--bg); font-size:22px; font-weight:900; font-variant-numeric:lining-nums; box-shadow:0 8px 18px -8px var(--moss); margin-bottom:12px; }
   .step h3 { margin:0 0 6px; font-size:19px; }
   .step p { margin:0; color:var(--muted); font-size:15.5px; }
   /* مسار الثقة: رمزٌ يصعد درجات الصلاحية ويقف عند بوابة موافقتك. الحالة الافتراضية مكتملة؛ السكربت وحده يبدأ الحركة. */
