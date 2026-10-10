@@ -222,7 +222,8 @@ const LOCK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-
 
 const LANDING_STYLE = `
   .hero { padding:64px 0 32px; display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr); gap:24px 40px; align-items:center; }
-  .hero-visual { display:flex; justify-content:center; }
+  /* مربّع الأقمار الدوّار تمتدّ زواياه خارج عمود الجوال أثناء الدوران فيتّسع عرض الصفحة: يُقصّ أفقياً على غلاف الرسم نفسه (لا على الصفحة). */
+  .hero-visual { display:flex; justify-content:center; overflow-x:clip; }
   .orbit { --s:clamp(250px, 32vw, 410px); position:relative; width:var(--s); aspect-ratio:1; flex:none; }
   .orbit-glow { position:absolute; inset:-14%; border-radius:50%; background:radial-gradient(closest-side, color-mix(in srgb, var(--moss) 24%, transparent), color-mix(in srgb, var(--amber) 8%, transparent) 62%, transparent 76%); }
   .orbit-ring { position:absolute; inset:7%; border-radius:50%; border:1.5px dashed color-mix(in srgb, var(--moss) 38%, var(--line)); }

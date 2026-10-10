@@ -1375,10 +1375,11 @@
   .work-focus .work-focus-river>.dna-steps{flex:1 1 100%}
 }
 
-/* Work focus card (narrow phones): six stage labels fold into two rows of three so no label breaks mid-word. */
-@media(max-width:380px){
-  .work-focus .work-focus-river>.dna-steps{grid-auto-flow:row;grid-template-columns:repeat(3,minmax(0,1fr));row-gap:14px}
-  .work-focus .work-focus-river>.dna-steps>.dna-stepi:nth-child(3n+1)::before{display:none}
+/* Work focus card (phones): six stage labels fold into two rows of three so no label breaks mid-word (English names are wider than a sixth of 390px). */
+@media(max-width:460px){
+  .work-focus .work-focus-river>.dna-steps:has(> :nth-child(5)){grid-auto-flow:row;grid-template-columns:repeat(3,minmax(0,1fr));row-gap:14px}
+  .work-focus .work-focus-river>.dna-steps:has(> :nth-child(5))>.dna-stepi:nth-child(3n+1)::before,
+  .work-focus .work-focus-river>.dna-steps:has(> :nth-child(5))>.dna-stepi:nth-child(3n+1)::after{display:none}
 }
 
 /* Phones: the large data rings (Impact automation share, People coverage, Practice pass) are scaled down so a ring is a gauge, not the page. */
