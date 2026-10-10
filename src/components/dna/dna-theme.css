@@ -114,3 +114,15 @@
 /* English station names are wider than the panel columns: stagger them over two rows instead of overlapping. */
 html[lang='en'] .skill-inspector .autonomy-steps .dna-lbl{white-space:nowrap}
 html[lang='en'] .skill-inspector .autonomy-steps .dna-stepi:nth-child(even) .dna-lbl{margin-top:20px}
+/* Dark: dna.css declares its warn/danger tokens on :root after index.css, which kept their light values (and a dark-red label on
+   dark paper). The journey states "returned"/"blocked" now show real cases, so they follow the dark palette like the accent does. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --dna-warn: var(--amber-ink); --dna-warn-soft: var(--amber-soft);
+    --dna-danger: var(--rose-ink); --dna-danger-soft: var(--rose-soft);
+  }
+}
+:root[data-theme='dark'] {
+  --dna-warn: var(--amber-ink); --dna-warn-soft: var(--amber-soft);
+  --dna-danger: var(--rose-ink); --dna-danger-soft: var(--rose-soft);
+}

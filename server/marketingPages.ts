@@ -36,6 +36,10 @@ export const JOURNEY_CSS = `
   .jr li.lit.cap .n { box-shadow:0 0 0 3px color-mix(in srgb, var(--moss) 22%, transparent); }
   .jr li + li::before, .jr li + li::after { content:""; position:absolute; top:7px; inset-inline-start:calc(-50% + 11px); width:calc(100% - 22px); height:2px; border-radius:2px; background:var(--line); }
   .jr li + li::after { background:var(--moss); transform:scaleX(0); transform-origin:left center; transition:transform .45s cubic-bezier(.5,.1,.2,1); }
+  [dir="rtl"] .jr li + li::after { transform-origin:right center; }
+  [dir="rtl"] [dir="ltr"] .jr li + li::after { transform-origin:left center; }
+  [dir="ltr"] [dir="rtl"] .jr li + li::after { transform-origin:right center; }
+  .jr li + li:dir(ltr)::after { transform-origin:left center; }
   .jr li + li:dir(rtl)::after { transform-origin:right center; }
   .jr li + li.lit::after { transform:scaleX(1); }
   .jr li.just .n { animation:jrHalo 1.5s ease-out .2s 1; }
@@ -287,7 +291,7 @@ const LANDING_STYLE = `
   .trail.live ~ .steps .step { opacity:.55; }
   .trail.live ~ .steps .step.on { opacity:1; border-color:var(--moss); transform:translateY(-4px); box-shadow:0 10px 24px -14px var(--moss); }
   .trail.live ~ .steps .step.on b { background:var(--moss); }
-  @media (max-width:560px) { .trail-node span { font-size:11px; } .trail-line { margin:0 16px; } }
+  @media (max-width:560px) { .trail-node span { font-size:12px; } .trail-line { margin:0 16px; } }
   @media (prefers-reduced-motion:reduce) { .trail *, .step { transition:none !important; animation:none !important; } }
   .levels { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
   .levels span { font-size:14px; padding:6px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); }

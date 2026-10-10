@@ -423,6 +423,11 @@
   transform-origin:left center;
   transition:transform 0.45s var(--dna-ease);
 }
+/* Older Safari (< 16.4) has no :dir(): follow the nearest dir attribute instead (nested LTR inside RTL included). */
+[dir='rtl'] .dna-steps[data-journey] .dna-stepi + .dna-stepi::after { transform-origin:right center; }
+[dir='rtl'] [dir='ltr'] .dna-steps[data-journey] .dna-stepi + .dna-stepi::after { transform-origin:left center; }
+[dir='ltr'] [dir='rtl'] .dna-steps[data-journey] .dna-stepi + .dna-stepi::after { transform-origin:right center; }
+.dna-steps[data-journey] .dna-stepi + .dna-stepi:dir(ltr)::after { transform-origin:left center; }
 .dna-steps[data-journey] .dna-stepi + .dna-stepi:dir(rtl)::after { transform-origin:right center; }
 .dna-steps[data-journey] .dna-stepi[data-link='done']::after { transform:scaleX(1); }
 .dna-steps[data-journey] .dna-stepi[data-link='done']::before { background:var(--dna-line-2); }

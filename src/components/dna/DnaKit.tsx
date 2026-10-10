@@ -158,7 +158,7 @@ export function DnaStepper({
   steps.forEach((s, i) => {
     if (s.state !== 'pending') target = i + 1;
   });
-  const { ref, lit } = useJourneyReveal({ target, count: steps.length, stepMs, enabled: reveal, hold, playKey, onDone: onRevealDone });
+  const { ref, lit } = useJourneyReveal({ target, count: steps.length, stepMs, enabled: reveal, hold, playKey, settleMs: size === 'xs' ? 0 : 1700, onDone: onRevealDone });
   // During the intro a station shows its real state only once its turn has come.
   const shown = lit === null ? steps : steps.map((s, i): DnaStep => (i < lit ? s : { ...s, state: 'pending' }));
   return (

@@ -53,6 +53,8 @@ export interface JourneyRevealOptions {
   hold?: boolean;
   /** Same key => the intro is not replayed for that entity during this tab session. */
   playKey?: string;
+  /** Keep the last station's one-shot halo alive this long before settling (0 = settle on the next beat). */
+  settleMs?: number;
   /** Called when this stepper is finished with its intro, or has none to play (so another one can start). */
   onDone?: () => void;
 }
@@ -65,6 +67,7 @@ export function useJourneyReveal<T extends HTMLElement = HTMLOListElement>({
   enabled = true,
   hold = false,
   playKey,
+  settleMs = 0,
   onDone,
 }: JourneyRevealOptions) {
   const ref = React.useRef<T>(null);
@@ -108,16 +111,27 @@ export function useJourneyReveal<T extends HTMLElement = HTMLOListElement>({
       return () => clearTimeout(giveUp);
     }
     armedFor.current = token;
+    let ended = false;
     const tick = (n: number) => {
       // The real stage may have been reached (or lost) while we were playing: never overshoot it.
       // `target` is re-read on every tick, so a stage that moves mid-intro is followed and the ticker always
       // ends in the settle below; it is only stopped by the effect cleanup, which settles as well.
       const max = targetRef.current;
       if (n > max) {
+        if (!ended) {
+          // The ticks are over: let the next stepper start and remember the play, but keep the last station's
+          // one-shot halo (1.7s from its lighting) running to its end before handing back to the static ring.
+          ended = true;
+          remember(playKey);
+          doneRef.current?.();
+          const rest = Math.max(0, settleMs - pace);
+          if (rest > 0) {
+            timer = setTimeout(() => tick(n), rest);
+            return;
+          }
+        }
         setLit(null);
-        remember(playKey);
         done = true;
-        doneRef.current?.();
         return;
       }
       setLit(n);
