@@ -7,7 +7,7 @@ import { Dt, PageHeader, SectionTitle } from "../Primitives";
 import { SkillRunway } from "../Visuals";
 import { DnaStepper, DnaTimeline, type DnaStepState } from "../dna";
 import { AutonomyBadge, Term } from "../Explain";
-import { riskLabel, hoursLabel, levelLabel } from "../../lib/labels";
+import { riskLabel, hoursLabel, levelLabel, LADDER_NAME_AR } from "../../lib/labels";
 import { ladderStep, ladderPlain, ladderYourPart, RISK_PLAIN, SKILL_STATUS_PLAIN } from "../../lib/glossary";
 
 export type PromoteOptions={signOff?:boolean;note?:string};
@@ -139,6 +139,8 @@ const stages=["Observe","Practice","Shadow","Suggest","Prepare","Approval","Auto
 export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpenPeople,onSkillUpdated,notify}:Props){
   const ar=lang==="ar"; const [selected,setSelected]=useState(skills[0]?.id||"");
   const [promoteTo,setPromoteTo]=useState<number|null>(null);
+  /* الدورة تُعرض أولاً ثم السُّلّم: لا مقدّمتان معاً في اللوحة نفسها. */
+  const [lifeDoneFor,setLifeDoneFor]=useState("");
   const skill=useMemo(()=>skills.find(s=>s.id===selected)||skills[0],[skills,selected]);
   return <div className="page-enter">
     <PageHeader eyebrow={ar?"المهارات / الذاكرة":"SKILLS / MEMORY"} title={ar?"كل ما تعرفه المؤسسة.":"What the organization knows how to do."} hint={ar?"المهارة إجراءٌ من عمل مؤسستك مكتوبٌ بخطواته وقراراته واستثناءاته — لا نصُّ أمرٍ يُكتب لنموذج.":"A skill is verified operational memory — not a prompt."}/>
@@ -157,7 +159,7 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
       </section>
       {skill&&<aside className="skill-inspector surface-strong">
         <div className="inspector-hero"><span className={`skill-glyph large risk-${skill.riskLevel}`}><BrainCircuit/></span><div><em>{ar?(SKILL_STATUS_PLAIN[skill.status]||skill.status):skill.status.toUpperCase()}</em><strong>{ar?<Dt t={skill.name} ar={ar}/>:skill.nameEn}</strong><small>v{skill.activeVersion} · {skill.ownerName}</small></div></div>
-        <DnaStepper className="skill-lifecycle" size="xs" ariaLabel={ar?"دورة حياة المهارة":"Skill lifecycle"} stateText={ar?undefined:EN_STATE}
+        <DnaStepper className="skill-lifecycle" size="xs" reveal stepMs={350} playKey={`life:${skill.id}`} onRevealDone={()=>setLifeDoneFor(skill.id)} ariaLabel={ar?"دورة حياة المهارة":"Skill lifecycle"} stateText={ar?undefined:EN_STATE}
           steps={LIFECYCLE.map((st,i)=>({key:st,label:ar?(SKILL_STATUS_PLAIN[st]||st):st,state:lifecycleState(skill.status,i)}))}/>
         <div className="reliability-orb" style={{"--value":`${skill.reliabilityScore}%`} as React.CSSProperties}><strong>{skill.reliabilityScore}%</strong><span>{ar?"موثوقية":"reliability"}</span></div>
         <SectionTitle title={ar?<Term k="autonomy">مستوى الاستقلالية</Term>:"Autonomy"} meta={`${skill.autonomyLevel}/6`}/>
@@ -169,8 +171,8 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
           <strong>{ladderPlain(skill.autonomyLevel,ar)}</strong>
           <small>{ladderYourPart(skill.autonomyLevel,ar)}</small>
         </div>
-        <DnaStepper className="autonomy-steps" size="sm" showLabels={false} ariaLabel={ar?"سُلّم الاستقلالية":"Autonomy ladder"} stateText={ar?undefined:EN_STATE}
-          steps={stages.map((st,i)=>({key:st,icon:i<skill.autonomyLevel?undefined:<span className="dna-num">{i}</span>,label:ar?ladderStep(i).plain:st,title:ar?ladderStep(i).plain:st,state:i<skill.autonomyLevel?"done":i===skill.autonomyLevel?"current":"pending"}))}/>
+        <DnaStepper className="autonomy-steps" size="sm" reveal playKey={`ladder:${skill.id}`} hold={lifeDoneFor!==skill.id} ariaLabel={ar?"سُلّم الاستقلالية":"Autonomy ladder"} stateText={ar?undefined:EN_STATE}
+          steps={stages.map((st,i)=>({key:st,num:i,label:ar?LADDER_NAME_AR[i]:st,title:ar?ladderStep(i).plain:st,state:i<skill.autonomyLevel?"done":i===skill.autonomyLevel?"current":"pending"}))}/>
         <div className="autonomy-chooser" role="group" aria-label={ar?"اختر مستوى الاستقلالية":"Choose autonomy level"}>{stages.map((st,i)=>{const label=ar?`المستوى ${i}: ${ladderStep(i).plain}${i===skill.autonomyLevel?" (الحالي)":i>skill.autonomyLevel?" — يتطلب مراجعة وتوقيعاً":""}`:`Level ${i}: ${st}${i===skill.autonomyLevel?" (current)":i>skill.autonomyLevel?" — requires review and sign-off":""}`;
           return <button key={st} type="button" className={i===skill.autonomyLevel?"active":""} aria-current={i===skill.autonomyLevel?"step":undefined} aria-label={label} title={label}
             onClick={()=>{if(i===skill.autonomyLevel)return;if(i>skill.autonomyLevel)setPromoteTo(i);else onPromote(skill.id,i as AutonomyLevel)}}>

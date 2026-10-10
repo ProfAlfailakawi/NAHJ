@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { DEFAULT_CURRENCY, formatMoney, listPlans, type Plan, type PlanFeatures } from "./billing.ts";
-import { contactEmail, page, renderLandingPage, renderPrivacyPage, renderTermsPage } from "./marketingPages.ts";
+import { contactEmail, JOURNEY_CSS, JOURNEY_SCRIPT, page, renderLandingPage, renderPrivacyPage, renderTermsPage } from "./marketingPages.ts";
 import { authCookieNames } from "./auth.ts";
 import { listSectors } from "./packs/index.ts";
 import { createLead, LeadError } from "./leads.ts";
@@ -95,6 +95,8 @@ export interface PublicPlanView {
   annual: string;
   setupFee: string;
   limits: { seats: string; skills: string; workItems: string; autonomy: string };
+  /** سقف الاستقلالية الحقيقي للباقة (0..6) — يرسمه السُّلّم المصغّر. */
+  autonomyCap: number;
   features: FeatureView[];
 }
 
@@ -125,6 +127,7 @@ export function publicPlans(): PublicPlanView[] {
         workItems: plan.limits.workItemsPerMonth === null ? "بلا حدّ" : plan.limits.workItemsPerMonth.toLocaleString("en-US"),
         autonomy: `L${plan.limits.maxAutonomyLevel}`,
       },
+      autonomyCap: plan.limits.maxAutonomyLevel,
       features: featuresOf(plan),
     }));
 }
@@ -172,6 +175,14 @@ const STYLE = `
  * أي جهاز وتُرسل رابطاً في محادثة، وتبقى صحيحة لأنها تُبنى من الباقات نفسها
  * التي يُفوتر بها.
  */
+/** سُلّم L0..L6 مضاءٌ حتى سقف الباقة؛ الأرقام من حدود الباقة نفسها لا من نص. */
+function autonomyLadder(cap: number): string {
+  const top = Math.max(0, Math.min(6, Math.floor(cap)));
+  const cells = Array.from({ length: 7 }, (_, level) =>
+    `<li class="${level <= top ? "lit" : ""}${level === top ? " cap" : ""}"><i class="n"></i><span>L${level}</span></li>`).join("");
+  return `<ol class="jr" data-cap="${top}" role="img" aria-label="${escapeHtml(`سقف الاستقلالية: حتى L${top} من L6`)}">${cells}</ol>`;
+}
+
 export function renderPricingPage(): string {
   const plans = publicPlans();
   const contact = contactEmail();
@@ -188,6 +199,7 @@ export function renderPricingPage(): string {
         <li><span>حالات العمل شهرياً</span><b>${escapeHtml(plan.limits.workItems)}</b></li>
         <li><span>سقف الاستقلالية</span><b>${escapeHtml(plan.limits.autonomy)}</b></li>
       </ul>
+      ${autonomyLadder(plan.autonomyCap)}
       <ul class="feat">
         ${plan.features.map(feature => `
           <li>
@@ -250,14 +262,15 @@ export function renderPricingPage(): string {
       });
     });
   });
-</script>`;
+</script>
+<script>${JOURNEY_SCRIPT}</script>`;
 
   return page({
     title: "نهج — الباقات والأسعار",
     description: "باقات نهج وأسعارها، وما هو مبنيٌّ منها وما هو في خارطة الطريق.",
     path: "/pricing",
     body,
-    style: STYLE,
+    style: STYLE + JOURNEY_CSS,
     index: false,
   });
 }
