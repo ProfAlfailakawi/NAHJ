@@ -14,6 +14,8 @@
   --dna-on-core: #ffffff;
   --dna-shadow: var(--shadow-1);
   --dna-ease: var(--ease);
+  /* Colour of a lit journey station and its connector (DnaStepper reveal): flip here to restyle. */
+  --journey-fill: var(--dna-accent);
 }
 /* The site keeps every text at 12px or more. */
 .dna .dna-tileb, .dna .dna-bdg, .dna .dna-hubv, .dna-ringc small, .dna-segb .dna-count,
@@ -36,7 +38,7 @@
 .shadow-head>div:not(.dna-ring){flex:1}
 /* Skills: lifecycle, autonomy ladder, requirement icons, versions. */
 .skill-inspector .skill-lifecycle{margin:10px 0 4px}
-.skill-inspector .autonomy-steps{margin:8px 0 6px}
+.skill-inspector .autonomy-steps{margin-block:8px 6px}
 .autonomy-chooser span svg,.promotion-reqs span svg{width:12px;height:12px;display:inline-block;vertical-align:-2px}
 .skill-inspector .skill-versions{margin-top:12px}
 /* Work: case stages and timeline. */
@@ -102,3 +104,13 @@
   .apphub-core{width:100px;height:100px}
   .apphub-core strong{font-size:26px}
 }
+/* Skills inspector: the 7-station ladder keeps readable labels, scrolling sideways in a narrow panel. */
+.skill-inspector .autonomy-steps{margin-inline:-8px;grid-auto-columns:minmax(42px,1fr);overflow-x:auto;padding-block:6px 4px;scrollbar-width:thin}
+.skill-inspector .autonomy-steps .dna-lbl{font-size:13px;overflow-wrap:normal}
+/* Teach: phase strip is static; only the live recording may pulse. */
+.teach-stage .teach-phases{margin:14px 0 6px}
+.teach-phases .dna-stepi[data-state='current'] .dna-node{animation:none}
+.teach-phases.is-recording .dna-stepi[data-state='current'] .dna-node{animation:dna-halo 2.8s var(--dna-ease) infinite}
+/* English station names are wider than the panel columns: stagger them over two rows instead of overlapping. */
+html[lang='en'] .skill-inspector .autonomy-steps .dna-lbl{white-space:nowrap}
+html[lang='en'] .skill-inspector .autonomy-steps .dna-stepi:nth-child(even) .dna-lbl{margin-top:20px}

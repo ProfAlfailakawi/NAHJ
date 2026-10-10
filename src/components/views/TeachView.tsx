@@ -5,6 +5,7 @@ import type { SkillStep } from "../../types";
 import { apiOrNull } from "../../lib/api";
 import { Dt, PageHeader } from "../Primitives";
 import { TeachStageVisual } from "../Visuals";
+import { DnaStepper, type DnaStepState } from "../dna";
 
 type EventRow={id:string;time:string;action:string;system:string;note?:string};
 type Synthesis={steps:SkillStep[];rules:string[];questions:{id:string;question:string;answered?:boolean}[]};
@@ -94,6 +95,14 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
     <section className="teach-layout">
       <article className="teach-stage surface">
         <div className="teach-title-row"><input value={title} onChange={e=>setTitle(e.target.value)} placeholder={ar?"اسم العملية التي ستعلّمها":"Process name"} aria-label={ar?"اسم العملية":"Process name"}/><span><FileCheck2/>{events.length}</span></div>
+        {/* مراحل الجلسة من الحالة الفعلية وحدها؛ ثابتة بلا مقدّمة، والنبض الوحيد المسموح هو نبض التسجيل. */}
+        <DnaStepper className={`teach-phases ${recording?"is-recording":""}`} size="sm" ariaLabel={ar?"مراحل جلسة التعليم":"Teaching session phases"}
+          stateText={ar?undefined:{done:"done",current:"current",pending:"upcoming",returned:"returned",blocked:"blocked"}}
+          steps={([
+            ["capture",ar?"التقاط":"Capture",result||busy?"done":"current"],
+            ["synthesize",ar?"استخلاص":"Synthesize",result?"done":busy?"current":"pending"],
+            ["approve",ar?"اعتماد":"Approve",codified?"done":result?"current":"pending"],
+          ] as [string,string,DnaStepState][]).map(([key,label,state])=>({key,label,state}))}/>
         <TeachStageVisual active={recording||busy} eventCount={events.length} ar={ar}/>
         <p className={`record-caption ${recording?"on":""}`} role="status"><i aria-hidden="true"/>{recording?(ar?"جارٍ التسجيل — اضغط الزر لإيقافه":"Recording — press the button to stop"):(ar?"زر الميكروفون يبدأ التسجيل":"The mic button starts recording")}</p>
         <div className="teach-controls">

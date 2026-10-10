@@ -35,7 +35,7 @@ export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPract
     <PageHeader eyebrow={ar?"التخرّج والتقييم":"GRADUATION / EVALS"} title={ar?"قبل أن يعمل… يثبت نفسه.":"Before it works, it proves itself."} hint={ar?"اختبارات ثم ظل حقيقي. الاستقلالية تُكتسب ولا تُمنح.":"Practice first. Shadow next. Autonomy is earned."}/>
     <div className="graduation-grid">
       <section className="graduation-stage surface">
-        <DnaStepper className="graduation-steps" size="lg"
+        <DnaStepper className="graduation-steps" size="lg" reveal playKey="graduation"
           ariaLabel={ar?"مسار التخرّج":"Graduation path"}
           stateText={ar?undefined:{done:"done",current:"current",pending:"upcoming",returned:"returned",blocked:"blocked"}}
           steps={[

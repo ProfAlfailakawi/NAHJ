@@ -52,7 +52,7 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
       </section>
       {item&&<section className="work-focus surface-strong">
         <div className="work-focus-top"><div><em>{item.code}</em><h2>{item.contactName||item.title}</h2><span><Dt t={item.skillName} ar={ar}/></span></div><div className={`mode-orb ${item.assignedMode}`}><span>{item.assignedMode==="ai"?<Bot/>:<UserRound/>}</span><small>{item.assignedMode==="ai"?(ar?"نهج":"AI"):(ar?"موظف":"HUMAN")}</small></div></div>
-        <div className="work-focus-river"><DnaStepper size="sm" steps={workSteps(item.state,ar)} stateText={workStepText(ar)} ariaLabel={ar?"مراحل الحالة":"Case stages"}/><strong>{item.progressPercent}%</strong></div>
+        <div className="work-focus-river"><DnaStepper size="sm" reveal playKey={`work:${item.id}`} steps={workSteps(item.state,ar)} stateText={workStepText(ar)} ariaLabel={ar?"مراحل الحالة":"Case stages"}/><strong>{item.progressPercent}%</strong></div>
         <div className="work-now"><Waypoints/><span><small>{ar?"الآن":"NOW"}</small><strong><Dt t={item.currentStepTitle} ar={ar}/></strong></span></div>
         <DnaTimeline className="work-timeline" ariaLabel={ar?"سجل الحالة":"Case timeline"} wrapMeta items={item.timeline.slice(0,5).map((t,i)=>({key:`${t.time}-${i}`,
           icon:t.actor==="ai"?<Bot/>:t.actor==="human"?<UserRound/>:<Waypoints/>,tone:t.actor==="ai"?"accent":t.actor==="human"?"sky":"neutral",

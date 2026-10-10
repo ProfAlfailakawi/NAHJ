@@ -16,6 +16,62 @@ import { FONT_FACE_CSS, FONT_PRELOAD_LINK } from "./fontFace.ts";
  * يُهرَّب.
  */
 
+/* ------------------------------------------------- سُلّم الصلاحية المصغّر */
+
+/**
+ * سُلّم L0..L6 مصغّر يُضاء حتى سقفٍ حقيقي (`<ol class="jr" data-cap="N">`).
+ *
+ * الحالة الافتراضية مكتملة (بلا سكربت أو مع «تقليل الحركة»)؛ والسكربت يُطفئ
+ * الدرجات ثم يُضيئها واحدةً واحدة عند ظهور كل سُلّم في الشاشة، مرة واحدة،
+ * ولا يتجاوز السقف أبداً. نصٌّ خالص بلا إطار عمل، فيصلح للصفحات المرسومة من الخادم.
+ */
+export const JOURNEY_CSS = `
+  .jr { display:flex; margin:14px 0 2px; padding:0; list-style:none; }
+  .jr li { position:relative; flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:3px; font-size:13px; font-weight:800; line-height:1.3; color:var(--muted); transition:color .3s .2s; }
+  .jr li.lit { color:var(--ink); }
+  .jr .n { position:relative; display:block; width:16px; height:16px; border-radius:50%; background:var(--card); box-shadow:inset 0 0 0 2px var(--line); transition:background-color .3s .2s, box-shadow .3s .2s; }
+  .jr .n::after { content:""; position:absolute; inset-inline-start:5px; top:2px; width:4px; height:8px; border:solid var(--bg); border-width:0 2px 2px 0; transform:rotate(45deg); opacity:0; transition:opacity .3s .2s; }
+  .jr li.lit .n { background:var(--moss); box-shadow:none; }
+  .jr li.lit .n::after { opacity:1; }
+  .jr li.lit.cap .n { box-shadow:0 0 0 3px color-mix(in srgb, var(--moss) 22%, transparent); }
+  .jr li + li::before, .jr li + li::after { content:""; position:absolute; top:7px; inset-inline-start:calc(-50% + 11px); width:calc(100% - 22px); height:2px; border-radius:2px; background:var(--line); }
+  .jr li + li::after { background:var(--moss); transform:scaleX(0); transform-origin:left center; transition:transform .45s cubic-bezier(.5,.1,.2,1); }
+  .jr li + li:dir(rtl)::after { transform-origin:right center; }
+  .jr li + li.lit::after { transform:scaleX(1); }
+  .jr li.just .n { animation:jrHalo 1.5s ease-out .2s 1; }
+  @keyframes jrHalo { 0% { box-shadow:0 0 0 0 color-mix(in srgb, var(--moss) 40%, transparent); } 100% { box-shadow:0 0 0 9px color-mix(in srgb, var(--moss) 0%, transparent); } }
+  @media (prefers-reduced-motion:reduce) { .jr *, .jr li, .jr li::before, .jr li::after { transition:none !important; animation:none !important; } }
+`;
+
+export const JOURNEY_SCRIPT = `
+  (function () {
+    var lists = document.querySelectorAll(".jr[data-cap]");
+    if (!lists.length || !window.IntersectionObserver) return;
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    Array.prototype.forEach.call(lists, function (el) {
+      var cells = el.children, cap = Math.min(+el.getAttribute("data-cap") || 0, cells.length - 1);
+      var h = el.getBoundingClientRect().height;
+      if (!h) return;
+      Array.prototype.forEach.call(cells, function (c) { c.classList.remove("lit", "just"); });
+      var step = Math.min(750, Math.max(350, 4000 / (cap + 1)));
+      var need = Math.max(.05, Math.min(.6, .9 * window.innerHeight / h));
+      var io = new IntersectionObserver(function (entries) {
+        if (!entries[0].isIntersecting || entries[0].intersectionRatio < need - .01) return;
+        io.disconnect();
+        var k = 0;
+        (function next() {
+          if (k > cap) return;
+          if (k) cells[k - 1].classList.remove("just");
+          cells[k].classList.add("lit", "just");
+          k++;
+          setTimeout(next, step);
+        })();
+      }, { threshold: need });
+      io.observe(el);
+    });
+  })();
+`;
+
 /** بريد التواصل التجاري إن ضُبط. */
 export function contactEmail(): string {
   const value = (process.env.NAHJ_CONTACT_EMAIL || "").trim();
@@ -222,7 +278,7 @@ const LANDING_STYLE = `
   .trail-gate::before { content:""; position:absolute; inset-inline-start:12px; top:0; width:4px; height:100%; border-radius:2px; background:var(--amber); }
   .trail-gate::after { content:""; position:absolute; top:-6px; inset-inline-start:4px; width:20px; height:10px; border-radius:6px; background:var(--amber); }
   .trail.live .trail-gate { opacity:.28; }
-  .trail.live .trail-gate.hold { opacity:1; animation:gatePulse 1.1s ease-in-out infinite; }
+  .trail.live .trail-gate.hold { opacity:1; animation:gatePulse 1.1s ease-in-out 1; }
   @keyframes gatePulse { 50% { transform:scale(1.12); } }
   .trail-say { margin:34px 0 0; min-height:3.4em; text-align:center; font-weight:800; font-size:clamp(18px, 2.6vw, 22px); transition:opacity .35s; }
   .trail-say.out { opacity:0; }
@@ -443,7 +499,8 @@ export function renderLandingPage(): string {
       { at: 3, hold: true,  text: "قبل أي قرارٍ حسّاس، ينتظر موافقتك." },
       { at: 6, hold: false, text: "يعمل ضمن حدوده، ويسجّل كل شيء. وزرّ واحد يوقفه." }
     ];
-    var i = -1, timer = null;
+    var rest = say.textContent;
+    /* يُعرض مرة واحدة ثم يستقر على الحالة الكاملة (كل الدرجات مضاءة والبوابة قائمة): لا حلقة لا نهائية. */
     function show(k) {
       var st = stages[k];
       /* أول مرحلة تبدأ من الصفر فوراً: لا تراجعٌ متحرك من L6 إلى L1. */
@@ -456,12 +513,23 @@ export function renderLandingPage(): string {
       say.classList.add("out");
       setTimeout(function () { say.textContent = st.text; say.classList.remove("out"); }, 250);
     }
-    function tick() { i = (i + 1) % stages.length; show(i); }
-    function start() { if (!timer) { tick(); timer = setInterval(tick, i === stages.length - 1 ? 3600 : 3000); } }
-    function stop() { clearInterval(timer); timer = null; }
-    new IntersectionObserver(function (entries) { entries[0].isIntersecting ? start() : stop(); }, { threshold: .4 }).observe(trail);
-    trail.addEventListener("mouseenter", stop);
-    trail.addEventListener("mouseleave", function () { if (document.documentElement.scrollTop >= 0) start(); });
+    function settle() {
+      nodes.forEach(function (n) { n.classList.add("lit"); n.classList.remove("now"); });
+      fill.style.width = "100%";
+      gate.classList.remove("hold");
+      cards.forEach(function (c) { c.classList.remove("on"); });
+      trail.classList.remove("live");
+      say.classList.add("out");
+      setTimeout(function () { say.textContent = rest; say.classList.remove("out"); }, 250);
+    }
+    function play(k) { if (k >= stages.length) { settle(); return; } show(k); setTimeout(function () { play(k + 1); }, k === stages.length - 1 ? 1200 : 1100); }
+    var need = Math.max(.05, Math.min(.4, .9 * window.innerHeight / (trail.getBoundingClientRect().height || 1)));
+    var io = new IntersectionObserver(function (entries) {
+      if (!entries[0].isIntersecting || entries[0].intersectionRatio < need - .01) return;
+      io.disconnect();
+      play(0);
+    }, { threshold: need });
+    io.observe(trail);
   })();
 </script>
 <script>
