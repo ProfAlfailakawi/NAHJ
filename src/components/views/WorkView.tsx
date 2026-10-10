@@ -7,9 +7,13 @@ import { workStatePlain } from "../../lib/glossary";
 import { timelineBadgeLabel, dataText } from "../../lib/labels";
 
 const WORK_FLOW=["queued","collecting_data","waiting_documents","waiting_approval","executing","completed"];
-const EN_STATE={done:"done",current:"current",pending:"upcoming",returned:"returned",blocked:"blocked"};
+const EN_STATE={done:"done",current:"current",pending:"upcoming",returned:"returned",blocked:"paused"};
 export const workStepText=(ar:boolean)=>ar?undefined:EN_STATE;
-/** مراحل الحالة من `state` وحده؛ «رُفعت» تُرسم عقدةً مُرجَعة. */
+/**
+ * مراحل الحالة من `state` وحده؛ «رُفعت» تُرسم عقدةً مُرجَعة.
+ * ثلاث حالات لا موضع لها في المسار الخطي: «تحتاج قرارك» بوابة الاعتماد نفسها فتُرسم موقوفةً عندها،
+ * و«استلمها موظف» و«جارية» لا تدلّ على محطة فتُرسم عقدةً واحدة بتسميتها الصادقة — لا تقدّمَ يُخترع ولا «لم تبدأ».
+ */
 export function workSteps(state:string,ar:boolean):DnaStep[]{
   const label=(st:string)=>workStatePlain(st, ar);
   if(state==="escalated")return [
@@ -17,13 +21,23 @@ export function workSteps(state:string,ar:boolean):DnaStep[]{
     {key:"escalated",label:label("escalated"),state:"returned"},
     {key:"completed",label:label("completed"),state:"pending"},
   ];
+  if(state==="needs_human_decision"){
+    const gate=WORK_FLOW.indexOf("waiting_approval");
+    return WORK_FLOW.map((st,i)=>i===gate?{key:"needs_human_decision",label:label("needs_human_decision"),state:"blocked"}:{key:st,label:label(st),state:i<gate?"done":"pending"});
+  }
+  if(state==="human_takeover")return [{key:state,label:label(state),state:"blocked"}];
+  if(state==="in_progress")return [{key:state,label:label(state),state:"current"}];
   const at=WORK_FLOW.indexOf(state);
+  if(at<0)return [{key:state,label:label(state),state:"pending"}];
   return WORK_FLOW.map((st,i)=>({key:st,label:label(st),state:i<at||(state==="completed"&&i===at)?"done":i===at?"current":"pending"}));
 }
 
 type Props={lang:"ar"|"en";items:WorkItem[];onTakeOver:(id:string)=>void;onResume:(id:string)=>void;onApproval:(id:string)=>void;approvalByWork:Record<string,string>};
 export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWork}:Props){
-  const ar=lang==="ar"; const [selectedId,setSelectedId]=useState(items[0]?.id||""); const item=useMemo(()=>items.find(w=>w.id===selectedId)||items[0],[items,selectedId]);
+  const ar=lang==="ar"; const [selectedId,setSelectedId]=useState(items[0]?.id||"");
+  /* أول بيانات تصل تُعتمد حالةً مختارة؛ بعدها إعادة ترتيب الاستطلاع لا تُغيّر المختارة ولا تُشغّل مقدّمة لحالةٍ لم يخترها أحد. */
+  if(!selectedId&&items[0])setSelectedId(items[0].id);
+  const item=useMemo(()=>items.find(w=>w.id===selectedId)||items[0],[items,selectedId]);
   /* مئة حالة وأكثر في عمودٍ واحد تُضيّع المهمّ: مرشّحٌ سريع ودفعاتٌ تُفتح بزرّ. */
   const [filter,setFilter]=useState<"all"|"live"|"approval"|"done">("all"); const [shown,setShown]=useState(24);
   const matches=(w:WorkItem)=>filter==="all"||(filter==="live"?w.state!=="completed"&&w.state!=="waiting_approval"&&w.state!=="escalated":filter==="approval"?w.state==="waiting_approval"||w.state==="escalated":w.state==="completed");
@@ -52,7 +66,7 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
       </section>
       {item&&<section className="work-focus surface-strong">
         <div className="work-focus-top"><div><em>{item.code}</em><h2>{item.contactName||item.title}</h2><span><Dt t={item.skillName} ar={ar}/></span></div><div className={`mode-orb ${item.assignedMode}`}><span>{item.assignedMode==="ai"?<Bot/>:<UserRound/>}</span><small>{item.assignedMode==="ai"?(ar?"نهج":"AI"):(ar?"موظف":"HUMAN")}</small></div></div>
-        <div className="work-focus-river"><DnaStepper size="sm" reveal playKey={`work:${item.id}`} steps={workSteps(item.state,ar)} stateText={workStepText(ar)} ariaLabel={ar?"مراحل الحالة":"Case stages"}/><strong>{item.progressPercent}%</strong></div>
+        <div className="work-focus-river"><DnaStepper size="sm" reveal={item.id===selectedId} playKey={`work:${item.id}`} steps={workSteps(item.state,ar)} stateText={workStepText(ar)} ariaLabel={ar?"مراحل الحالة":"Case stages"}/><strong>{item.progressPercent}%</strong></div>
         <div className="work-now"><Waypoints/><span><small>{ar?"الآن":"NOW"}</small><strong><Dt t={item.currentStepTitle} ar={ar}/></strong></span></div>
         <DnaTimeline className="work-timeline" ariaLabel={ar?"سجل الحالة":"Case timeline"} wrapMeta items={item.timeline.slice(0,5).map((t,i)=>({key:`${t.time}-${i}`,
           icon:t.actor==="ai"?<Bot/>:t.actor==="human"?<UserRound/>:<Waypoints/>,tone:t.actor==="ai"?"accent":t.actor==="human"?"sky":"neutral",
