@@ -99,7 +99,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
         <DnaStepper className={`teach-phases ${recording?"is-recording":""}`} size="sm" ariaLabel={ar?"مراحل جلسة التعليم":"Teaching session phases"}
           stateText={ar?undefined:{done:"done",current:"current",pending:"upcoming",returned:"returned",blocked:"blocked"}}
           steps={([
-            ["capture",ar?"التقاط":"Capture",result?"done":"current"],
+            ["capture",ar?"التقاط":"Capture",result||busy?"done":"current"],
             ["synthesize",ar?"استخلاص":"Synthesize",result?"done":busy?"current":"pending"],
             ["approve",ar?"اعتماد":"Approve",codified?"done":result?"current":"pending"],
           ] as [string,string,DnaStepState][]).map(([key,label,state])=>({key,label,state}))}/>

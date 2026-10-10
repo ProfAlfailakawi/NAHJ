@@ -137,7 +137,11 @@ export function useJourneyReveal<T extends HTMLElement = HTMLOListElement>({
       io.disconnect();
       if (timer) clearTimeout(timer);
       // A cleanup before the intro finished (unmount, key change) leaves the real state in place.
-      if (!done) setLit(null);
+      if (!done) {
+        setLit(null);
+        // Release the token we took: a re-run after this cleanup (StrictMode, key change) must be able to arm again.
+        if (armedFor.current === token) armedFor.current = null;
+      }
     };
     // `target` is read through a ref on purpose: live data must not restart the intro.
   }, [enabled, hold, hasTarget, playKey, pace, threshold]);
