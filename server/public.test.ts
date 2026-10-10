@@ -93,3 +93,18 @@ test("الصفحة مكتفية بذاتها ولا تطلب من الشبكة �
   assert.ok(!/<link[^>]+stylesheet/.test(html), "ورقة أنماطٍ خارجية");
   assert.ok(html.includes('dir="rtl"'), "صفحةٌ عربية بلا اتجاه صحيح");
 });
+
+test("سُلّم الاستقلالية المصغّر يُضاء حتى سقف الباقة الفعلي لا أكثر", () => {
+  freshDatabase();
+  const html = renderPricingPage();
+  for (const plan of publicPlans()) {
+    assert.ok(html.includes(`data-cap="${plan.autonomyCap}"`), `سقف ${plan.code} غائب عن السُّلّم`);
+    assert.equal(`L${plan.autonomyCap}`, plan.limits.autonomy, "السُّلّم لا يطابق نص السقف");
+  }
+  const lit = [...html.matchAll(/<ol class="jr" data-cap="(\d)"[^>]*>(.*?)<\/ol>/g)];
+  assert.equal(lit.length, publicPlans().length);
+  for (const [, cap, cells] of lit) {
+    assert.equal((cells.match(/<li class="lit/g) || []).length, Number(cap) + 1, "أُضيئت درجاتٌ فوق السقف");
+    assert.equal((cells.match(/<li /g) || []).length, 7);
+  }
+});
