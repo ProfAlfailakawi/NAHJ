@@ -522,7 +522,7 @@ export function renderLandingPage(): string {
       say.classList.add("out");
       setTimeout(function () { say.textContent = rest; say.classList.remove("out"); }, 250);
     }
-    function play(k) { if (k >= stages.length) { settle(); return; } show(k); setTimeout(function () { play(k + 1); }, k === stages.length - 1 ? 3000 : 2600); }
+    function play(k) { if (k >= stages.length) { settle(); return; } show(k); setTimeout(function () { play(k + 1); }, k === stages.length - 1 ? 1200 : 1100); }
     var need = Math.max(.05, Math.min(.4, .9 * window.innerHeight / (trail.getBoundingClientRect().height || 1)));
     var io = new IntersectionObserver(function (entries) {
       if (!entries[0].isIntersecting || entries[0].intersectionRatio < need - .01) return;
