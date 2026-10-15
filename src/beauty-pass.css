@@ -111,3 +111,28 @@
 .usage-meter-top { align-items: flex-end; }
 .usage-meter-top b { white-space: nowrap; flex: none; }
 .usage-meter-top b { direction: ltr; unicode-bidi: isolate; }
+
+/* Very large or long values (a 7+ digit count, an unbroken token) stay inside their tile: the grid items may shrink
+   below their content and the value wraps instead of pushing past the card edge. Presentation only. */
+.impact-metrics > *, .guardrail-grid > *, .memory-strip > *, .pulse-stats > * { min-width: 0; }
+.impact-metric { grid-template-columns: 28px minmax(0, 1fr); }
+.memory-glyph { grid-template-columns: 38px minmax(0, 1fr); }
+.impact-metric strong, .impact-metric small, .guard-tile strong, .guard-tile small,
+.memory-glyph strong, .memory-glyph small { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+
+/* weekly bars: a large daily count wraps inside its own column instead of running into the neighbours' numbers */
+.bars > div { min-width: 0; }
+.bars b { max-width: 100%; text-align: center; line-height: 1.15; overflow-wrap: anywhere; }
+
+/* Partner portal on phones: a long company name gets the full row (the badge and the amount sit beneath it)
+   instead of being squeezed into a one-word column; a very large money tile puts its value on its own full-width row. */
+.partner-client-head strong, .partner-client-head small { overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .partner-client-head { flex-wrap: wrap; row-gap: 8px; }
+  .partner-client-head > div { flex: 1 1 calc(100% - 56px); }
+  .partner-client-head .client-badge { margin-inline-start: 0; }
+  .partner-client-amount { margin-inline-start: auto; }
+  .partner-stage .stat-tile { grid-template-areas: "icon label" "value value"; row-gap: 8px; }
+  .partner-stage .stat-tile strong { min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  .partner-stage .stat-tile strong::-webkit-scrollbar { display: none; }
+}
