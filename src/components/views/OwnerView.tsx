@@ -232,7 +232,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
       {/* ---------------------------------------------- الاشتراك الجاري */}
       <section className="surface-strong owner-block">
         <SectionTitle title="اشتراك المؤسسة" icon={<Crown />}
-          meta={subscription ? `${shortDate(subscription.startedAt)} → ${shortDate(subscription.currentPeriodEnd)}` : "لا اشتراك"} />
+          meta={subscription ? `${shortDate(subscription.startedAt)} ← ${shortDate(subscription.currentPeriodEnd)}` : "لا اشتراك"} />
 
         {!subscription ? (
           <div className="owner-start">

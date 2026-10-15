@@ -331,7 +331,7 @@ const LANDING_STYLE = `
   .contact input:focus, .contact select:focus, .contact textarea:focus { outline:none; border-color:var(--moss); background:var(--card); box-shadow:0 0 0 4px color-mix(in srgb, var(--moss) 22%, transparent); }
   .contact input:focus-visible, .contact select:focus-visible, .contact textarea:focus-visible { outline:2px solid transparent; }
   .contact .trust-cue { display:flex; align-items:center; gap:8px; margin:0; font-size:14px; color:var(--muted); }
-  .contact .trust-cue a { font-weight:700; color:var(--muted); }
+  .contact .trust-cue a { font-weight:700; color:var(--muted); display:inline-flex; align-items:center; min-height:44px; padding-inline:4px; }
   .contact .trust-cue svg { width:18px; height:18px; flex:none; color:var(--moss); }
   .contact .hp { position:absolute; inset-inline-start:-9999px; width:1px; height:1px; overflow:hidden; }
   .form-status { margin:0; min-height:1.6em; font-weight:700; }

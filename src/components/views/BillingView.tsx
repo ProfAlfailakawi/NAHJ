@@ -331,7 +331,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
 
       <section className="surface-strong sub-block">
         <SectionTitle title={ar ? "مدّة الاشتراك" : "Subscription term"} icon={<CalendarClock />}
-          meta={subscription ? `${shortDate(subscription.startedAt, ar)} → ${shortDate(subscription.currentPeriodEnd, ar)}` : undefined} />
+          meta={subscription ? `${shortDate(subscription.startedAt, ar)} ${ar?"←":"→"} ${shortDate(subscription.currentPeriodEnd, ar)}` : undefined} />
         <LifeBar snapshot={snapshot} ar={ar} />
         {snapshot.scheduledPlanChange && (
           <div className="sub-scheduled">
@@ -501,7 +501,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
                 <React.Fragment key={invoice.id}>
                   <button className={`ledger-row ${open ? "open" : ""}`} onClick={() => setOpenInvoice(open ? null : invoice.id)}>
                     <span className="mono">{invoice.number}</span>
-                    <span>{invoice.periodStart ? `${shortDate(invoice.periodStart, ar)} → ${shortDate(invoice.periodEnd, ar)}` : shortDate(invoice.issuedAt, ar)}</span>
+                    <span>{invoice.periodStart ? `${shortDate(invoice.periodStart, ar)} ${ar?"←":"→"} ${shortDate(invoice.periodEnd, ar)}` : shortDate(invoice.issuedAt, ar)}</span>
                     <span>{shortDate(invoice.dueAt, ar)}</span>
                     <span className="mono">{money(invoice.total, invoice.currency, ar)}</span>
                     <span className="mono">{money(invoice.amountPaid, invoice.currency, ar)}</span>

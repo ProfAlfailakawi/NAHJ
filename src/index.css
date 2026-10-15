@@ -532,7 +532,7 @@
 /* ---- طبقة الشرح: المصطلح ومعناه ----------------------------------------- */
 
 .term-wrap{position:relative;display:inline}
-.term{border:0;padding:0;background:none;font:inherit;color:inherit;cursor:help;
+.term{position:relative;border:0;padding:0;background:none;font:inherit;color:inherit;cursor:help;
   border-bottom:1.5px dotted var(--moss);border-radius:0;transition:.16s var(--ease)}
 .term:hover,.term.open{color:var(--moss-dark);border-bottom-style:solid}
 .term-pop{position:absolute;z-index:120;inset-block-start:calc(100% + 7px);inset-inline-start:0;
@@ -1529,3 +1529,8 @@
 .user-chip small{max-width:190px}
 .manual-advanced{margin-top:12px}.manual-advanced>summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--muted);min-height:32px;display:flex;align-items:center}
 .sector-counts .sector-count{display:inline-flex;align-items:center;gap:5px}.sector-counts .sector-count small{font-size:14px;color:var(--muted);font-weight:600}
+
+.term::after{content:"";position:absolute;inset:-12px -6px}
+.scroll-hint{display:none;margin:0 0 6px;font-size:14px;color:var(--muted)}
+.people-matrix-scroll{background:linear-gradient(to right,var(--paper) 30%,transparent) left center/28px 100% no-repeat local,linear-gradient(to left,var(--paper) 30%,transparent) right center/28px 100% no-repeat local,radial-gradient(farthest-side at 0 50%,rgba(16,37,31,.18),transparent) left center/12px 100% no-repeat scroll,radial-gradient(farthest-side at 100% 50%,rgba(16,37,31,.18),transparent) right center/12px 100% no-repeat scroll}
+@media(max-width:900px){.scroll-hint{display:block}}
