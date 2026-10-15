@@ -1028,6 +1028,61 @@ button.dna-hubn:focus-visible .dna-hubt { transform:translateY(-2px); }
   block-size:18px !important;
 }
 
+/* ---------- draw-in / count-up / change-flash (one-shot; final state by default) ----------
+   Every "pre" pose is applied ONLY through [data-draw='pre'], which JS sets after deciding to play. */
+.dna-cu { font-variant-numeric:tabular-nums; }
+.dna-cu-sr {
+  position:absolute !important;
+  inline-size:1px !important;
+  block-size:1px !important;
+  margin:-1px;
+  padding:0;
+  overflow:hidden;
+  clip:rect(0 0 0 0);
+  white-space:nowrap;
+  border:0;
+}
+
+/* ring */
+.dna-ring[data-draw] .dna-ringv { transition:stroke-dasharray 0.9s var(--dna-ease), opacity 0.2s var(--dna-ease); }
+.dna-ring[data-draw='pre'] .dna-ringv { stroke-dasharray:0 1000; opacity:0; }
+.dna-ring[data-snap] .dna-ringv { transition:none; }
+
+/* bars: grow from the inline-start edge (right in RTL) / rise from the baseline */
+.dna-grow, .dna-rise {
+  transition:transform 0.6s var(--dna-ease) calc(var(--i, 0) * 60ms);
+}
+.dna-grow { transform-origin:left center; }
+[dir='rtl'] .dna-grow { transform-origin:right center; }
+[dir='rtl'] [dir='ltr'] .dna-grow { transform-origin:left center; }
+.dna-rise { transform-origin:center bottom; }
+[data-draw='pre'] .dna-grow { transform:scaleX(0); }
+[data-draw='pre'] .dna-rise { transform:scaleY(0); }
+.dna-fadein { transition:opacity 0.5s var(--dna-ease) calc(var(--i, 0) * 60ms); }
+[data-draw='pre'] .dna-fadein { opacity:0; }
+
+/* sparkline: line draws, then the area and the end point fade in */
+.dna-spark[data-draw] .dna-sparkl { stroke-dasharray:1; stroke-dashoffset:0; transition:stroke-dashoffset 0.9s var(--dna-ease); }
+.dna-spark[data-draw='pre'] .dna-sparkl { stroke-dashoffset:1; }
+.dna-spark[data-draw] .dna-sparka, .dna-spark[data-draw] circle { transition:opacity 0.5s var(--dna-ease) 0.7s; }
+.dna-spark[data-draw='pre'] .dna-sparka, .dna-spark[data-draw='pre'] circle { opacity:0; }
+
+/* heat strip: cells fade in by day (opacity of a cell is its value, so only the pre pose is overridden) */
+.dna-heat[data-draw] .dna-heatc { transition:opacity 0.5s var(--dna-ease) var(--d, 0ms); }
+.dna-heat[data-draw='pre'] .dna-heatc { opacity:0; }
+
+/* timeline: dots and the connector reveal in order; the text rows stay readable */
+.dna-tline[data-draw] .dna-dot { transition:transform 0.35s var(--dna-ease) calc(var(--i, 0) * var(--tstep, 40ms)), opacity 0.35s var(--dna-ease) calc(var(--i, 0) * var(--tstep, 40ms)); }
+.dna-tline[data-draw='pre'] .dna-dot { transform:scale(0.4); opacity:0; }
+.dna-tline[data-draw] .dna-tli:not(:last-child)::after { transition:opacity 0.35s var(--dna-ease) calc(var(--i, 0) * var(--tstep, 40ms) + 120ms); }
+.dna-tline[data-draw='pre'] .dna-tli:not(:last-child)::after { opacity:0; }
+
+/* change-highlight: one soft tint that fades to rest (alternating names restart it) */
+@keyframes dna-flash-a { from { background-color:color-mix(in srgb, var(--dna-accent) 16%, transparent); } }
+@keyframes dna-flash-b { from { background-color:color-mix(in srgb, var(--dna-accent) 16%, transparent); } }
+[data-flash='a'] { animation:dna-flash-a 1.2s var(--dna-ease) 1; }
+[data-flash='b'] { animation:dna-flash-b 1.2s var(--dna-ease) 1; }
+
 /* ---------- motion safety ---------- */
 @media (prefers-reduced-motion: reduce) {
   .dna-hub .dna-hubln,
@@ -1042,4 +1097,10 @@ button.dna-hubn:focus-visible .dna-hubt { transform:translateY(-2px); }
   .dna-stepi .dna-node,
   .dna-stepi .dna-lbl { transition:none !important; }
   .dna-steps[data-journey] .dna-stepi .dna-node { animation:none !important; }
+  .dna-grow, .dna-rise, .dna-fadein,
+  .dna-ring[data-draw] .dna-ringv,
+  .dna-spark[data-draw] .dna-sparkl, .dna-spark[data-draw] .dna-sparka, .dna-spark[data-draw] circle,
+  .dna-heat[data-draw] .dna-heatc,
+  .dna-tline[data-draw] .dna-dot, .dna-tline[data-draw] .dna-tli::after { transition:none !important; }
+  [data-flash] { animation:none !important; }
 }

@@ -7,7 +7,7 @@ import type { ApprovalRequest, LearningProposal, Organization, Skill, WorkItem }
 import type { SectionId } from "../Shell";
 import { workStepText, workSteps } from "./WorkView";
 import { AppHub } from "./AppHub";
-import { DnaHubMap, DnaSpark, DnaStepper } from "../dna";
+import { DnaHubMap, DnaSpark, DnaStepper, DnaDraw, dnaStagger, useDnaFlash } from "../dna";
 import { Dt, PageHeader, SectionTitle, Stat } from "../Primitives";
 import { hoursLabel } from "../../lib/labels";
 import { Term } from "../Explain";
@@ -113,11 +113,11 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
         </article>
         <div className="pulse-stats">
           {/* «نشاط» لا «أُنجز»: العدّ يشمل كل ما سُجِّل، لا المهام المكتملة وحدها. */}
-          <Stat label={ar?"نشاط اليوم":"ACTIVITY TODAY"} value={todayMetrics?.auditEventsToday ?? 0} tone="moss" icon={<Activity/>}
-            spark={activityTrend && activityTrend.length > 1 ? <DnaSpark values={activityTrend} width={64} height={24} ariaLabel={ar?"أحداث آخر أيام":"Recent daily events"}/> : undefined}/>
-          <Stat label={ar?"وقت مستعاد":"TIME BACK"} value={hoursLabel(todayMetrics?.hoursSavedThisMonth ?? organization.hoursSavedMonth, ar)} tone="moss" icon={<Clock3/>}/>
-          <Stat label={ar?"تعلّم":"LEARNING"} value={open.length} tone="moss" icon={<Sparkles/>}/>
-          <Stat label={ar?"قرارك":"NEEDS YOU"} value={needsYou} tone={needsYou>0?"amber":"moss"} icon={<ShieldCheck/>}/>
+          <Stat label={ar?"نشاط اليوم":"ACTIVITY TODAY"} value={todayMetrics?.auditEventsToday ?? 0} tone="moss" icon={<Activity/>} countUp playKey="today:activity" rise
+            spark={activityTrend && activityTrend.length > 1 ? <DnaSpark values={activityTrend} width={64} height={24} draw playKey="today:spark" ariaLabel={ar?"أحداث آخر أيام":"Recent daily events"}/> : undefined}/>
+          <Stat label={ar?"وقت مستعاد":"TIME BACK"} value={hoursLabel(todayMetrics?.hoursSavedThisMonth ?? organization.hoursSavedMonth, ar)} tone="moss" icon={<Clock3/>} rise index={1}/>
+          <Stat label={ar?"تعلّم":"LEARNING"} value={open.length} tone="moss" icon={<Sparkles/>} countUp playKey="today:learning" rise index={2}/>
+          <Stat label={ar?"قرارك":"NEEDS YOU"} value={needsYou} tone={needsYou>0?"amber":"moss"} icon={<ShieldCheck/>} rise index={3}/>
         </div>
       </section>
 
@@ -182,19 +182,30 @@ function GettingStarted({ ar, steps, onNavigate }: { ar: boolean; steps: Step[];
         <div><em>{ar ? "البداية" : "GETTING STARTED"}</em><h2 id="gs-title">{ar ? "خطواتك الأولى مع نهج" : "Your first steps"}</h2></div>
         <span className="gs-count">{doneCount}/{steps.length}</span>
       </div>
+      <DnaDraw className="gs-progress" aria-hidden="true" playKey="today:gs-progress">
+        <i className="dna-grow" style={{ width: `${steps.length ? (doneCount / steps.length) * 100 : 0}%` }}/>
+      </DnaDraw>
       <ol>
         {steps.map((step, index) => (
-          <li key={step.id} className={step.done ? "done" : ""}>
-            <button type="button" onClick={() => onNavigate(step.id)}>
-              <span className="gs-mark" aria-hidden="true">{step.done ? <CheckCircle2/> : <Circle/>}</span>
-              <span className="gs-icon" aria-hidden="true">{step.icon}</span>
-              <span className="gs-text"><strong>{index + 1}. {step.title}</strong><small>{step.detail}</small></span>
-              <ArrowUpLeft className="gs-go" aria-hidden="true"/>
-            </button>
-          </li>
+          <React.Fragment key={step.id}><GettingStartedItem step={step} index={index} onNavigate={onNavigate}/></React.Fragment>
         ))}
       </ol>
     </section>
+  );
+}
+
+/* القائمة ثابتة؛ الخطوة التي تكتمل الآن فقط تحمل وميضاً هادئاً واحداً. */
+function GettingStartedItem({ step, index, onNavigate }: { step: Step; index: number; onNavigate: (s: SectionId) => void }) {
+  const flash = useDnaFlash(step.done);
+  return (
+    <li className={step.done ? "done" : ""}>
+      <button type="button" {...(step.done ? flash : {})} onClick={() => onNavigate(step.id)}>
+        <span className="gs-mark" aria-hidden="true">{step.done ? <CheckCircle2/> : <Circle/>}</span>
+        <span className="gs-icon" aria-hidden="true">{step.icon}</span>
+        <span className="gs-text"><strong>{index + 1}. {step.title}</strong><small>{step.detail}</small></span>
+        <ArrowUpLeft className="gs-go" aria-hidden="true"/>
+      </button>
+    </li>
   );
 }
 
@@ -212,9 +223,9 @@ function MemoryBar({ar,total,single,ready}:{ar:boolean;total:number;single:numbe
     ["rest",rest,ar?"باقي الموثّقة":"Other documented"],
   ];
   return <div className="memory-bar-wrap">
-    <div className="memory-bar" role="img" aria-label={segs.map(([,n,l])=>`${l}: ${n}`).join("، ")+(ar?` من ${total}`:` of ${total}`)}>
-      {segs.map(([k,n,l])=>n>0?<span key={k} className={`mb-${k}`} style={{flexGrow:n}} title={`${l}: ${n}`}/>:null)}
-    </div>
+    <DnaDraw className="memory-bar" role="img" playKey="today:memory-bar" aria-label={segs.map(([,n,l])=>`${l}: ${n}`).join("، ")+(ar?` من ${total}`:` of ${total}`)}>
+      {segs.map(([k,n,l],i)=>n>0?<span key={k} className={`mb-${k} dna-grow`} style={{flexGrow:n,...dnaStagger(i)}} title={`${l}: ${n}`}/>:null)}
+    </DnaDraw>
     <div className="memory-bar-legend" aria-hidden="true">{segs.map(([k,n,l])=>n>0?<span key={k}><i className={`mb-${k}`}/>{l} <b>{n}</b></span>:null)}</div>
   </div>;
 }

@@ -5,7 +5,7 @@ import { Dialog } from "../Dialog";
 import type { AutonomyLevel, Skill } from "../../types";
 import { Dt, PageHeader, SectionTitle } from "../Primitives";
 import { SkillRunway } from "../Visuals";
-import { DnaStepper, DnaTimeline, type DnaStepState } from "../dna";
+import { DnaStepper, DnaTimeline, DnaDraw, type DnaStepState } from "../dna";
 import { AutonomyBadge, Term } from "../Explain";
 import { riskLabel, hoursLabel, levelLabel, LADDER_NAME_AR } from "../../lib/labels";
 import { ladderStep, ladderPlain, ladderYourPart, RISK_PLAIN, SKILL_STATUS_PLAIN } from "../../lib/glossary";
@@ -142,6 +142,17 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
   /* الدورة تُعرض أولاً ثم السُّلّم: لا مقدّمتان معاً في اللوحة نفسها، والمجموع نحو 4.5 ثانية. */
   const [lifeDoneFor,setLifeDoneFor]=useState("");
   const skill=useMemo(()=>skills.find(s=>s.id===selected)||skills[0],[skills,selected]);
+  /* بعد الترقية: الدرجة التي بلغتها المهارة تأخذ هالةً واحدة ثم تستقر. لا تُؤخّر القرار ولا تتكرر عند تبديل المهارة. */
+  const prevRung=React.useRef<{id:string;level:number}|null>(null);
+  const [justRung,setJustRung]=useState<{id:string;level:number}|null>(null);
+  useEffect(()=>{
+    if(!skill)return;
+    const prev=prevRung.current; prevRung.current={id:skill.id,level:skill.autonomyLevel};
+    if(!prev||prev.id!==skill.id||skill.autonomyLevel<=prev.level)return;
+    setJustRung({id:skill.id,level:skill.autonomyLevel});
+    const t=setTimeout(()=>setJustRung(null),2000);
+    return()=>{clearTimeout(t);setJustRung(null)};
+  },[skill?.id,skill?.autonomyLevel]);
   return <div className="page-enter">
     <PageHeader eyebrow={ar?"المهارات / الذاكرة":"SKILLS / MEMORY"} title={ar?"كل ما تعرفه المؤسسة.":"What the organization knows how to do."} hint={ar?"المهارة إجراءٌ من عمل مؤسستك مكتوبٌ بخطواته وقراراته واستثناءاته — لا نصُّ أمرٍ يُكتب لنموذج.":"A skill is verified operational memory — not a prompt."}/>
     <div className="skills-layout">
@@ -159,9 +170,9 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
       </section>
       {skill&&<aside className="skill-inspector surface-strong">
         <div className="inspector-hero"><span className={`skill-glyph large risk-${skill.riskLevel}`}><BrainCircuit/></span><div><em>{ar?(SKILL_STATUS_PLAIN[skill.status]||skill.status):skill.status.toUpperCase()}</em><strong>{ar?<Dt t={skill.name} ar={ar}/>:skill.nameEn}</strong><small>v{skill.activeVersion} · {skill.ownerName}</small></div></div>
-        <DnaStepper className="skill-lifecycle" size="xs" reveal stepMs={220} playKey={`life:${skill.id}`} onRevealDone={()=>setLifeDoneFor(skill.id)} ariaLabel={ar?"دورة حياة المهارة":"Skill lifecycle"} stateText={ar?undefined:EN_STATE}
+        <DnaStepper className="skill-lifecycle" size="xs" reveal stepMs={220} playKey="life:skills" onRevealDone={()=>setLifeDoneFor(skill.id)} ariaLabel={ar?"دورة حياة المهارة":"Skill lifecycle"} stateText={ar?undefined:EN_STATE}
           steps={LIFECYCLE.map((st,i)=>({key:st,label:ar?(SKILL_STATUS_PLAIN[st]||st):st,state:lifecycleState(skill.status,i)}))}/>
-        <div className="reliability-orb" style={{"--value":`${skill.reliabilityScore}%`} as React.CSSProperties}><strong>{skill.reliabilityScore}%</strong><span>{ar?"موثوقية":"reliability"}</span></div>
+        <DnaDraw className="reliability-orb" playKey="skills:orb" style={{"--value":`${skill.reliabilityScore}%`} as React.CSSProperties}><strong>{skill.reliabilityScore}%</strong><span>{ar?"موثوقية":"reliability"}</span></DnaDraw>
         <SectionTitle title={ar?<Term k="autonomy">مستوى الاستقلالية</Term>:"Autonomy"} meta={`${skill.autonomyLevel}/6`}/>
         {/*
           * «L4 — Prepare» لا تقول للموظف شيئاً. الجملة تقول ماذا يفعل النظام
@@ -171,7 +182,7 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
           <strong>{ladderPlain(skill.autonomyLevel,ar)}</strong>
           <small>{ladderYourPart(skill.autonomyLevel,ar)}</small>
         </div>
-        <DnaStepper className="autonomy-steps" size="sm" reveal stepMs={Math.min(450,Math.max(300,Math.round(2500/(skill.autonomyLevel+2))))} playKey={`ladder:${skill.id}`} hold={lifeDoneFor!==skill.id} ariaLabel={ar?"سُلّم الاستقلالية":"Autonomy ladder"} stateText={ar?undefined:EN_STATE}
+        <DnaStepper className="autonomy-steps" size="sm" reveal stepMs={Math.min(450,Math.max(300,Math.round(2500/(skill.autonomyLevel+2))))} playKey="ladder:skills" justIndex={justRung&&justRung.id===skill.id?justRung.level:null} hold={lifeDoneFor!==skill.id} ariaLabel={ar?"سُلّم الاستقلالية":"Autonomy ladder"} stateText={ar?undefined:EN_STATE}
           steps={stages.map((st,i)=>({key:st,num:i,label:ar?LADDER_NAME_AR[i]:st,title:ar?ladderStep(i).plain:st,state:i<skill.autonomyLevel?"done":i===skill.autonomyLevel?"current":"pending"}))}/>
         <div className="autonomy-chooser" role="group" aria-label={ar?"اختر مستوى الاستقلالية":"Choose autonomy level"}>{stages.map((st,i)=>{const label=ar?`المستوى ${i}: ${ladderStep(i).plain}${i===skill.autonomyLevel?" (الحالي)":i>skill.autonomyLevel?" — يتطلب مراجعة وتوقيعاً":""}`:`Level ${i}: ${st}${i===skill.autonomyLevel?" (current)":i>skill.autonomyLevel?" — requires review and sign-off":""}`;
           return <button key={st} type="button" className={i===skill.autonomyLevel?"active":""} aria-current={i===skill.autonomyLevel?"step":undefined} aria-label={label} title={label}
@@ -181,9 +192,9 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
         <div className="skill-mini-metrics"><div><strong>{skill.usageCount}</strong><span>{ar?"تشغيل":"runs"}</span></div><div><strong>{skill.successRate}%</strong><span>{ar?"نجاح":"success"}</span></div><div><strong>{hoursLabel(skill.hoursSavedTotal,ar)}</strong><span>{ar?"وقت":"saved"}</span></div></div>
         <div className="skill-alerts">{skill.isSinglePointOfFailure&&!(skill.backupOwnerNames||[]).length&&<div><AlertTriangle aria-hidden="true"/><span>{ar?`تعتمد على شخص واحد (${skill.ownerName})`:`Single-person dependency (${skill.ownerName})`}</span>{onOpenPeople&&<button type="button" className="spof-nudge" onClick={onOpenPeople}><UserPlus aria-hidden="true"/>{ar?"أسند زميلاً بديلاً":"Assign a backup"}</button>}</div>}{skill.killSwitchActive&&<div className="danger"><CirclePause/><span>{ar?"المهارة متوقفة":"Skill paused"}</span></div>}</div>
         <div className="inspector-actions"><button onClick={()=>onToggleKill(skill.id)} className={skill.killSwitchActive?"resume":"danger"}>{skill.killSwitchActive?<Zap/>:<CirclePause/>}{skill.killSwitchActive?(ar?"استئناف":"Resume"):(ar?"إيقاف":"Pause")}</button>{skill.activeVersion>1&&<button onClick={()=>onRollback(skill.id,skill.activeVersion-1)}><History/>{ar?"رجوع":"Rollback"}</button>}</div>
-        {(skill.versions||[]).length>0&&<DnaTimeline className="skill-versions" ariaLabel={ar?"سجل النسخ":"Version history"} maxHeight={260} wrapMeta
+        {(skill.versions||[]).length>0&&<React.Fragment key={skill.id}><DnaTimeline reveal playKey={`hist:${skill.id}`} className="skill-versions" ariaLabel={ar?"سجل النسخ":"Version history"} maxHeight={260} wrapMeta
           items={[...(skill.versions||[])].sort((a,b)=>b.version-a.version).map(v=>({key:String(v.version),icon:<GitCommitVertical/>,tone:v.version===skill.activeVersion?"accent":"neutral",
-            title:<><b>v{v.version}</b> · <Dt t={v.changeSummary} ar={ar}/></>,date:v.createdAt?.slice(0,10),meta:v.approvedBy}))}/>}
+            title:<><b>v{v.version}</b> · <Dt t={v.changeSummary} ar={ar}/></>,date:v.createdAt?.slice(0,10),meta:v.approvedBy}))}/></React.Fragment>}
         <ManualPanel lang={lang} skill={skill} onSkillUpdated={onSkillUpdated} notify={notify}/>
       </aside>}
     </div>

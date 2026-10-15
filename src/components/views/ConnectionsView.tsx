@@ -20,7 +20,7 @@ import {
 import type { Connector } from "../../types";
 import { Dt, PageHeader, SectionTitle } from "../Primitives";
 import { ConnectionConstellation } from "../Visuals";
-import { DnaLive, DnaStatusHeader } from "../dna";
+import { DnaLive, DnaStatusHeader, useDnaFlash } from "../dna";
 import { apiOrNull } from "../../lib/api";
 
 /*
@@ -186,35 +186,45 @@ export function ConnectionsView({ lang, connectors, testingId, onTest, isDemo = 
             {connectors.some(c => c.mode !== "live") && (
               <p className="connector-sim-note"><Zap aria-hidden="true" />{ar ? "المحاكاة: لا يخرج منها طلب شبكة، والأرقام للعرض." : "Simulated: no network calls; figures are illustrative."}</p>
             )}
-            {connectors.map((c) => {
-              const Icon = TYPE_ICON[c.type] || PlugZap;
-              return (
-                <article key={c.id} className="connector-row">
-                  <span className={`connector-icon status-${c.status}`}>
-                    <Icon />
-                  </span>
-                  <div>
-                    <strong><Dt t={c.name} ar={ar} />{c.mode !== "live" && <em className="connector-sim-badge" title={ar ? "محاكاة — لا يخرج منها طلب شبكة، والأرقام للعرض" : "Simulated — no network calls; figures are illustrative"}>{ar ? "محاكاة" : "Simulated"}</em>}</strong>
-                    <small>
-                      {connectorTypeLabel(c.type, ar)} · {syncLabel(c.lastSync, ar)}
-                    </small>
-                  </div>
-                  <span className={`health status-${c.status}`}>
-                    {c.status === "healthy" ? <CheckCircle2 /> : <TriangleAlert />}
-                  </span>
-                  <button
-                    disabled={testingId === c.id}
-                    onClick={() => onTest(c.id)}
-                    title={ar ? "فحص" : "Test"}
-                  >
-                    <RefreshCw className={testingId === c.id ? "spin" : ""} />
-                  </button>
-                </article>
-              );
-            })}
+            {connectors.map((c) => (
+              <React.Fragment key={c.id}><ConnectorRow c={c} ar={ar} testing={testingId === c.id} onTest={onTest} /></React.Fragment>
+            ))}
           </div>
         </section>
       </div>
     </div>
+  );
+}
+
+/* وميضٌ واحد هادئ على الصف حين ينتهي فحصه — لا عند أول عرض ولا عند بدء الفحص. */
+function ConnectorRow({ c, ar, testing, onTest }: { c: Connector; ar: boolean; testing: boolean; onTest: (id: string) => void }) {
+  const was = React.useRef(testing);
+  const finished = React.useRef(0);
+  if (was.current && !testing) finished.current += 1;
+  was.current = testing;
+  const flash = useDnaFlash(finished.current);
+  const Icon = TYPE_ICON[c.type] || PlugZap;
+  return (
+    <article className="connector-row" {...flash}>
+      <span className={`connector-icon status-${c.status}`}>
+        <Icon />
+      </span>
+      <div>
+        <strong><Dt t={c.name} ar={ar} />{c.mode !== "live" && <em className="connector-sim-badge" title={ar ? "محاكاة — لا يخرج منها طلب شبكة، والأرقام للعرض" : "Simulated — no network calls; figures are illustrative"}>{ar ? "محاكاة" : "Simulated"}</em>}</strong>
+        <small>
+          {connectorTypeLabel(c.type, ar)} · {syncLabel(c.lastSync, ar)}
+        </small>
+      </div>
+      <span className={`health status-${c.status}`}>
+        {c.status === "healthy" ? <CheckCircle2 /> : <TriangleAlert />}
+      </span>
+      <button
+        disabled={testing}
+        onClick={() => onTest(c.id)}
+        title={ar ? "فحص" : "Test"}
+      >
+        <RefreshCw className={testing ? "spin" : ""} />
+      </button>
+    </article>
   );
 }

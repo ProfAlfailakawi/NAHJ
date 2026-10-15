@@ -1,6 +1,7 @@
 import React from "react";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { dataText } from "../lib/labels";
+import { DnaCountUp } from "./dna";
 
 export function PageHeader({ eyebrow, title, hint, action }: { eyebrow?: string; title: string; hint?: string; action?: React.ReactNode }) {
   return (
@@ -27,11 +28,19 @@ export function SectionTitle({ title, meta, icon }: { title: React.ReactNode; me
   );
 }
 
-export function Stat({ value, label, tone = "moss", icon, spark }: { value: string | number; label: string; tone?: "moss" | "sky" | "amber" | "rose" | "violet"; icon?: React.ReactNode; spark?: React.ReactNode }) {
+export function Stat({ value, label, tone = "moss", icon, spark, countUp, playKey, rise, index }: {
+  value: string | number; label: string; tone?: "moss" | "sky" | "amber" | "rose" | "violet"; icon?: React.ReactNode; spark?: React.ReactNode;
+  /** Plain counts only (never money): a numeric value rises 0 -> value once when first seen. */
+  countUp?: boolean;
+  playKey?: string;
+  /** Subtle one-shot entrance (same as the governance tiles). `index` staggers neighbours. */
+  rise?: boolean;
+  index?: number;
+}) {
   return (
-    <div className={`stat-tile tone-${tone}`}>
+    <div className={`stat-tile tone-${tone}`} data-rise={rise ? "" : undefined} style={rise && index ? ({ ["--i" as string]: Math.min(index, 6) } as React.CSSProperties) : undefined}>
       <div className="stat-top"><span>{label}</span>{icon && <span className="stat-icon">{icon}</span>}</div>
-      <strong>{value}</strong>
+      <strong>{countUp && typeof value === "number" && Number.isFinite(value) ? <DnaCountUp value={value} playKey={playKey} /> : value}</strong>
       {spark && <span className="stat-spark">{spark}</span>}
     </div>
   );

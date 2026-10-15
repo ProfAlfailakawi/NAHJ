@@ -76,10 +76,10 @@ export function AuditView({ lang, events }: Props) {
         {heatDays.length > 1 && (
           <div className="audit-heat">
             <div><small>{ar ? "الأحداث لكل يوم" : "Events per day"}</small>
-              <DnaHeat tone="accent" ariaLabel={ar ? "الأحداث لكل يوم" : "Events per day"}
+              <DnaHeat draw playKey="audit:heat" tone="accent" ariaLabel={ar ? "الأحداث لكل يوم" : "Events per day"}
                 cells={heatDays.map((d, i) => ({ key: `${i}-${d.day}`, value: d.events.length, label: `${d.day}: ${d.events.length}` }))} /></div>
             <div><small>{ar ? "عالية وحرجة الخطورة" : "High and critical risk"}</small>
-              <DnaHeat tone="danger" max={Math.max(1, ...heatDays.map(d => d.events.filter(isRisky).length))} ariaLabel={ar ? "الأحداث عالية الخطورة لكل يوم" : "High-risk events per day"}
+              <DnaHeat draw playKey="audit:heat-risk" tone="danger" max={Math.max(1, ...heatDays.map(d => d.events.filter(isRisky).length))} ariaLabel={ar ? "الأحداث عالية الخطورة لكل يوم" : "High-risk events per day"}
                 cells={heatDays.map((d, i) => ({ key: `${i}-${d.day}`, value: d.events.filter(isRisky).length, label: `${d.day}: ${d.events.filter(isRisky).length}` }))} /></div>
           </div>
         )}
