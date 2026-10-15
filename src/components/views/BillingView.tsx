@@ -5,6 +5,7 @@ import {
   Download, FileText, Gauge, HardDriveDownload, Layers, Receipt, RefreshCw, ShieldCheck, Sparkles, Timer, Wallet,
 } from "lucide-react";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
+import { DnaDraw } from "../dna";
 import {
   archiveApi, billingApi, money, paymentsApi,
   type BillingSnapshot, type ExportSummary, type GatewayState, type Plan, type PlanFeatureKey, type SubscriptionStatus,
@@ -110,14 +111,14 @@ function LifeBar({ snapshot, ar }: { snapshot: BillingSnapshot; ar: boolean }) {
           <strong>{shortDate(subscription.currentPeriodEnd, ar)}</strong>
         </div>
       </div>
-      <div className={`sub-life-track tone-${tone}`}>
-        <div className="sub-life-fill" style={{ width: `${elapsed}%` }} />
+      <DnaDraw className={`sub-life-track tone-${tone}`} playKey="billing:term">
+        <div className="sub-life-fill dna-grow" style={{ width: `${elapsed}%` }} />
         {subscription.graceDays > 0 && (
           <div className="sub-life-grace" style={{ width: `${Math.min(30, (subscription.graceDays / (span / 86_400_000)) * 100)}%` }}
             title={ar ? `مهلة سماح ${subscription.graceDays} يوماً بعد الانتهاء` : `${subscription.graceDays} grace days after the end`} />
         )}
-        <span className="sub-life-now" style={{ insetInlineStart: `${elapsed}%` }} />
-      </div>
+        <span className="sub-life-now dna-fadein" style={{ insetInlineStart: `${elapsed}%`, ["--i" as string]: 8 }} />
+      </DnaDraw>
       <div className="sub-life-foot">
         <span>{ar ? "بداية الاشتراك" : "Subscription started"}: <b>{shortDate(subscription.startedAt, ar)}</b></span>
         <span>
@@ -152,7 +153,7 @@ function UsageMeter({ label, used, limit, ar }: { label: string; used: number; l
   return (
     <div className="usage-meter">
       <div className="usage-meter-top"><span>{label}</span><b>{used.toLocaleString("en-US")} / {limit.toLocaleString("en-US")}</b></div>
-      <div className="usage-track"><div className={`usage-fill tone-${tone}`} style={{ width: `${percent}%` }} /></div>
+      <DnaDraw className="usage-track" playKey={`billing:usage:${label}`}><div className={`usage-fill dna-grow tone-${tone}`} style={{ width: `${percent}%` }} /></DnaDraw>
       <small className={`tone-text-${tone}`}>
         {percent >= 100 ? (ar ? "بلغت الحدّ" : "Limit reached") : ar ? `${percent}% من الحدّ` : `${percent}% of limit`}
       </small>
@@ -322,11 +323,11 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
       </section>
 
       <div className="stat-grid sub-stats">
-        <Stat label={ar ? "المتبقّي من الدورة" : "Days remaining"} value={state.daysRemaining} tone={state.daysRemaining <= 7 ? "amber" : "moss"} icon={<Timer />} />
-        <Stat label={ar ? "التجديد القادم" : "Next renewal"} value={formattedMoney(snapshot.formatted.nextRenewalAmount, ar) || (ar ? "لا تجديد" : "None")} tone="sky" icon={<CalendarClock />} />
-        <Stat label={ar ? "مستحق غير مسدَّد" : "Outstanding"} value={formattedMoney(snapshot.formatted.outstanding, ar)} tone={snapshot.outstanding.amount > 0 ? "rose" : "moss"} icon={<Wallet />} />
-        <Stat label={ar ? "إجمالي ما سُدِّد" : "Paid to date"} value={formattedMoney(snapshot.formatted.lifetimePaid, ar)} tone="violet" icon={<Receipt />} />
-        <Stat label={ar ? "سقف الاستقلالية" : "Autonomy ceiling"} value={levelLabel(limits?.maxAutonomyLevel ?? 6, ar)} tone="moss" icon={<ShieldCheck />} />
+        <Stat label={ar ? "المتبقّي من الدورة" : "Days remaining"} value={state.daysRemaining} tone={state.daysRemaining <= 7 ? "amber" : "moss"} icon={<Timer />} rise index={0} />
+        <Stat label={ar ? "التجديد القادم" : "Next renewal"} value={formattedMoney(snapshot.formatted.nextRenewalAmount, ar) || (ar ? "لا تجديد" : "None")} tone="sky" icon={<CalendarClock />} rise index={1} />
+        <Stat label={ar ? "مستحق غير مسدَّد" : "Outstanding"} value={formattedMoney(snapshot.formatted.outstanding, ar)} tone={snapshot.outstanding.amount > 0 ? "rose" : "moss"} icon={<Wallet />} rise index={2} />
+        <Stat label={ar ? "إجمالي ما سُدِّد" : "Paid to date"} value={formattedMoney(snapshot.formatted.lifetimePaid, ar)} tone="violet" icon={<Receipt />} rise index={3} />
+        <Stat label={ar ? "سقف الاستقلالية" : "Autonomy ceiling"} value={levelLabel(limits?.maxAutonomyLevel ?? 6, ar)} tone="moss" icon={<ShieldCheck />} rise index={4} />
       </div>
 
       <section className="surface-strong sub-block">

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, CheckCircle2, Clock3, Gauge, Info, ShieldCheck, TimerReset } from "lucide-react";
 import { PageHeader, SectionTitle } from "../Primitives";
-import { DnaRing } from "../dna";
+import { DnaRing, DnaDraw, DnaCountUp, dnaStagger } from "../dna";
 import { riskLabel, measureBasis, trendReason, weekdayLabel, hoursLabel } from "../../lib/labels";
 
 /*
@@ -93,13 +93,13 @@ export function AnalyticsView({ lang, data }: Props) {
       <div className="impact-layout">
         <section className="impact-hero surface">
           <DnaRing className="impact-ring" value={data.kpis.automationRatePercent} size={176} stroke={12}
-            sublabel={ar ? "أتمتة" : "automation"}
+            sublabel={ar ? "أتمتة" : "automation"} draw playKey="impact:ring"
             ariaLabel={ar ? `نسبة الأتمتة ${show(data.kpis.automationRatePercent, "%")}` : `Automation rate ${show(data.kpis.automationRatePercent, "%")}`} />
           <div className="impact-hero-copy">
             <em>{ar ? "منذ الاعتماد" : "SINCE ADOPTION"}</em>
-            <strong>{data.kpis.totalTasksCompleted.toLocaleString("en-US")}</strong>
+            <strong><DnaCountUp value={data.kpis.totalTasksCompleted} format={n => n.toLocaleString("en-US")} playKey="impact:total" /></strong>
             <span>{ar ? "مرة تنفيذ موثّقة" : "recorded executions"}</span>
-            <span className="impact-hours"><Clock3 aria-hidden="true" /> {hoursLabel(data.kpis.totalHoursSaved, ar)}</span>
+            <span className="impact-hours"><Clock3 aria-hidden="true" /> <DnaCountUp value={data.kpis.totalHoursSaved} format={n => hoursLabel(n, ar)} playKey="impact:hours" /></span>
           </div>
           <div className="impact-badges">
             <span title={ar ? "نسبة الأتمتة" : "Automation rate"}><ArrowUpRight aria-hidden="true" /><small>{ar ? "أتمتة" : "Automation"}</small> {show(data.kpis.automationRatePercent, "%")}</span>
@@ -128,17 +128,17 @@ export function AnalyticsView({ lang, data }: Props) {
           */}
           {trend?.available ? (
             <>
-            <div className="bars" role="list" aria-label={ar ? "الأحداث لكل يوم" : "Events per day"}>
-              {trend.points.map(point => (
+            <DnaDraw className="bars" role="list" aria-label={ar ? "الأحداث لكل يوم" : "Events per day"} playKey="impact:week">
+              {trend.points.map((point, index) => (
                 <div key={point.day} role="listitem" className={point.events === max && max > 0 ? "is-peak" : ""}
                   title={`${weekdayLabel(point.day, point.label, ar)}: ${point.events} ${ar ? "حدث" : "events"}`}
                   aria-label={`${weekdayLabel(point.day, point.label, ar)}: ${point.events} ${ar ? "حدث" : "events"}`}>
-                  <span style={{ height: `calc((100% - 46px) * ${Math.max(0.06, point.events / max)})` }} />
+                  <span className="dna-rise" style={{ height: `calc((100% - 46px) * ${Math.max(0.06, point.events / max)})`, ...dnaStagger(index) }} />
                   <b>{point.events}</b>
                   <small title={weekdayLabel(point.day, point.label, ar)}>{weekdayLabel(point.day, point.label, ar)}</small>
                 </div>
               ))}
-            </div>
+            </DnaDraw>
             <p className="bars-axis"><span>{ar ? "الأعلى" : "Peak"}: <b>{max}</b></span><span>{ar ? "أحداث التدقيق في اليوم" : "Audit events per day"}</span><span>0</span></p>
             </>
           ) : (
@@ -153,15 +153,15 @@ export function AnalyticsView({ lang, data }: Props) {
           <SectionTitle title={ar ? "توزيع المخاطر" : "Risk distribution"}
             meta={ar ? `${riskTotal} مهارة` : `${riskTotal} skills`} />
           {riskTotal > 0 ? (<>
-            <div className="risk-bar" role="img"
+            <DnaDraw className="risk-bar" role="img" playKey="impact:risk"
               aria-label={ar ? `منخفض ${risk.low}، متوسط ${risk.medium}، مرتفع ${risk.high}` : "risk distribution"}>
               {([["low", risk.low], ["medium", risk.medium], ["high", risk.high], ["critical", risk.critical || 0]] as const).map(([level, count]) =>
                 count > 0 ? (
-                  <span key={level} className={`risk-seg risk-${level}`} style={{ width: `${(count / riskTotal) * 100}%` }}
+                  <span key={level} className={`risk-seg risk-${level} dna-grow`} style={{ width: `${(count / riskTotal) * 100}%`, ...dnaStagger(["low", "medium", "high", "critical"].indexOf(level)) }}
                     title={`${level}: ${count}`}>{count}</span>
                 ) : null,
               )}
-            </div>
+            </DnaDraw>
             <ul className="risk-legend">
               {([["low", risk.low], ["medium", risk.medium], ["high", risk.high], ["critical", risk.critical || 0]] as const).map(([level, count]) => (
                 <li key={level}><i className={`risk-seg risk-${level}`} /><span>{riskLabel(level, ar)}</span><b>{count}</b><small>{Math.round((count / riskTotal) * 100)}%</small></li>
@@ -175,19 +175,19 @@ export function AnalyticsView({ lang, data }: Props) {
         <section className="top-skill-visual surface">
           <SectionTitle title={ar ? "أكثر المهارات أثرًا" : "Top skills"} />
           {data.topSkillsByUsage.length ? (
-            <div className="top-skills">
+            <DnaDraw className="top-skills" playKey="impact:top">
               {data.topSkillsByUsage.slice(0, 5).map((skill, index) => (
                 <div key={skill.name}>
                   <span>{index + 1}</span>
                   <div>
                     <strong>{skill.name}</strong>
                     <small>{skill.usageCount} · {hoursLabel(skill.hoursSaved, ar)}</small>
-                    <span className="ts-bar" aria-hidden="true"><i style={{ width: `${Math.max(3, (skill.usageCount / Math.max(1, ...data.topSkillsByUsage.slice(0, 5).map(x => x.usageCount))) * 100)}%` }} /></span>
+                    <span className="ts-bar" aria-hidden="true"><i className="dna-grow" style={{ ...dnaStagger(index), width: `${Math.max(3, (skill.usageCount / Math.max(1, ...data.topSkillsByUsage.slice(0, 5).map(x => x.usageCount))) * 100)}%` }} /></span>
                   </div>
                   <b>{skill.successRate}%</b>
                 </div>
               ))}
-            </div>
+            </DnaDraw>
           ) : (
             <div className="metric-unavailable"><Info /><p>{ar ? "لا مهارات بعد." : "No skills yet."}</p></div>
           )}

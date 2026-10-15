@@ -4,6 +4,7 @@ import {
 } from "lucide-react";
 import type { SectionId } from "../Shell";
 import { hoursLabel } from "../../lib/labels";
+import { DnaDraw, useDnaFlash } from "../dna";
 
 /*
  * خريطة التطبيق كلّه — عرضٌ فقط.
@@ -49,10 +50,12 @@ export function AppHub(p: Props) {
   const [focus, setFocus] = React.useState<SectionId>("skills");
   const cur = nodes.find(n => n.id === focus) ?? nodes[1];
   const R = 2 * Math.PI * 26;
+  /* تغيّر التحديد بعد أول عرض فقط: وميضٌ واحد هادئ على القرص المحدد وعلى لوحة التفاصيل. */
+  const flash = useDnaFlash(focus);
 
   return (
     <section className="apphub surface" aria-label={ar ? "خريطة نهج" : "NAHJ map"}>
-      <div className="apphub-stage">
+      <DnaDraw className="apphub-stage" playKey="apphub:rings">
         <svg className="apphub-spokes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           {nodes.map((n, i) => {
             const a = (-90 + i * 36) * Math.PI / 180;
@@ -73,8 +76,8 @@ export function AppHub(p: Props) {
               aria-pressed={n.id === focus}
               aria-label={`${n.label}: ${n.value}`}
               onClick={() => setFocus(n.id)}>
-              <span className="apphub-disc">
-                {n.ring != null && <svg className="apphub-ring" viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="26" strokeDasharray={`${R * n.ring} ${R}`} transform="rotate(-90 30 30)"/></svg>}
+              <span className="apphub-disc" {...(n.id === focus ? flash : {})}>
+                {n.ring != null && <svg className="apphub-ring" viewBox="0 0 60 60" aria-hidden="true"><circle className="apphub-ringc" cx="30" cy="30" r="26" strokeDasharray={`${R * n.ring} ${R}`} transform="rotate(-90 30 30)"/></svg>}
                 <Icon className="apphub-ico" strokeWidth={1.25}/>
               </span>
               <span className="apphub-label">{n.label}</span>
@@ -82,8 +85,8 @@ export function AppHub(p: Props) {
             </button>
           );
         })}
-      </div>
-      <aside className="apphub-focus" aria-live="polite">
+      </DnaDraw>
+      <aside className="apphub-focus" aria-live="polite" {...flash}>
         <div className="apphub-focus-text">
           <em>{ar ? "القسم المحدد" : "SELECTED"}</em>
           <h3>{cur.label}</h3>

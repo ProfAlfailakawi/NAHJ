@@ -11,7 +11,7 @@ import { MIN_PASS_RATE, MIN_SHADOW_AGREEMENT } from "../../../server/engine/prom
 
 type Props={lang:"ar"|"en";cases:TestCase[];shadow:ShadowComparison[];running:boolean;shadowRunning:boolean;onRunPractice:()=>void;onRunShadow:()=>void};
 export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPractice,onRunShadow}:Props){
-  const ar=lang==="ar"; const passed=cases.filter(c=>c.resultStatus==="pass").length;
+  const ar=lang==="ar"; const [stepperDone,setStepperDone]=React.useState(false); const passed=cases.filter(c=>c.resultStatus==="pass").length;
   /*
    * الحالة التي لم تُقارَن لا تُعدّ تطابقاً ولا انحرافاً.
    *
@@ -36,7 +36,7 @@ export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPract
     <PageHeader eyebrow={ar?"التخرّج والتقييم":"GRADUATION / EVALS"} title={ar?"قبل أن يعمل… يثبت نفسه.":"Before it works, it proves itself."} hint={ar?"اختبارات ثم ظل حقيقي. الاستقلالية تُكتسب ولا تُمنح.":"Practice first. Shadow next. Autonomy is earned."}/>
     <div className="graduation-grid">
       <section className="graduation-stage surface">
-        <DnaStepper className="graduation-steps" size="lg" reveal playKey="graduation"
+        <DnaStepper className="graduation-steps" size="lg" reveal playKey="graduation" onRevealDone={()=>setStepperDone(true)}
           ariaLabel={ar?"مسار التخرّج":"Graduation path"}
           stateText={ar?undefined:{done:"done",current:"current",pending:"upcoming",returned:"returned",blocked:"blocked"}}
           steps={[
@@ -44,7 +44,7 @@ export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPract
             {key:"shadow",icon:<GitCompareArrows/>,label:ar?"موازاة":"Shadow",state:shadowDone?"done":practiceDone?"current":"pending"},
             {key:"approval",icon:<ShieldCheck/>,label:ar?"اعتماد":"Approval",state:practiceDone&&shadowDone?"current":"pending"},
           ]}/>
-        <DnaRing className="graduation-ring" value={cases.length?passed:null} max={cases.length||1} size={148} stroke={10}
+        <DnaRing className="graduation-ring" value={cases.length?passed:null} max={cases.length||1} size={148} stroke={10} draw playKey="practice:ring" hold={!stepperDone}
           sublabel={ar?"اجتياز":"practice pass"}
           ariaLabel={ar?`اجتياز ${passed} من ${cases.length}`:`Practice pass ${passed} of ${cases.length}`}/>
         <button className="btn-primary" disabled={running} onClick={onRunPractice}><Play/>{running?(ar?"يختبر...":"Running..."):(ar?"شغّل الاختبارات":"Run practice")}</button>
@@ -56,7 +56,7 @@ export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPract
         <details className="skills-more eval-fold"><summary>{ar?`عرض الكل (${cases.length})`:`Show all (${cases.length})`}</summary><div className="eval-list">{cases.map(c=><div key={c.id} className={`eval-row ${c.resultStatus||"pending"}`}><span>{c.resultStatus==="pass"?<CheckCircle2/>:c.resultStatus==="fail"?<XCircle/>:<FlaskConical/>}</span><div><strong title={dataText(c.name,ar)!==c.name?c.name:undefined}>{dataText(c.name,ar)}</strong><small><Dt t={c.scenario} ar={ar}/></small></div><b>{c.executionTimeMs?latencyLabel(`${c.executionTimeMs}ms`,ar):"—"}</b></div>)}</div></details>
       </section>
       <section className="shadow-deck surface-strong">
-        <div className="shadow-head"><DnaRing value={compared.length?matched:null} max={compared.length||1} size={56} stroke={5} ariaLabel={ar?`توافق القرار مع الموظف ${matched} من ${compared.length}`:`Shadow agreement ${matched} of ${compared.length}`}/><div><em>{ar?"موازاة الموظف":"SHADOW"}</em><strong>{matched}/{compared.length}</strong>{skipped>0&&<small className="shadow-skipped">{ar?`${skipped} بلا وقائع مسجَّلة — لم تُقارَن`:`${skipped} not compared`}</small>}</div><button className="btn-primary shadow-run" disabled={shadowRunning} onClick={onRunShadow} title={ar?"قارن قرارات الموظفين بما كان نهج سيقرّره":"Compare staff decisions with NAHJ's"}><Play/>{shadowRunning?(ar?"يقارن...":"Comparing..."):(ar?"شغّل مقارنة الظل":"Run shadow")}</button></div>
+        <div className="shadow-head"><DnaRing value={compared.length?matched:null} max={compared.length||1} size={56} stroke={5} draw playKey="practice:shadow-ring" hold={!stepperDone} ariaLabel={ar?`توافق القرار مع الموظف ${matched} من ${compared.length}`:`Shadow agreement ${matched} of ${compared.length}`}/><div><em>{ar?"موازاة الموظف":"SHADOW"}</em><strong>{matched}/{compared.length}</strong>{skipped>0&&<small className="shadow-skipped">{ar?`${skipped} بلا وقائع مسجَّلة — لم تُقارَن`:`${skipped} not compared`}</small>}</div><button className="btn-primary shadow-run" disabled={shadowRunning} onClick={onRunShadow} title={ar?"قارن قرارات الموظفين بما كان نهج سيقرّره":"Compare staff decisions with NAHJ's"}><Play/>{shadowRunning?(ar?"يقارن...":"Comparing..."):(ar?"شغّل مقارنة الظل":"Run shadow")}</button></div>
         <DotMatrix className="shadow-matrix" label={ar?`توافق القرار مع الموظف: ${matched} من ${compared.length}`:`Shadow agreement: ${matched} of ${compared.length}`}
           cells={shadow.map(s=>({state:s.evaluated===false||(s.evaluated===undefined&&!(s.aiAction||s.aiDecision))?"none":s.matched?"ok":"warn",title:s.humanAction||s.humanDecision}))}/>
         <details className="skills-more eval-fold"><summary>{ar?`عرض الكل (${shadow.length})`:`Show all (${shadow.length})`}</summary><div className="shadow-pairs">{shadow.map(s=>{

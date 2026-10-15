@@ -162,3 +162,135 @@ export function useJourneyReveal<T extends HTMLElement = HTMLOListElement>({
 
   return { ref, lit };
 }
+
+/* ==========================================================================
+ * Draw-in / count-up / change-flash — calm one-shot flourishes on top of values
+ * that are already true. They reuse the play-once store above (`wasPlayed` /
+ * `remember`), so a remount or a refetch never replays them in the same tab.
+ *
+ * The first render decides synchronously: anything that cannot or should not
+ * animate (no IntersectionObserver, reduced motion, hidden tab, already played,
+ * already scrolled past) starts in the FINAL state and never shows an
+ * intermediate one.
+ * ========================================================================== */
+
+export type DrawPhase = 'final' | 'pre' | 'play';
+
+function prefersReduced(): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function canAnimate(playKey: string | undefined, enabled: boolean): boolean {
+  if (!enabled || typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') return false;
+  if (prefersReduced()) return false;
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return false;
+  return !wasPlayed(playKey);
+}
+
+export interface PlayOnViewOptions {
+  /** Same key => played once per tab session; omitted => once per mount. */
+  playKey?: string;
+  threshold?: number;
+  enabled?: boolean;
+  /** Stay in `pre` while true (e.g. wait for a stepper to finish). Never for ever: released after 8s. */
+  hold?: boolean;
+}
+
+/**
+ * `final` = show the real value, `pre` = the empty starting pose (applied only when JS decided to play),
+ * `play` = transition to the real value. The phase never goes back, so later data changes never replay it.
+ */
+export function usePlayOnView<T extends Element = HTMLElement>({ playKey, threshold = 0.4, enabled = true, hold = false }: PlayOnViewOptions = {}) {
+  const ref = React.useRef<T>(null);
+  const [phase, setPhase] = React.useState<DrawPhase>(() => (canAnimate(playKey, enabled) ? 'pre' : 'final'));
+  const seen = React.useRef(false);
+  const [released, setReleased] = React.useState(!hold);
+  const phaseRef = React.useRef(phase);
+  phaseRef.current = phase;
+  const releasedRef = React.useRef(released);
+  releasedRef.current = released;
+
+  React.useEffect(() => {
+    if (!hold) setReleased(true);
+    else {
+      const giveUp = setTimeout(() => setReleased(true), 8000);
+      return () => clearTimeout(giveUp);
+    }
+  }, [hold]);
+
+  const go = React.useCallback(() => {
+    if (phaseRef.current !== 'pre') return;
+    remember(playKey);
+    setPhase('play');
+  }, [playKey]);
+
+  React.useLayoutEffect(() => {
+    if (phaseRef.current !== 'pre') return;
+    const node = ref.current;
+    if (!node) return setPhase('final');
+    const box = node.getBoundingClientRect();
+    // Already scrolled past, or unmeasurable: show the real state, spend nothing.
+    if (box.bottom < 0 || !box.width || !box.height) return setPhase('final');
+    const t = Math.max(0.05, Math.min(threshold, box.height ? (0.9 * window.innerHeight) / box.height : threshold));
+    const io = new IntersectionObserver(
+      entries => {
+        if (!entries.some(e => e.isIntersecting && e.intersectionRatio >= t - 0.01)) return;
+        io.disconnect();
+        seen.current = true;
+        if (releasedRef.current) go();
+      },
+      { threshold: t },
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [playKey, threshold, go]);
+
+  // The element was seen while held: start as soon as the hold is released.
+  React.useEffect(() => {
+    if (released && seen.current) go();
+  }, [released, go]);
+
+  return { ref, phase, drawing: phase === 'pre' };
+}
+
+const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+
+/** 0 -> value once when first seen (<= 900ms). After it played, value changes snap. Final value whenever unsure. */
+export function useCountUp<T extends Element = HTMLElement>(value: number, { playKey, duration = 700, threshold = 0.4, enabled = true }: { playKey?: string; duration?: number; threshold?: number; enabled?: boolean } = {}) {
+  const { ref, phase } = usePlayOnView<T>({ playKey, threshold, enabled });
+  const [t, setT] = React.useState(0);
+  React.useEffect(() => {
+    if (phase !== 'play') return;
+    const ms = Math.min(900, duration);
+    const start = performance.now();
+    let raf = 0;
+    const step = (now: number) => {
+      const p = Math.max(0, Math.min(1, (now - start) / ms)); /* a first frame stamped before `start` must not yield a negative count */
+      setT(p);
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [phase]);
+  const decimals = Number.isInteger(value) ? 0 : Math.min(2, (String(value).split('.')[1] ?? '').length);
+  const factor = Math.pow(10, decimals);
+  const shown = phase === 'final' || t >= 1 ? value : Math.round(value * easeOut(t) * factor) / factor;
+  return { ref, shown };
+}
+
+/**
+ * One soft highlight when `signal` changes AFTER the first render (never on mount, never looping).
+ * Returns a data-flash value ('a' | 'b', alternating so the CSS animation restarts) or undefined.
+ */
+export function useChangeFlash(signal: unknown): 'a' | 'b' | undefined {
+  const prev = React.useRef(signal);
+  const [state, setState] = React.useState({ n: 0, on: false });
+  React.useEffect(() => {
+    if (Object.is(prev.current, signal)) return;
+    prev.current = signal;
+    setState(s => ({ n: s.n + 1, on: true }));
+    const id = setTimeout(() => setState(s => ({ ...s, on: false })), 1400);
+    return () => clearTimeout(id);
+  }, [signal]);
+  return state.on ? (state.n % 2 ? 'a' : 'b') : undefined;
+}
