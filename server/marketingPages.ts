@@ -256,6 +256,10 @@ const LANDING_STYLE = `
   .sector p { margin:0; color:var(--muted); font-size:15.5px; }
   .sector ul { margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:6px; }
   .sector li { font-size:13.5px; font-weight:700; background:color-mix(in srgb, var(--accent) 12%, var(--card)); color:var(--accent); padding:4px 10px; border-radius:999px; }
+  .sector a.try { position:relative; z-index:2; align-self:flex-start; display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 14px; border:1.5px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius:999px; font-weight:800; font-size:15px; color:var(--accent); text-decoration:none; background:var(--card); }
+  .sector a.try svg { width:18px; height:18px; }
+  .sector a.try:hover { background:color-mix(in srgb, var(--accent) 10%, var(--card)); }
+  .sector a.try:focus-visible { outline:3px solid var(--moss); outline-offset:2px; }
   .sector a.more { margin-top:auto; padding-top:6px; display:inline-flex; align-items:center; gap:8px; font-weight:800; font-size:15.5px; color:var(--accent); text-decoration:none; }
   .sector a.more::after { content:""; position:absolute; inset:0; border-radius:inherit; }
   .sector a.more svg { width:18px; height:18px; transition:transform .2s; }
@@ -374,6 +378,7 @@ export function renderLandingPage(): string {
       <p>${escapeHtml(sector.descriptionAr)}</p>
       <ul aria-label="أمثلة على ما يتولّاه">${examples.map(example => `<li>${escapeHtml(example)}</li>`).join("")}</ul>
       <a class="more" href="?sector=${encodeURIComponent(sector.code)}#contact" data-sector="${escapeHtml(sector.code)}" aria-label="اطلب عرضاً لقطاع ${escapeHtml(sector.nameAr)}">اطلب عرضاً لقطاعك ${ARROW}</a>
+      <a class="try" href="/try/${encodeURIComponent(sector.code)}" aria-label="شاهد تجربة قطاع ${escapeHtml(sector.nameAr)} الآن">شاهده الآن ${ARROW}</a>
     </article>`;
   }).join("");
 

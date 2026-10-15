@@ -57,28 +57,16 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated, demoEnabled, de
             <strong>{ar ? "نهج" : "NAHJ"}</strong>
             <small>{ar ? "نظام التعلّم التشغيلي" : "Operational Learning OS"}</small>
           </div>
-          {demoEnabled && (
-            <button
-              type="button"
-              className="demo-enter demo-enter--icon login-demo-icon"
-              onClick={onEnterDemo}
-              disabled={demoBusy}
-              title={demoBusy ? (ar ? "جارٍ تجهيز التجربة..." : "Preparing demo...") : (ar ? "جرّب نهج بدون تسجيل — بيئة تجريبية معزولة" : "Try NAHJ without signing in — isolated sandbox")}
-              aria-label={ar ? "جرّب نهج بدون تسجيل" : "Try NAHJ without signing in"}
-            >
-              <FlaskConical aria-hidden="true" />
-            </button>
-          )}
         </div>
 
         <p className="login-hint">
           {needsSetup
             ? ar
-              ? "لا يوجد أي حساب بعد. أنشئ حساب المشغّل الأول — هذه الشاشة تُعرض مرة واحدة فقط، وتُقفل بمجرد إنشاء الحساب."
-              : "No account exists yet. Create the first operator account — this screen appears once and closes the moment the account is created."
+              ? "لا يوجد أي حساب بعد. أنشئ حسابك الأول — هذه الشاشة تُعرض مرة واحدة فقط، وتُقفل بمجرد إنشاء الحساب."
+              : "No account exists yet. Create the first account — this screen appears once and closes the moment the account is created."
             : ar
-              ? "سجّل الدخول بحساب المشغّل للوصول إلى المهارات والموافقات وسجل الأثر."
-              : "Sign in with your operator account to reach skills, approvals and the evidence log."}
+              ? "سجّل الدخول بحسابك للوصول إلى المهارات والموافقات وسجل الأثر."
+              : "Sign in with your account to reach skills, approvals and the evidence log."}
         </p>
 
         {needsSetup && (
@@ -139,6 +127,19 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated, demoEnabled, de
               ? ar ? "إنشاء الحساب والدخول" : "Create account and sign in"
               : ar ? "تسجيل الدخول" : "Sign in"}
         </button>
+
+        {demoEnabled && (
+          <button
+            type="button"
+            className="login-demo-text"
+            onClick={onEnterDemo}
+            disabled={demoBusy}
+            title={ar ? "بيئة تجريبية معزولة — لا حساب ولا بيانات حقيقية" : "Isolated sandbox — no account, no real data"}
+          >
+            <FlaskConical aria-hidden="true" />
+            {demoBusy ? (ar ? "جارٍ تجهيز التجربة..." : "Preparing demo...") : (ar ? "جرّب بدون حساب" : "Try without an account")}
+          </button>
+        )}
 
         {!needsSetup && marketing && (
           <div className="login-links-row">

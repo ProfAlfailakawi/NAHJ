@@ -102,8 +102,9 @@
   border-radius:20px;
 }
 .login-brand { display:flex; align-items:center; gap:12px; }
-.login-brand .login-demo-icon { margin-inline-start:auto; }
-.login-brand .login-demo-icon svg { width:18px; height:18px; }
+.login-card button.login-demo-text{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;width:100%;border:1px solid rgba(190,138,42,.45);border-radius:14px;background:rgba(190,138,42,.09);color:var(--amber-ink);font-size:15px;font-weight:800;cursor:pointer}
+.login-card button.login-demo-text:hover:not(:disabled){background:rgba(190,138,42,.16)}
+.login-card button.login-demo-text svg{width:18px;height:18px}
 .login-brand svg { width:28px; height:28px; flex:none; }
 .login-brand strong { display:block; font-size:20px; line-height:1.2; }
 .login-brand small { display:block; opacity:.65; font-size:13px; }
