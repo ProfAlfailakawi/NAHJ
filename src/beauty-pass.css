@@ -136,3 +136,32 @@
   .partner-stage .stat-tile strong { min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
   .partner-stage .stat-tile strong::-webkit-scrollbar { display: none; }
 }
+
+/* partner client meta: the renewal calendar icon sits inline with its text (the global svg reset made it a block) */
+.partner-client-meta svg { display: inline-block; flex: none; }
+
+/* Teach: with nothing captured yet the live-capture card hugs its header instead of stretching to the stage's height */
+@media (min-width: 901px) {
+  .teach-capture:not(:has(.capture-timeline > *)):not(:has(.synthesis-wow)) { align-self: start; }
+}
+
+/* Skill inspector ladder (English): the end labels ("Observe", "Autopilot") are wider than their column and were cut by
+   the scroll box; give the row side room so they sit whole. */
+.skill-inspector .autonomy-steps { padding-inline: 16px; grid-auto-columns: minmax(30px, 1fr); }
+
+/* weekly bars (English): the seven weekday names are wider than their columns and ran into one another; each is clipped to its column */
+.bars small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.bars > div { max-width: none; align-items: center; }
+.bars > div > span { max-width: 52px; }
+
+/* Partner portal (tablet): the hero stacks earlier so a large "due now" figure never runs into the paid/accrued legend,
+   and the four stat tiles sit in an even 2 x 2 instead of 3 + 1. */
+.partner-hero-main { min-width: 0; }
+.partner-hero-main strong { overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  .partner-hero { grid-template-columns: minmax(0, 1fr); }
+  .partner-stage .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* partner hero bar: the empty track stays visible on dark (var(--paper-2) disappears into the dark card at 0% paid) */
+.partner-hero-bar { background: color-mix(in srgb, var(--ink) 9%, transparent); }
