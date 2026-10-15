@@ -134,7 +134,7 @@ export function publicPlans(): PublicPlanView[] {
         seats: plan.limits.seats === null ? "بلا حدّ" : String(plan.limits.seats),
         skills: plan.limits.skills === null ? "بلا حدّ" : String(plan.limits.skills),
         workItems: plan.limits.workItemsPerMonth === null ? "بلا حدّ" : plan.limits.workItemsPerMonth.toLocaleString("en-US"),
-        autonomy: autonomyPlain(plan.limits.maxAutonomyLevel),
+        autonomy: `مستوى ${Math.max(0, Math.min(6, Math.floor(plan.limits.maxAutonomyLevel)))} من 6`,
       },
       autonomyCap: plan.limits.maxAutonomyLevel,
       features: featuresOf(plan),

@@ -46,7 +46,7 @@ function PromotionDialog({lang,skill,target,onClose,onConfirm}:{lang:"ar"|"en";s
     {review&&<>
       <dl className="promotion-stats">
         <div><dt>{ar?"نجاح التدرّب":"Practice pass rate"}</dt><dd>{pct(review.stats.passRate)}<small>{review.stats.testsTotal?` ${review.stats.testsPassed}/${review.stats.testsTotal}`:""}</small></dd></div>
-        <div><dt>{ar?"التطابق في الظل":"Shadow agreement"}</dt><dd>{pct(review.stats.shadowAgreement)}<small>{review.stats.shadowCompared?` ${review.stats.shadowMatched}/${review.stats.shadowCompared}`:""}</small></dd></div>
+        <div><dt>{ar?"توافق قرار نهج مع الموظف":"Shadow agreement"}</dt><dd>{pct(review.stats.shadowAgreement)}<small>{review.stats.shadowCompared?` ${review.stats.shadowMatched}/${review.stats.shadowCompared}`:""}</small></dd></div>
         <div><dt>{ar?"الاستثناءات الموثّقة":"Documented exceptions"}</dt><dd>{review.stats.exceptions}</dd></div>
         <div><dt>{ar?"الموثوقية":"Reliability"}</dt><dd>{skill.reliabilityScore}%</dd></div>
       </dl>

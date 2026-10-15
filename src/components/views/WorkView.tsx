@@ -62,7 +62,7 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
           <strong>{w.contactName||w.title}</strong><small><Dt t={w.currentStepTitle} ar={ar}/></small>
           <DnaStepper size="xs" steps={workSteps(w.state,ar)} stateText={workStepText(ar)} ariaLabel={workStatePlain(w.state, ar)}/>
         </button>)}</div>
-        {filtered.length>shown&&<button type="button" className="btn-secondary work-more" onClick={()=>setShown(v=>v+24)}>{ar?`عرض ${Math.min(24,filtered.length-shown)} حالة أخرى من ${filtered.length-shown}`:`Show ${Math.min(24,filtered.length-shown)} more of ${filtered.length-shown}`}</button>}
+        {filtered.length>shown&&<button type="button" className="btn-secondary work-more" onClick={()=>setShown(v=>v+24)}>{ar?`عرض المزيد (${Math.min(24,filtered.length-shown)} من ${filtered.length-shown} متبقية)`:`Show more (${Math.min(24,filtered.length-shown)} of ${filtered.length-shown} left)`}</button>}
         {filtered.length===0&&<p className="decision-muted">{ar?"لا حالات في هذا التصنيف.":"No cases in this group."}</p>}
       </section>
       {item&&<section className="work-focus surface-strong">
