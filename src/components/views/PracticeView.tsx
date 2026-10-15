@@ -40,7 +40,7 @@ export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPract
           stateText={ar?undefined:{done:"done",current:"current",pending:"upcoming",returned:"returned",blocked:"blocked"}}
           steps={[
             {key:"practice",icon:<FlaskConical/>,label:ar?"تدريب":"Practice",state:practiceDone?"done":"current"},
-            {key:"shadow",icon:<GitCompareArrows/>,label:ar?"ظل":"Shadow",state:shadowDone?"done":practiceDone?"current":"pending"},
+            {key:"shadow",icon:<GitCompareArrows/>,label:ar?"موازاة":"Shadow",state:shadowDone?"done":practiceDone?"current":"pending"},
             {key:"approval",icon:<ShieldCheck/>,label:ar?"اعتماد":"Approval",state:practiceDone&&shadowDone?"current":"pending"},
           ]}/>
         <DnaRing className="graduation-ring" value={cases.length?passed:null} max={cases.length||1} size={148} stroke={10}
@@ -55,8 +55,8 @@ export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPract
         <details className="skills-more eval-fold"><summary>{ar?`عرض الكل (${cases.length})`:`Show all (${cases.length})`}</summary><div className="eval-list">{cases.map(c=><div key={c.id} className={`eval-row ${c.resultStatus||"pending"}`}><span>{c.resultStatus==="pass"?<CheckCircle2/>:c.resultStatus==="fail"?<XCircle/>:<FlaskConical/>}</span><div><strong title={dataText(c.name,ar)!==c.name?c.name:undefined}>{dataText(c.name,ar)}</strong><small><Dt t={c.scenario} ar={ar}/></small></div><b>{c.executionTimeMs?latencyLabel(`${c.executionTimeMs}ms`,ar):"—"}</b></div>)}</div></details>
       </section>
       <section className="shadow-deck surface-strong">
-        <div className="shadow-head"><DnaRing value={compared.length?matched:null} max={compared.length||1} size={56} stroke={5} ariaLabel={ar?`تطابق الظل ${matched} من ${compared.length}`:`Shadow agreement ${matched} of ${compared.length}`}/><div><em>{ar?"الظل":"SHADOW"}</em><strong>{matched}/{compared.length}</strong>{skipped>0&&<small className="shadow-skipped">{ar?`${skipped} بلا وقائع مسجَّلة — لم تُقارَن`:`${skipped} not compared`}</small>}</div><button className="btn-primary shadow-run" disabled={shadowRunning} onClick={onRunShadow} title={ar?"قارن قرارات الموظفين بما كان نهج سيقرّره":"Compare staff decisions with NAHJ's"}><Play/>{shadowRunning?(ar?"يقارن...":"Comparing..."):(ar?"شغّل مقارنة الظل":"Run shadow")}</button></div>
-        <DotMatrix className="shadow-matrix" label={ar?`مطابقة الظل: ${matched} من ${compared.length}`:`Shadow agreement: ${matched} of ${compared.length}`}
+        <div className="shadow-head"><DnaRing value={compared.length?matched:null} max={compared.length||1} size={56} stroke={5} ariaLabel={ar?`توافق القرار مع الموظف ${matched} من ${compared.length}`:`Shadow agreement ${matched} of ${compared.length}`}/><div><em>{ar?"موازاة الموظف":"SHADOW"}</em><strong>{matched}/{compared.length}</strong>{skipped>0&&<small className="shadow-skipped">{ar?`${skipped} بلا وقائع مسجَّلة — لم تُقارَن`:`${skipped} not compared`}</small>}</div><button className="btn-primary shadow-run" disabled={shadowRunning} onClick={onRunShadow} title={ar?"قارن قرارات الموظفين بما كان نهج سيقرّره":"Compare staff decisions with NAHJ's"}><Play/>{shadowRunning?(ar?"يقارن...":"Comparing..."):(ar?"شغّل مقارنة الظل":"Run shadow")}</button></div>
+        <DotMatrix className="shadow-matrix" label={ar?`توافق القرار مع الموظف: ${matched} من ${compared.length}`:`Shadow agreement: ${matched} of ${compared.length}`}
           cells={shadow.map(s=>({state:s.evaluated===false||(s.evaluated===undefined&&!(s.aiAction||s.aiDecision))?"none":s.matched?"ok":"warn",title:s.humanAction||s.humanDecision}))}/>
         <details className="skills-more eval-fold"><summary>{ar?`عرض الكل (${shadow.length})`:`Show all (${shadow.length})`}</summary><div className="shadow-pairs">{shadow.map(s=>{
           /* حالةٌ لم تُقارَن بعد ليست انحرافاً: تُعرض «بانتظار المقارنة» حتى يُشغَّل الظل. */

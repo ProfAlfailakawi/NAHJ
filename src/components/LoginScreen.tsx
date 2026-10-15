@@ -5,7 +5,7 @@ import { ApiError, authApi } from "../lib/api";
 
 interface Props {
   lang: "ar" | "en";
-  /** true عند أول تشغيل: لا يوجد أي حساب بعد، فنُنشئ حساب المشغّل بدل طلب الدخول. */
+  /** true عند أول تشغيل: لا يوجد أي حساب بعد، فنُنشئ حسابك بدل طلب الدخول. */
   needsSetup: boolean;
   onAuthenticated: () => void;
   demoEnabled: boolean;

@@ -120,7 +120,7 @@ export default function App(){
   const [demoBusy,setDemoBusy]=useState(false);
   const [toast,setToast]=useState<{text:string;error?:boolean}|null>(null);
   // "checking" حتى نعرف من /auth/me؛ لا يُعرض أي سطح تشغيلي قبل الحسم.
-  // "setup" = لا يوجد أي حساب بعد، فالشاشة تُنشئ حساب المشغّل بدل أن تطلب الدخول.
+  // "setup" = لا يوجد أي حساب بعد، فالشاشة تُنشئ حسابك بدل أن تطلب الدخول.
   const [authState,setAuthState]=useState<"checking"|"setup"|"anonymous"|"authenticated">("checking");
   const [account,setAccount]=useState<{id:string;role:string}|null>(null);
   /*

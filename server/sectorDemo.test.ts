@@ -136,8 +136,12 @@ test("عرض التعليم: حالات التدرّب كلها قابلة لل�
 
 test("صفحات الهبوط والشروط والخصوصية تُرسم — والعرض ليس باباً عامّاً فيها", () => {
   const landing = renderLandingPage();
-  /* العرض أداةٌ يعرضها المالك: لا رابط /try في الصفحة العامة، بل طلب عرضٍ لكل قطاع. */
-  assert.ok(!landing.includes("/try/"), "الصفحة العامة تفتح العرض لكل زائر");
+  /* بطاقة كل قطاع تحمل «شاهده الآن» نحو /try/<قطاع> ما دام العرض مفعّلاً، إلى جانب طلب العرض. */
+  for (const pack of SECTOR_PACKS) assert.ok(landing.includes(`href="/try/${pack.code}"`), `لا رابط مشاهدة لقطاع ${pack.code}`);
+  const previous = process.env.NAHJ_DEMO_ENABLED;
+  process.env.NAHJ_DEMO_ENABLED = "false";
+  assert.ok(!renderLandingPage().includes("/try/"), "العرض معطّل لكن الرابط ظاهر");
+  if (previous === undefined) delete process.env.NAHJ_DEMO_ENABLED; else process.env.NAHJ_DEMO_ENABLED = previous;
   assert.match(landing, /id="lead-form"/);
   for (const pack of SECTOR_PACKS) assert.ok(landing.includes(`data-sector="${pack.code}"`), `لا طلب عرض لقطاع ${pack.code}`);
   assert.ok(landing.includes(`data-sector="${EDUCATION_CODE}"`));

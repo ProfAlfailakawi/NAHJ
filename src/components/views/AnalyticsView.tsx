@@ -103,7 +103,7 @@ export function AnalyticsView({ lang, data }: Props) {
           </div>
           <div className="impact-badges">
             <span title={ar ? "نسبة الأتمتة" : "Automation rate"}><ArrowUpRight aria-hidden="true" /><small>{ar ? "أتمتة" : "Automation"}</small> {show(data.kpis.automationRatePercent, "%")}</span>
-            <span title={ar ? "تطابق الظل" : "Shadow match"}><ShieldCheck aria-hidden="true" /><small>{ar ? "ظل" : "Shadow"}</small> {show(data.kpis.shadowMatchRatePercent, "%")}</span>
+            <span title={ar ? "تطابق قرار نهج مع قرار الموظف" : "Shadow match"}><ShieldCheck aria-hidden="true" /><small>{ar ? "توافق مع الموظف" : "Shadow"}</small> {show(data.kpis.shadowMatchRatePercent, "%")}</span>
             <span title={ar ? "نسبة الخطأ" : "Error rate"}><ArrowDownRight aria-hidden="true" /><small>{ar ? "خطأ" : "Errors"}</small> {show(data.kpis.errorRatePercent, "%")}</span>
           </div>
         </section>
@@ -116,7 +116,7 @@ export function AnalyticsView({ lang, data }: Props) {
           <Metric ar={ar} icon={<TimerReset />} value={show(data.kpis.humanTakeoverPercent, "%")}
             label={ar ? "استلام بشري" : "takeover"} measure={evidence.humanTakeoverPercent} />
           <Metric ar={ar} icon={<CheckCircle2 />} value={show(data.kpis.shadowMatchRatePercent, "%")}
-            label={ar ? "تطابق الظل" : "shadow match"} measure={evidence.shadowMatchRatePercent} />
+            label={ar ? "توافق قرار نهج مع الموظف" : "shadow match"} measure={evidence.shadowMatchRatePercent} />
         </section>
 
         <section className="weekly-visual surface-strong">

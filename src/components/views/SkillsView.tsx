@@ -119,12 +119,15 @@ function ManualPanel({lang,skill,onSkillUpdated,notify}:{lang:"ar"|"en";skill:Sk
       </div>})}
       <button type="button" className="btn-secondary" disabled={!Object.keys(drafts).length} onClick={()=>void saveTranslation()}>{ar?"احفظ":"Save"}</button>
     </details>
+    <details className="manual-advanced">
+    <summary>{ar?"متقدّم":"Advanced"}</summary>
     <form className="manual-verify" onSubmit={verify}>
       <label htmlFor={ids.sig}>{ar?"تحقّق من توقيع دليلٍ مطبوع":"Verify a printed manual's signature"}</label>
-      <input id={ids.sig} dir="ltr" value={signature} onChange={e=>setSignature(e.target.value)} placeholder="HMAC-SHA256"/>
+      <input id={ids.sig} dir="ltr" value={signature} onChange={e=>setSignature(e.target.value)} placeholder={ar?"الصق التوقيع الرقمي هنا":"Paste the digital signature"}/>
       <button type="submit" className="btn-secondary" disabled={signature.trim().length<64}>{ar?"تحقّق":"Verify"}</button>
       {verdict&&<p role="status" className={verdict.valid?"verify-ok":"verify-bad"}>{verdict.reason}</p>}
     </form>
+    </details>
   </section>;
 }
 const LIFECYCLE=["draft","proposed","approved","practicing","shadow","active"];

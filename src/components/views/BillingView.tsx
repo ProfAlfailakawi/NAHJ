@@ -49,8 +49,8 @@ const STATUS_META: Record<SubscriptionStatus, { ar: string; en: string; tone: st
 const FEATURE_LABELS: Record<PlanFeatureKey, { ar: string; en: string }> = {
   teachMode: { ar: "وضع التعليم", en: "Teach Mode" },
   processIntelligence: { ar: "ذكاء العمليات واكتشاف التعارض", en: "Process intelligence" },
-  shadowEngine: { ar: "محرّك الظل والمقارنة", en: "Shadow engine" },
-  mcp: { ar: "بروتوكول MCP", en: "MCP protocol" },
+  shadowEngine: { ar: "مقارنة قرارات نهج بقرارات الموظف", en: "Shadow engine" },
+  mcp: { ar: "ربط وكلاء ذكاء خارجيين (MCP)", en: "MCP protocol" },
   externalConnectors: { ar: "موصلات خارجية", en: "External connectors" },
   apiAccess: { ar: "واجهة برمجية", en: "API access" },
   sso: { ar: "دخول موحّد (SSO)", en: "Single sign-on" },
