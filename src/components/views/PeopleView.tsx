@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useId, useState } from "react";
 import { AlertTriangle, Circle, UserPlus, Users } from "lucide-react";
 import { api, ApiError, apiOrNull } from "../../lib/api";
 import { Dt, PageHeader, SectionTitle } from "../Primitives";
-import { DnaRing } from "../dna";
+import { DnaRing, DnaDraw } from "../dna";
 import { dataText } from "../../lib/labels";
 
 /*
@@ -61,6 +61,19 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
   const assigned = (next: CoverageReport) => { setCoverage(next); onChanged?.(); };
 
   const history = coverage?.history || [];
+  /* خطٌّ بحدٍّ ثابت السماكة (non-scaling-stroke): تُحسب لوحة الرسم بالبكسل لتستعملها حركة الرسم لمرة واحدة. */
+  const trendLine = React.useRef<SVGPolylineElement>(null);
+  React.useLayoutEffect(() => {
+    const line = trendLine.current; const svg = line?.ownerSVGElement;
+    if (!line || !svg) return;
+    const box = svg.getBoundingClientRect();
+    const vb = svg.viewBox.baseVal;
+    if (!box.width || !vb.width || !vb.height) return;
+    const sx = box.width / vb.width; const sy = box.height / vb.height;
+    let len = 0; const pts = line.points;
+    for (let i = 1; i < pts.numberOfItems; i++) len += Math.hypot((pts.getItem(i).x - pts.getItem(i - 1).x) * sx, (pts.getItem(i).y - pts.getItem(i - 1).y) * sy);
+    line.style.setProperty("--len", String(Math.ceil(len) + 2));
+  }, [history.length, loaded]);
   const max = 100;
   /* شبكة شخص × مهارة من بيانات الغطاء نفسها: ممتلئة = يحملها ومغطّاة، تحذير = يحملها وحده، فارغة = لا يحملها. */
   const gridSkills = (() => {
@@ -95,21 +108,21 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
           <Users aria-hidden="true" />
           {/* المقياس مرة واحدة: حلقةٌ بنسبتها في وسطها، وتحتها العدّ بالكلام. */}
           {coverage && coverage.total > 0
-            ? <DnaRing className="people-ring" value={coverage.covered} max={coverage.total} size={150} stroke={10}
+            ? <DnaRing className="people-ring" value={coverage.covered} max={coverage.total} size={150} stroke={10} draw playKey="people:ring"
                 label={coverage.score == null ? "—" : `${coverage.score}%`}
                 ariaLabel={ar ? `${coverage.covered} من ${coverage.total} مهارة لها أكثر من شخص` : `${coverage.covered} of ${coverage.total} skills covered`} />
             : <strong>{coverage?.score == null ? "—" : `${coverage.score}%`}</strong>}
           <span>{ar ? "غطاء المعرفة" : "Knowledge coverage"}</span>
           <small>{coverage ? (ar ? `${coverage.covered} من ${coverage.total} مهارة لها أكثر من شخص` : `${coverage.covered} of ${coverage.total} skills have more than one person`) : ""}</small>
           {history.length > 1 && (
-            <figure className="coverage-trend">
+            <DnaDraw as="figure" className="coverage-trend" playKey="people:trend">
               <svg viewBox={`0 0 ${Math.max(history.length - 1, 1) * 20} 60`} preserveAspectRatio="none" role="img"
                 aria-label={ar ? `تطوّر الغطاء من ${history[0].score}% إلى ${history[history.length - 1].score}%` : `Coverage from ${history[0].score}% to ${history[history.length - 1].score}%`}>
-                <polyline fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke"
+                <polyline ref={trendLine} fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke"
                   points={history.map((point, index) => `${index * 20},${60 - (point.score / max) * 56}`).join(" ")} />
               </svg>
               <figcaption>{ar ? `آخر ${history.length} يوماً` : `Last ${history.length} days`}</figcaption>
-            </figure>
+            </DnaDraw>
           )}
         </section>
         <section className="surface-strong people-risks">

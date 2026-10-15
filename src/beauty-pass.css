@@ -24,6 +24,8 @@
 @media (prefers-reduced-motion: no-preference) {
   @keyframes bpTileIn { from { opacity: 0; transform: translateY(10px); } }
   .guard-tile { animation: bpTileIn 0.5s var(--ease) backwards; }
+  /* the same subtle rise for <Stat rise> tiles (display-only screens), staggered by --i */
+  .stat-tile[data-rise] { animation: bpTileIn 0.5s var(--ease) calc(var(--i, 0) * 60ms) backwards; }
 }
 
 /* phones: the emergency button lives in the dock row (beside the dock) instead of floating over page content.
@@ -43,3 +45,42 @@
   .emergency-fab { inset-inline-end: 8px; width: 40px; height: 40px; min-width: 40px; border-radius: 14px; }
   .apphub-stage { margin-inline: 14px; }
 }
+
+/* ==========================================================================
+   Motion polish: one-shot draw-ins on top of values that are already true.
+   The "pre" pose exists only under [data-draw='pre'] (set by JS when it decided
+   to play), so every screen shows its final state without JS / IntersectionObserver
+   / reduced motion. Transform, opacity and stroke-dashoffset only.
+   ========================================================================== */
+
+/* bars that already carry their own transition keep it and add the draw */
+.bars span.dna-rise { transition: transform 0.6s var(--ease) calc(var(--i, 0) * 60ms), background-color 0.3s; }
+.sub-life-fill.dna-grow,
+.usage-fill.dna-grow { transition: width 0.5s var(--ease), transform 0.6s var(--ease) calc(var(--i, 0) * 60ms); }
+.partner-hero-bar i.dna-grow { transition: width 0.8s var(--ease), transform 0.8s var(--ease); }
+
+/* getting-started progress (n/5) */
+.gs-progress { display: block; height: 6px; margin: 0 0 14px; border-radius: 99px; overflow: hidden; background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.gs-progress > i { display: block; height: 100%; border-radius: inherit; background: var(--moss); }
+
+/* app map rings and the learning lens */
+.apphub-ringc, .lens-progress { transition: stroke-dasharray 0.9s var(--ease), opacity 0.2s var(--ease); }
+[data-draw='pre'] .apphub-ringc,
+[data-draw='pre'] .lens-progress { stroke-dasharray: 0 1000; opacity: 0; }
+
+/* skill reliability orb: the conic fill is driven by a registered property so it can be drawn */
+@property --orb-v { syntax: '<percentage>'; inherits: false; initial-value: 0%; }
+.reliability-orb[data-draw] {
+  --orb-v: var(--value);
+  background: conic-gradient(var(--moss) var(--orb-v), color-mix(in srgb, var(--ink) 6%, transparent) 0);
+  transition: --orb-v 0.9s var(--ease);
+}
+.reliability-orb[data-draw='pre'] { --orb-v: 0%; }
+
+/* coverage trend line */
+/* the line has a non-scaling stroke, so its dash is in screen px: PeopleView measures the length into --len */
+.coverage-trend[data-draw] polyline { stroke-dasharray: var(--len, 300); stroke-dashoffset: 0; transition: stroke-dashoffset 0.9s var(--ease); }
+.coverage-trend[data-draw='pre'] polyline { stroke-dashoffset: var(--len, 300); }
+
+/* calm: the post-synthesis fingerprint orbit turns once, slowly, then rests (it sits beside the approve form) */
+.skill-fingerprint > div { animation: orbitSpin 6s var(--ease) 1; }

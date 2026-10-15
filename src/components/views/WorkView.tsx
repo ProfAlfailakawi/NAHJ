@@ -2,7 +2,7 @@ import React,{useMemo,useState} from "react";
 import { Bot, Hand, PauseCircle, Play, ShieldAlert, UserRound, Waypoints } from "lucide-react";
 import type { WorkItem } from "../../types";
 import { Dt, PageHeader, SectionTitle } from "../Primitives";
-import { DnaStepper, DnaTimeline, type DnaStep } from "../dna";
+import { DnaStepper, DnaTimeline, DnaDraw, dnaStagger, type DnaStep } from "../dna";
 import { workStatePlain } from "../../lib/glossary";
 import { timelineBadgeLabel, dataText } from "../../lib/labels";
 
@@ -35,6 +35,8 @@ export function workSteps(state:string,ar:boolean):DnaStep[]{
 type Props={lang:"ar"|"en";items:WorkItem[];onTakeOver:(id:string)=>void;onResume:(id:string)=>void;onApproval:(id:string)=>void;approvalByWork:Record<string,string>};
 export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWork}:Props){
   const ar=lang==="ar"; const [selectedId,setSelectedId]=useState(items[0]?.id||"");
+  /* المقدّمة الكاملة تُعرض للحالة الأولى في الجلسة فقط؛ الحالات التالية تُعرض بحالتها النهائية فوراً. */
+  const [riverDone,setRiverDone]=useState(false);
   /* أول بيانات تصل تُعتمد حالةً مختارة؛ بعدها إعادة ترتيب الاستطلاع لا تُغيّر المختارة ولا تُشغّل مقدّمة لحالةٍ لم يخترها أحد. */
   if(!selectedId&&items[0])setSelectedId(items[0].id);
   const item=useMemo(()=>items.find(w=>w.id===selectedId)||items[0],[items,selectedId]);
@@ -50,9 +52,9 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
       <section className="work-queue surface">
         <SectionTitle title={ar?"الجاري":"Live"} meta={ar?`${items.filter(i=>i.state!=="completed").length} لم تكتمل بعد`:`${items.filter(i=>i.state!=="completed").length} not completed`}/>
         {items.length>0&&(()=>{const stages=[...WORK_FLOW,...(items.some(w=>w.state==="escalated")?["escalated"]:[])];const max=Math.max(1,...stages.map(st=>items.filter(w=>w.state===st).length));
-          return <div className="work-funnel" role="list" aria-label={ar?"عدد الحالات في كل مرحلة":"Cases per stage"}>
-            {stages.map(st=>{const n=items.filter(w=>w.state===st).length;return <div role="listitem" key={st} className={`${n?"has":""} ${st==="escalated"?"esc":""}`}><small>{workStatePlain(st,ar)}</small><span aria-hidden="true"><i style={{width:`${n?Math.max(4,n/max*100):0}%`}}/></span><b>{n}</b></div>})}
-          </div>})()}
+          return <DnaDraw className="work-funnel" role="list" aria-label={ar?"عدد الحالات في كل مرحلة":"Cases per stage"} playKey="work:funnel">
+            {stages.map((st,si)=>{const n=items.filter(w=>w.state===st).length;return <div role="listitem" key={st} className={`${n?"has":""} ${st==="escalated"?"esc":""}`}><small>{workStatePlain(st,ar)}</small><span aria-hidden="true"><i className="dna-grow" style={{width:`${n?Math.max(4,n/max*100):0}%`,...dnaStagger(si)}}/></span><b>{n}</b></div>})}
+          </DnaDraw>})()}
         <div className="work-filters" role="tablist" aria-label={ar?"تصفية الحالات":"Filter cases"}>{tabs.map(([key,label])=><button key={key} type="button" role="tab" aria-selected={filter===key} className={filter===key?"active":""} onClick={()=>{setFilter(key);setShown(24)}}>{label}<b>{counts[key]}</b></button>)}</div>
         <div className="work-queue-list">{filtered.slice(0,shown).map(w=><button key={w.id} className={`queue-card ${item?.id===w.id?"selected":""}`} onClick={()=>{setSelectedId(w.id);
           /* على الهاتف تقع اللوحة تحت قائمةٍ طويلة: يُنقل إليها المستخدم بدل أن يبحث عنها. */
@@ -66,9 +68,9 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
       </section>
       {item&&<section className="work-focus surface-strong">
         <div className="work-focus-top"><div><em>{item.code}</em><h2>{item.contactName||item.title}</h2><span><Dt t={item.skillName} ar={ar}/></span></div><div className={`mode-orb ${item.assignedMode}`}><span>{item.assignedMode==="ai"?<Bot/>:<UserRound/>}</span><small>{item.assignedMode==="ai"?(ar?"نهج":"AI"):(ar?"موظف":"HUMAN")}</small></div></div>
-        <div className="work-focus-river"><DnaStepper size="sm" reveal={item.id===selectedId} playKey={`work:${item.id}`} steps={workSteps(item.state,ar)} stateText={workStepText(ar)} ariaLabel={ar?"مراحل الحالة":"Case stages"}/><strong>{item.progressPercent}%</strong></div>
+        <div className="work-focus-river"><DnaStepper size="sm" reveal={item.id===selectedId} playKey="work:river" onRevealDone={()=>setRiverDone(true)} steps={workSteps(item.state,ar)} stateText={workStepText(ar)} ariaLabel={ar?"مراحل الحالة":"Case stages"}/><strong>{item.progressPercent}%</strong></div>
         <div className="work-now"><Waypoints/><span><small>{ar?"الآن":"NOW"}</small><strong><Dt t={item.currentStepTitle} ar={ar}/></strong></span></div>
-        <DnaTimeline className="work-timeline" ariaLabel={ar?"سجل الحالة":"Case timeline"} wrapMeta items={item.timeline.slice(0,5).map((t,i)=>({key:`${t.time}-${i}`,
+        <DnaTimeline reveal hold={!riverDone} playKey="work:timeline" className="work-timeline" ariaLabel={ar?"سجل الحالة":"Case timeline"} wrapMeta items={item.timeline.slice(0,5).map((t,i)=>({key:`${t.time}-${i}`,
           icon:t.actor==="ai"?<Bot/>:t.actor==="human"?<UserRound/>:<Waypoints/>,tone:t.actor==="ai"?"accent":t.actor==="human"?"sky":"neutral",
           title:<><Dt t={t.title} ar={ar}/>{t.badge&&<span className="work-tl-badge" title={t.badge}>{timelineBadgeLabel(t.badge,ar)}</span>}</>,date:t.time,meta:t.details?dataText(t.details,ar):undefined}))}/>
         <div className="work-actions">

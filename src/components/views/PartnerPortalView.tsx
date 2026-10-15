@@ -4,6 +4,7 @@ import {
   AlertTriangle, Building2, CalendarClock, CheckCircle2, Clock3, HandCoins, RefreshCw, Wallet,
 } from "lucide-react";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
+import { DnaDraw } from "../dna";
 import { SectorIcon } from "../SectorIcon";
 import {
   CLIENT_STATUS_AR, COMMISSION_MODEL_AR, COMMISSION_STATUS_AR, money, partnersApi,
@@ -107,9 +108,9 @@ export function PartnerPortalView({ lang, notify }: Props) {
           <strong className="mono">{formattedMoney(totals.formatted.due, ar)}</strong>
         </div>
         <div className="partner-hero-split">
-          <div className="partner-hero-bar" role="img" aria-label={ar ? `قُبض ${totals.accrued > 0 ? Math.round(totals.paid / totals.accrued * 100) : 0}% مما استُحقّ` : "Share paid"}>
-            <i style={{ width: `${totals.accrued > 0 ? Math.min(100, Math.round(totals.paid / totals.accrued * 100)) : 0}%` }} />
-          </div>
+          <DnaDraw className="partner-hero-bar" playKey="partner:hero-bar" role="img" aria-label={ar ? `قُبض ${totals.accrued > 0 ? Math.round(totals.paid / totals.accrued * 100) : 0}% مما استُحقّ` : "Share paid"}>
+            <i className="dna-grow" style={{ width: `${totals.accrued > 0 ? Math.min(100, Math.round(totals.paid / totals.accrued * 100)) : 0}%` }} />
+          </DnaDraw>
           <div className="partner-hero-legend">
             <span><i className="paid" />{ar ? "ما قُبض" : "Paid"} <b className="mono">{formattedMoney(totals.formatted.paid, ar)}</b></span>
             <span><i className="accrued" />{ar ? "إجمالي ما استُحقّ" : "Accrued"} <b className="mono">{formattedMoney(totals.formatted.accrued, ar)}</b></span>
@@ -118,10 +119,10 @@ export function PartnerPortalView({ lang, notify }: Props) {
       </section>
 
       <div className="stat-grid">
-        <Stat label={ar ? "شركاتك" : "Companies"} value={clients.length} tone="sky" icon={<Building2 />} />
-        <Stat label={ar ? "إجمالي ما استُحقّ" : "Accrued"} value={formattedMoney(totals.formatted.accrued, ar)} tone="violet" icon={<HandCoins />} />
-        <Stat label={ar ? "ما قُبض" : "Paid"} value={formattedMoney(totals.formatted.paid, ar)} tone="moss" icon={<CheckCircle2 />} />
-        <Stat label={ar ? "المستحقّ لك الآن" : "Due to you"} value={formattedMoney(totals.formatted.due, ar)} tone={totals.due > 0 ? "amber" : "moss"} icon={<Wallet />} />
+        <Stat label={ar ? "شركاتك" : "Companies"} value={clients.length} tone="sky" icon={<Building2 />} rise index={0} />
+        <Stat label={ar ? "إجمالي ما استُحقّ" : "Accrued"} value={formattedMoney(totals.formatted.accrued, ar)} tone="violet" icon={<HandCoins />} rise index={1} />
+        <Stat label={ar ? "ما قُبض" : "Paid"} value={formattedMoney(totals.formatted.paid, ar)} tone="moss" icon={<CheckCircle2 />} rise index={2} />
+        <Stat label={ar ? "المستحقّ لك الآن" : "Due to you"} value={formattedMoney(totals.formatted.due, ar)} tone={totals.due > 0 ? "amber" : "moss"} icon={<Wallet />} rise index={3} />
       </div>
 
       {/* الاتفاق مكتوبٌ على الشاشة، فلا يبقى في الذاكرة وحدها. */}

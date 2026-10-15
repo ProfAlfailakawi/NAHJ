@@ -1,4 +1,5 @@
 import { LADDER_NAME_AR } from "../lib/labels";
+import { usePlayOnView } from "./dna";
 import React from "react";
 import {
   BrainCircuit, BookOpenCheck, CalendarDays, Check, Circle, CircleDollarSign, FileCheck2, Fingerprint,
@@ -25,11 +26,13 @@ function VisualNode({ className, icon, tone, label }: { className: string; icon:
   );
 }
 
-export function LearningLens({ progress = 76, label, ar = true }: { progress?: number; label?: string; ar?: boolean }) {
+export function LearningLens({ progress = 76, label, ar = true, draw = false, playKey }: { progress?: number; label?: string; ar?: boolean; draw?: boolean; playKey?: string }) {
+  /* الرسم عند أول ظهور فقط؛ وبعدها يُحرّك الانتقال نمو القوس حين يزيد المحسوم. */
+  const { ref, phase } = usePlayOnView<HTMLDivElement>({ playKey, enabled: draw, threshold: 0.4 });
   const circumference = 2 * Math.PI * 42;
   const dash = Math.max(0, Math.min(100, progress)) / 100 * circumference;
   return (
-    <div className="learning-lens" aria-label={ar ? `تغطية التعلّم ${progress}%` : `Learning coverage ${progress}%`}>
+    <div ref={draw ? ref : undefined} data-draw={draw && phase !== "final" ? phase : undefined} className="learning-lens" aria-label={ar ? `تغطية التعلّم ${progress}%` : `Learning coverage ${progress}%`}>
       <svg viewBox="0 0 120 120" aria-hidden="true">
         <circle cx="60" cy="60" r="47" fill="none" stroke="color-mix(in srgb,var(--ink) 5.5%,transparent)" strokeWidth="1"/>
         <circle cx="60" cy="60" r="42" fill="none" stroke="color-mix(in srgb,var(--ink) 8%,transparent)" strokeWidth="5"/>
