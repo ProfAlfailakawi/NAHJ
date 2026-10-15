@@ -105,7 +105,8 @@
 .impact-metric strong { font-size: 22px; }
 
 /* Billing: money never breaks across two lines; usage meters keep "used / limit" whole and their bars on one baseline. */
-.sub-stats .stat-tile strong { white-space: nowrap; min-width: 0; font-size: clamp(16px, 1.65vw, 21px); }
+.sub-stats .stat-tile strong { white-space: nowrap; min-width: 0; font-size: clamp(16px, 1.65vw, 21px); /* a very large total never gets clipped: it stays on one line and scrolls inside its tile */ overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.sub-stats .stat-tile strong::-webkit-scrollbar { display: none; }
 .usage-meter { display: flex; flex-direction: column; justify-content: flex-end; }
 .usage-meter-top { align-items: flex-end; }
 .usage-meter-top b { white-space: nowrap; flex: none; }
