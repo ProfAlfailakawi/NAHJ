@@ -84,3 +84,29 @@
 
 /* calm: the post-synthesis fingerprint orbit turns once, slowly, then rests (it sits beside the approve form) */
 .skill-fingerprint > div { animation: orbitSpin 6s var(--ease) 1; }
+
+/* Impact (desktop/tablet): the top-skills card shares the second column with the risk/week cards instead of
+   sitting alone in a last row with an empty half-page beside it. Presentation only; DOM order unchanged,
+   single column on phones. */
+@media (min-width: 901px) {
+  .impact-layout {
+    grid-template-areas:
+      "hero metrics"
+      "weekly top"
+      "risk top";
+  }
+  .impact-hero { grid-area: hero; }
+  .impact-metrics { grid-area: metrics; }
+  .weekly-visual { grid-area: weekly; }
+  .risk-visual { grid-area: risk; }
+  .top-skill-visual { grid-area: top; display: flex; flex-direction: column; }
+  .top-skill-visual .top-skills { flex: 1; grid-auto-rows: 1fr; align-content: stretch; }
+}
+.impact-metric strong { font-size: 22px; }
+
+/* Billing: money never breaks across two lines; usage meters keep "used / limit" whole and their bars on one baseline. */
+.sub-stats .stat-tile strong { white-space: nowrap; min-width: 0; font-size: clamp(16px, 1.65vw, 21px); }
+.usage-meter { display: flex; flex-direction: column; justify-content: flex-end; }
+.usage-meter-top { align-items: flex-end; }
+.usage-meter-top b { white-space: nowrap; flex: none; }
+.usage-meter-top b { direction: ltr; unicode-bidi: isolate; }
