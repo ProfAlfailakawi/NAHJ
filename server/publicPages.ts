@@ -66,7 +66,7 @@ export const FEATURE_BUILD_STATE: Record<keyof PlanFeatures, { label: string; st
   mcp: { label: "ربط وكلاء الذكاء الخارجيين", state: "built", note: "يستطيع أي وكيل ذكاء اصطناعي يدعم معيار MCP أن يستخدم مهارات نهج المعتمدة." },
   externalConnectors: { label: "موصلات الأنظمة الخارجية", state: "simulated", note: "معروضة في المنتج كمحاكاة معلنة. أول وصلة حقيقية تُبنى مع أول عميل." },
   apiAccess: { label: "واجهة برمجية", state: "planned", note: "مسارات المنتج قائمة خلف جلسة؛ مفاتيح التطبيقات لم تُبنَ بعد." },
-  sso: { label: "دخول موحّد (SSO)", state: "planned", note: "الحسابات اليوم بكلمة مرور وجلسات مُجزَّأة." },
+  sso: { label: "دخول موحّد لموظفيكم", state: "planned", note: "الحسابات اليوم بكلمة مرور وجلسات مُجزَّأة." },
   whiteLabel: { label: "علامة المؤسسة", state: "planned", note: "الهوية اليوم هوية نهج." },
   onPremise: { label: "نشر داخل المؤسسة", state: "built", note: "نشرٌ مستقلّ بقاعدة بياناتكم على خوادمكم." },
 };
@@ -166,7 +166,7 @@ const STYLE = `
   .limits { list-style:none; padding:0; margin:18px 0; border-top:1px solid var(--line); }
   .limits li { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--line); font-size:15px; }
   .limits li span { color:var(--muted); }
-  .limits b { font-variant-numeric:tabular-nums; }
+  .limits b { font-variant-numeric:tabular-nums; white-space:nowrap; }
   .feat { list-style:none; padding:0; margin:0; }
   .feat li { padding:5px 0; font-size:15px; display:flex; gap:10px; align-items:flex-start; line-height:1.7; }
   .dot { width:9px; height:9px; border-radius:50%; margin-top:9px; flex:none; background:var(--moss); }
@@ -215,7 +215,7 @@ export function renderPricingPage(): string {
         <li><span>المقاعد</span><b>${escapeHtml(plan.limits.seats)}</b></li>
         <li><span>المهارات</span><b>${escapeHtml(plan.limits.skills)}</b></li>
         <li><span>حالات العمل شهرياً</span><b>${escapeHtml(plan.limits.workItems)}</b></li>
-        <li><span>سقف الاستقلالية</span><b>${escapeHtml(plan.limits.autonomy)}</b></li>
+        <li><span>الاستقلالية</span><b>${escapeHtml(plan.limits.autonomy)}</b></li>
       </ul>
       ${autonomyLadder(plan.autonomyCap)}
       <ul class="feat">

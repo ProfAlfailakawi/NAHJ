@@ -495,7 +495,7 @@ export const initialWorkItems: WorkItem[] = [
         time: '10:16 ص',
         actor: 'ai',
         title: 'تحديد الصف والاستعلام من SIS',
-        details: 'العمر 5 سنوات → مؤهل لـ KG2. المقاعد المتاحة في الشعبة: 4 مقاعد.',
+        details: 'العمر 5 سنوات ← مؤهل لـ KG2. المقاعد المتاحة في الشعبة: 4 مقاعد.',
         badge: 'SIS Checked'
       },
       {

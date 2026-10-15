@@ -110,7 +110,7 @@ export const BASE_STYLE = `${FONT_FACE_CSS}
   .brand { display:flex; align-items:center; gap:10px; font-weight:900; font-size:21px; text-decoration:none; }
   .brand svg { width:34px; height:34px; }
   .top nav { margin-inline-start:auto; display:flex; align-items:center; gap:6px; }
-  .top nav a { text-decoration:none; padding:8px 12px; border-radius:10px; font-weight:700; font-size:15px; color:var(--muted); }
+  .top nav a { text-decoration:none; padding:8px 12px; min-height:44px; display:inline-flex; align-items:center; border-radius:10px; font-weight:700; font-size:15px; color:var(--muted); }
   .top nav a:hover { color:var(--ink); background:var(--card); }
   .top nav a.cta { background:var(--ink); color:var(--bg); }
   .top nav a { white-space:nowrap; }
@@ -133,7 +133,8 @@ export const BASE_STYLE = `${FONT_FACE_CSS}
   .btn:focus-visible, .top nav a:focus-visible, .sector a:focus-visible { outline:3px solid var(--moss); outline-offset:2px; }
   footer { border-top:1px solid var(--line); margin-top:72px; padding:32px 0 48px; color:var(--muted); font-size:15px; }
   footer .wrap { display:flex; flex-wrap:wrap; gap:14px 26px; align-items:center; }
-  footer nav { display:flex; flex-wrap:wrap; gap:18px; }
+  footer nav { display:flex; flex-wrap:wrap; gap:4px 18px; }
+  footer nav a { display:inline-flex; align-items:center; min-height:44px; }
   footer a { text-decoration:none; font-weight:700; }
   footer a:hover { color:var(--ink); }
   @media (max-width:720px) {
@@ -260,7 +261,7 @@ const LANDING_STYLE = `
   .sector a.try svg { width:18px; height:18px; }
   .sector a.try:hover { background:color-mix(in srgb, var(--accent) 10%, var(--card)); }
   .sector a.try:focus-visible { outline:3px solid var(--moss); outline-offset:2px; }
-  .sector a.more { margin-top:auto; padding-top:6px; display:inline-flex; align-items:center; gap:8px; font-weight:800; font-size:15.5px; color:var(--accent); text-decoration:none; }
+  .sector a.more { margin-top:auto; min-height:44px; padding-top:6px; display:inline-flex; align-items:center; gap:8px; font-weight:800; font-size:15.5px; color:var(--accent); text-decoration:none; }
   .sector a.more::after { content:""; position:absolute; inset:0; border-radius:inherit; }
   .sector a.more svg { width:18px; height:18px; transition:transform .2s; }
   .sector:hover a.more svg { transform:translateX(-5px); }

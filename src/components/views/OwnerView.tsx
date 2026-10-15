@@ -41,7 +41,7 @@ const FEATURE_KEYS: PlanFeatureKey[] = [
 ];
 const FEATURE_AR: Record<PlanFeatureKey, string> = {
   teachMode: "وضع التعليم", processIntelligence: "ذكاء العمليات", shadowEngine: "مقارنة قرارات نهج بقرارات الموظف",
-  mcp: "ربط وكلاء ذكاء خارجيين (MCP)", externalConnectors: "موصلات خارجية", apiAccess: "واجهة برمجية", sso: "دخول موحّد",
+  mcp: "ربط وكلاء ذكاء خارجيين", externalConnectors: "موصلات خارجية", apiAccess: "واجهة برمجية", sso: "دخول موحّد",
   customPolicies: "سياسات مخصّصة", whiteLabel: "علامة المؤسسة", onPremise: "نشر داخلي",
   prioritySupport: "دعم بأولوية", dedicatedSuccessManager: "مدير نجاح مخصّص",
 };
@@ -49,7 +49,7 @@ const FEATURE_AR: Record<PlanFeatureKey, string> = {
 const LIMIT_KEYS = ["seats", "skills", "workItemsPerMonth", "connectors", "mcpServers", "aiCallsPerMonth", "auditRetentionDays"] as const;
 const LIMIT_AR: Record<string, string> = {
   seats: "المقاعد", skills: "المهارات", workItemsPerMonth: "حالات/شهر", connectors: "الموصلات",
-  mcpServers: "وكلاء ذكاء خارجيون (MCP)", aiCallsPerMonth: "نداءات ذكاء/شهر", auditRetentionDays: "احتفاظ التدقيق (يوم)",
+  mcpServers: "وكلاء ذكاء خارجيون", aiCallsPerMonth: "نداءات ذكاء/شهر", auditRetentionDays: "احتفاظ التدقيق (يوم)",
 };
 
 const shortDate = (value: string | null | undefined) =>

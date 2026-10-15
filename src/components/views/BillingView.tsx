@@ -50,10 +50,10 @@ const FEATURE_LABELS: Record<PlanFeatureKey, { ar: string; en: string }> = {
   teachMode: { ar: "وضع التعليم", en: "Teach Mode" },
   processIntelligence: { ar: "ذكاء العمليات واكتشاف التعارض", en: "Process intelligence" },
   shadowEngine: { ar: "مقارنة قرارات نهج بقرارات الموظف", en: "Shadow engine" },
-  mcp: { ar: "ربط وكلاء ذكاء خارجيين (MCP)", en: "MCP protocol" },
+  mcp: { ar: "ربط وكلاء ذكاء خارجيين", en: "MCP protocol" },
   externalConnectors: { ar: "موصلات خارجية", en: "External connectors" },
   apiAccess: { ar: "واجهة برمجية", en: "API access" },
-  sso: { ar: "دخول موحّد (SSO)", en: "Single sign-on" },
+  sso: { ar: "دخول موحّد لموظفيكم", en: "Single sign-on" },
   customPolicies: { ar: "سياسات مخصّصة", en: "Custom policies" },
   whiteLabel: { ar: "علامة المؤسسة", en: "White label" },
   onPremise: { ar: "نشر داخل المؤسسة", en: "On-premise" },
@@ -443,7 +443,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
           </p>
           <div className="export-actions">
             <button className="btn-primary" onClick={() => archiveApi.download("/export/full.json")}>
-              <Download /> {ar ? "نسخة كاملة (JSON)" : "Full export (JSON)"}
+              <Download /> {ar ? "نسخة كاملة من البيانات" : "Full export (JSON)"}
             </button>
             {exportSummary.ledgers.map(ledger => (
               <button key={ledger.name} className="btn-secondary"

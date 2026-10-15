@@ -26,7 +26,7 @@ const kwd = (value: number, ar: boolean) => `${value.toLocaleString("en-US")} ${
 const PLANS = [
   { ar: "بداية", en: "Starter", monthly: 149 as number | null, seats: "10", orgs: 3 },
   { ar: "نمو", en: "Growth", monthly: 395 as number | null, seats: "40", orgs: 5 },
-  { ar: "مؤسسي", en: "Enterprise", monthly: 950 as number | null, seats: "120", orgs: 2 },
+  { ar: "مؤسسي", en: "Enterprise", monthly: 950 as number | null, seats: "بلا حدّ", orgs: 2 },
   { ar: "سيادي", en: "Sovereign", monthly: null as number | null, seats: "—", orgs: 1 },
 ] as const;
 
