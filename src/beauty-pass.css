@@ -111,3 +111,57 @@
 .usage-meter-top { align-items: flex-end; }
 .usage-meter-top b { white-space: nowrap; flex: none; }
 .usage-meter-top b { direction: ltr; unicode-bidi: isolate; }
+
+/* Very large or long values (a 7+ digit count, an unbroken token) stay inside their tile: the grid items may shrink
+   below their content and the value wraps instead of pushing past the card edge. Presentation only. */
+.impact-metrics > *, .guardrail-grid > *, .memory-strip > *, .pulse-stats > * { min-width: 0; }
+.impact-metric { grid-template-columns: 28px minmax(0, 1fr); }
+.memory-glyph { grid-template-columns: 38px minmax(0, 1fr); }
+.impact-metric strong, .impact-metric small, .guard-tile strong, .guard-tile small,
+.memory-glyph strong, .memory-glyph small { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+
+/* weekly bars: a large daily count wraps inside its own column instead of running into the neighbours' numbers */
+.bars > div { min-width: 0; }
+.bars b { max-width: 100%; text-align: center; line-height: 1.15; overflow-wrap: anywhere; }
+
+/* Partner portal on phones: a long company name gets the full row (the badge and the amount sit beneath it)
+   instead of being squeezed into a one-word column; a very large money tile puts its value on its own full-width row. */
+.partner-client-head strong, .partner-client-head small { overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .partner-client-head { flex-wrap: wrap; row-gap: 8px; }
+  .partner-client-head > div { flex: 1 1 calc(100% - 56px); }
+  .partner-client-head .client-badge { margin-inline-start: 0; }
+  .partner-client-amount { margin-inline-start: auto; }
+  .partner-stage .stat-tile { grid-template-areas: "icon label" "value value"; row-gap: 8px; }
+  .partner-stage .stat-tile strong { min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  .partner-stage .stat-tile strong::-webkit-scrollbar { display: none; }
+}
+
+/* partner client meta: the renewal calendar icon sits inline with its text (the global svg reset made it a block) */
+.partner-client-meta svg { display: inline-block; flex: none; }
+
+/* Teach: with nothing captured yet the live-capture card hugs its header instead of stretching to the stage's height */
+@media (min-width: 901px) {
+  .teach-capture:not(:has(.capture-timeline > *)):not(:has(.synthesis-wow)) { align-self: start; }
+}
+
+/* Skill inspector ladder (English): the end labels ("Observe", "Autopilot") are wider than their column and were cut by
+   the scroll box; give the row side room so they sit whole. */
+.skill-inspector .autonomy-steps { padding-inline: 16px; grid-auto-columns: minmax(30px, 1fr); }
+
+/* weekly bars (English): the seven weekday names are wider than their columns and ran into one another; each is clipped to its column */
+.bars small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.bars > div { max-width: none; align-items: center; }
+.bars > div > span { max-width: 52px; }
+
+/* Partner portal (tablet): the hero stacks earlier so a large "due now" figure never runs into the paid/accrued legend,
+   and the four stat tiles sit in an even 2 x 2 instead of 3 + 1. */
+.partner-hero-main { min-width: 0; }
+.partner-hero-main strong { overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  .partner-hero { grid-template-columns: minmax(0, 1fr); }
+  .partner-stage .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* partner hero bar: the empty track stays visible on dark (var(--paper-2) disappears into the dark card at 0% paid) */
+.partner-hero-bar { background: color-mix(in srgb, var(--ink) 9%, transparent); }
