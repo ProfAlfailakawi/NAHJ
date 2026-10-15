@@ -265,7 +265,7 @@ export function useCountUp<T extends Element = HTMLElement>(value: number, { pla
     const start = performance.now();
     let raf = 0;
     const step = (now: number) => {
-      const p = Math.min(1, (now - start) / ms);
+      const p = Math.max(0, Math.min(1, (now - start) / ms)); /* a first frame stamped before `start` must not yield a negative count */
       setT(p);
       if (p < 1) raf = requestAnimationFrame(step);
     };
