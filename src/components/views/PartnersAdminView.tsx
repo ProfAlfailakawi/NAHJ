@@ -244,7 +244,7 @@ export function PartnersAdminView({ lang, notify }: Props) {
                 <strong>{client.name}</strong>
                 <small>{client.sector || "—"} · {partners.find(p => p.id === client.partnerId)?.name || "بيع مباشر"}</small>
                 <small className="partner-terms">
-                  {CYCLE_AR[client.cycle]} · {money(client.contractValue, client.currency, ar)} · {shortDate(client.startedAt)} → {shortDate(client.endsAt)}
+                  {CYCLE_AR[client.cycle]} · {money(client.contractValue, client.currency, ar)} · {shortDate(client.startedAt)} {ar?"←":"→"} {shortDate(client.endsAt)}
                 </small>
               </div>
               <div className="partner-figures">

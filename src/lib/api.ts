@@ -259,7 +259,9 @@ export function money(amountMinor: number, currency = "KWD", ar?: boolean): stri
   const fraction = String(absolute % divisor).padStart(exponent, "0");
   /* العملة بلغة الواجهة الحالية (تُضبط على <html lang>): «KWD» ← «د.ك» في الواجهة العربية فقط. */
   const arabicUi = ar ?? (typeof document !== "undefined" && document.documentElement.lang === "ar");
-  return `${sign}${whole}${exponent ? `.${fraction}` : ""} ${currencyLabel((currency || "KWD").toUpperCase(), arabicUi)}`;
+  /* بالعربية يُحذف الكسر الصفري: «395 د.ك» كما في صفحة الأسعار، و«12.500 د.ك» تبقى كما هي. */
+  const showFraction = exponent > 0 && !(arabicUi && /^0+$/.test(fraction));
+  return `${sign}${whole}${showFraction ? `.${fraction}` : ""} ${currencyLabel((currency || "KWD").toUpperCase(), arabicUi)}`;
 }
 
 /** يحوّل ما كتبه المالك بالوحدة الكبرى (12.500) إلى وحدة صغرى صحيحة (12500). */

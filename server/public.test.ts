@@ -99,7 +99,7 @@ test("سُلّم الاستقلالية المصغّر يُضاء حتى سقف 
   const html = renderPricingPage();
   for (const plan of publicPlans()) {
     assert.ok(html.includes(`data-cap="${plan.autonomyCap}"`), `سقف ${plan.code} غائب عن السُّلّم`);
-    assert.equal(`L${plan.autonomyCap}`, plan.limits.autonomy, "السُّلّم لا يطابق نص السقف");
+    assert.ok(plan.limits.autonomy.startsWith(`مستوى ${plan.autonomyCap} من 6`), "السُّلّم لا يطابق نص السقف");
   }
   const lit = [...html.matchAll(/<ol class="jr" data-cap="(\d)"[^>]*>(.*?)<\/ol>/g)];
   assert.equal(lit.length, publicPlans().length);

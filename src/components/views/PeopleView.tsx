@@ -140,6 +140,7 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
         {coverage && coverage.people.length > 0 && gridSkills.length > 0 && (
           <section className="surface people-matrix">
             <SectionTitle title={ar ? "من يحمل ماذا" : "Who holds what"} />
+            <p className="scroll-hint" aria-hidden="true">{ar ? "← اسحب الجدول جانبياً لرؤية بقية المهارات" : "Swipe the table sideways to see more skills"}</p>
             <div className="people-matrix-scroll">
               <table>
                 <caption className="sr-only">{ar ? "شبكة الأشخاص والمهارات" : "People by skill grid"}</caption>

@@ -1313,7 +1313,7 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
     db.simulatorState.messages.push({
       id: `msg_${Date.now()}`,
       sender: "system",
-      text: `✅ تم اعتماد الطلب رسميًا من مديرة القبول (${currentUser.name})! تم إصدار رقم الملف ومزامنة بيانات القبول في نظام SIS.`,
+      text: `تم اعتماد الطلب رسميًا من مديرة القبول (${currentUser.name})! تم إصدار رقم الملف ومزامنة بيانات القبول في نظام SIS.`,
       timestamp: "الآن",
       cardType: "booking_confirmation",
       metadata: {

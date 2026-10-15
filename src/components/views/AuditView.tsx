@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { Bot, FileCheck2, LayoutList, Search, ShieldAlert, UserRound, Waypoints } from "lucide-react";
+import { FileCheck2, LayoutList, Search, ShieldAlert, UserRound, Waypoints } from "lucide-react";
+import { NahjGlyph } from "../Brand";
 import type { AuditEvent } from "../../types";
 import { Dt, PageHeader } from "../Primitives";
 import { DnaHeat, DnaSegmented } from "../dna";
@@ -87,7 +88,7 @@ export function AuditView({ lang, events }: Props) {
           onChange={k => { setKind(k); setShown(40); }}
           options={[
             { value: "all", label: ar ? "الكل" : "All", icon: <LayoutList />, count: kindCounts.all },
-            { value: "ai", label: ar ? "نهج" : "AI", icon: <Bot />, count: kindCounts.ai },
+            { value: "ai", label: ar ? "نهج" : "AI", icon: <NahjGlyph />, count: kindCounts.ai },
             { value: "human", label: ar ? "بشر" : "People", icon: <UserRound />, count: kindCounts.human },
             { value: "system", label: ar ? "النظام" : "System", icon: <Waypoints />, count: kindCounts.system },
             { value: "risk", label: ar ? "خطر" : "Risk", icon: <ShieldAlert />, count: kindCounts.risk },
@@ -114,14 +115,14 @@ export function AuditView({ lang, events }: Props) {
               )}
               <article className="audit-item" data-risk={e.risk}>
                 <span className={`audit-actor ${e.actorType} risk-${e.risk}`} aria-hidden="true">
-                  {e.actorType === "ai" ? <Bot /> : e.actorType === "human" ? <UserRound /> : e.risk === "high" || e.risk === "critical" ? <ShieldAlert /> : <Waypoints />}
+                  {e.actorType === "ai" ? <NahjGlyph /> : e.actorType === "human" ? <UserRound /> : e.risk === "high" || e.risk === "critical" ? <ShieldAlert /> : <Waypoints />}
                 </span>
                 <div>
                   <div className="audit-head"><strong title={e.action}>{actionLabel(e.action, ar)}</strong><small>{stampLabel(e.timestamp, ar)} · {actorLabel(e.actorName, ar)} · {riskLabel(e.risk, ar)}</small></div>
                   <p className="audit-detail" title={dataText(e.details, ar)}><Dt t={e.details} ar={ar} /></p>
                   {record?.skill && <p className="audit-record">{ar ? `المهارة: ${dataText(record.skill.name, true)} — v${record.skill.version}` : `Skill: ${record.skill.name} — v${record.skill.version}`}</p>}
                   {record?.review?.signedOffBy && <p className="audit-record">{ar
-                    ? `وقّع: ${record.review.signedOffBy} · نجاح التدرّب ${record.review.stats?.passRate ?? "—"}% · التطابق في الظل ${record.review.stats?.shadowAgreement ?? "—"}%`
+                    ? `وقّع: ${record.review.signedOffBy} · نجاح التدرّب ${record.review.stats?.passRate ?? "—"}% · توافق قرار نهج مع الموظف ${record.review.stats?.shadowAgreement ?? "—"}%`
                     : `Signed off by ${record.review.signedOffBy}`}</p>}
                   <div className="audit-tags">
                     {e.policyCode && <span title={e.policyCode}><FileCheck2 aria-hidden="true" />{reasonLabel(e.policyCode, ar)}</span>}
@@ -135,7 +136,7 @@ export function AuditView({ lang, events }: Props) {
         </div>
         {filtered.length > shown && (
           <button type="button" className="btn-secondary audit-more" onClick={() => setShown(v => v + 40)}>
-            {ar ? `عرض ${Math.min(40, filtered.length - shown)} حدثاً أقدم (متبقٍ ${filtered.length - shown})` : `Show ${Math.min(40, filtered.length - shown)} older events (${filtered.length - shown} left)`}
+            {ar ? `عرض المزيد (${Math.min(40, filtered.length - shown)} من ${filtered.length - shown} متبقية)` : `Show more (${Math.min(40, filtered.length - shown)} of ${filtered.length - shown} left)`}
           </button>
         )}
         {filtered.length === 0 && <p className="empty-note">{ar ? "لا أثر يطابق بحثك." : "No evidence matches your search."}</p>}

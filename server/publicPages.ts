@@ -58,15 +58,15 @@ export interface FeatureView {
  */
 export const FEATURE_BUILD_STATE: Record<keyof PlanFeatures, { label: string; state: BuildState; note: string }> = {
   teachMode: { label: "وضع التعليم", state: "built", note: "يُركّب المهارة ممّا يفعله موظفوكم فعلاً." },
-  shadowEngine: { label: "محرّك الظل", state: "built", note: "يقارن قرار نهج بقرار الموظف قبل أن يُمنح التنفيذ." },
+  shadowEngine: { label: "مقارنة قرار نهج بقرار الموظف", state: "built", note: "يقارن قرار نهج بقرار الموظف قبل أن يُمنح التنفيذ." },
   processIntelligence: { label: "ذكاء العمليات", state: "built", note: "قياسٌ مشتقّ من عملكم، ولا رقم بلا أساس." },
   customPolicies: { label: "سياسات مخصّصة", state: "built", note: "لوائحكم تحكم المحرّك، لا ثوابت مكتوبة." },
   prioritySupport: { label: "دعم بأولوية", state: "built", note: "التزامٌ تعاقدي لا ميزة برمجية." },
   dedicatedSuccessManager: { label: "مدير نجاح مخصّص", state: "built", note: "التزامٌ تعاقدي لا ميزة برمجية." },
-  mcp: { label: "بروتوكول MCP", state: "built", note: "نهج خادم MCP: يستقبل JSON-RPC ويُنفّذ أدواته." },
+  mcp: { label: "ربط وكلاء الذكاء الخارجيين", state: "built", note: "يستطيع أي وكيل ذكاء اصطناعي يدعم معيار MCP أن يستخدم مهارات نهج المعتمدة." },
   externalConnectors: { label: "موصلات الأنظمة الخارجية", state: "simulated", note: "معروضة في المنتج كمحاكاة معلنة. أول وصلة حقيقية تُبنى مع أول عميل." },
   apiAccess: { label: "واجهة برمجية", state: "planned", note: "مسارات المنتج قائمة خلف جلسة؛ مفاتيح التطبيقات لم تُبنَ بعد." },
-  sso: { label: "دخول موحّد (SSO)", state: "planned", note: "الحسابات اليوم بكلمة مرور وجلسات مُجزَّأة." },
+  sso: { label: "دخول موحّد لموظفيكم", state: "planned", note: "الحسابات اليوم بكلمة مرور وجلسات مُجزَّأة." },
   whiteLabel: { label: "علامة المؤسسة", state: "planned", note: "الهوية اليوم هوية نهج." },
   onPremise: { label: "نشر داخل المؤسسة", state: "built", note: "نشرٌ مستقلّ بقاعدة بياناتكم على خوادمكم." },
 };
@@ -102,8 +102,17 @@ export interface PublicPlanView {
 
 export const CUSTOM_PRICE = "سعرٌ مخصّص";
 
+/** «149 د.ك» بدل «149.000 KWD»: الكسر يظهر فقط إن وُجد، والعملة بالعربية. */
+export function plainMoney(amountMinor: number, currency: string): string {
+  const code = (currency || DEFAULT_CURRENCY).toUpperCase();
+  const label = ({ KWD: "د.ك", SAR: "ر.س", AED: "د.إ", QAR: "ر.ق", BHD: "د.ب", OMR: "ر.ع", USD: "دولار", EUR: "يورو" } as Record<string, string>)[code] || code;
+  const formatted = formatMoney(amountMinor, code);
+  const number = formatted.slice(0, formatted.lastIndexOf(" ")).replace(/\.0+$/, "");
+  return `${number} ${label}`;
+}
+
 function priceLabel(amount: number, currency: string): string {
-  return amount > 0 ? formatMoney(amount, currency) : CUSTOM_PRICE;
+  return amount > 0 ? plainMoney(amount, currency) : CUSTOM_PRICE;
 }
 
 /** الباقات العلنية وحدها — والخاصة والمؤرشفة لا تخرج من هنا أبداً. */
@@ -120,12 +129,12 @@ export function publicPlans(): PublicPlanView[] {
       monthly: priceLabel(plan.priceMonthly, plan.currency),
       quarterly: priceLabel(plan.priceQuarterly, plan.currency),
       annual: priceLabel(plan.priceAnnual, plan.currency),
-      setupFee: plan.setupFee > 0 ? formatMoney(plan.setupFee, plan.currency) : "",
+      setupFee: plan.setupFee > 0 ? plainMoney(plan.setupFee, plan.currency) : "",
       limits: {
         seats: plan.limits.seats === null ? "بلا حدّ" : String(plan.limits.seats),
         skills: plan.limits.skills === null ? "بلا حدّ" : String(plan.limits.skills),
         workItems: plan.limits.workItemsPerMonth === null ? "بلا حدّ" : plan.limits.workItemsPerMonth.toLocaleString("en-US"),
-        autonomy: `L${plan.limits.maxAutonomyLevel}`,
+        autonomy: `مستوى ${Math.max(0, Math.min(6, Math.floor(plan.limits.maxAutonomyLevel)))} من 6`,
       },
       autonomyCap: plan.limits.maxAutonomyLevel,
       features: featuresOf(plan),
@@ -144,6 +153,8 @@ const STYLE = `
   .cycle button:hover { color:var(--ink); }
   .cycle button[aria-pressed="true"] { background:var(--ink); color:var(--bg); }
   .cycle button:focus-visible { outline:3px solid var(--moss); outline-offset:2px; }
+  .ladder-legend { margin:18px 0 0; color:var(--muted); font-size:15px; line-height:1.8; }
+  .ladder-legend b { color:var(--ink); }
   .plans { display:grid; grid-template-columns:repeat(auto-fit, minmax(235px, 1fr)); gap:14px; }
   .plan { display:flex; flex-direction:column; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:24px 20px; transition:transform .25s, box-shadow .25s, border-color .25s; }
   .plan:hover { transform:translateY(-4px); box-shadow:var(--shadow); border-color:color-mix(in srgb, var(--moss) 50%, var(--line)); }
@@ -155,7 +166,7 @@ const STYLE = `
   .limits { list-style:none; padding:0; margin:18px 0; border-top:1px solid var(--line); }
   .limits li { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px solid var(--line); font-size:15px; }
   .limits li span { color:var(--muted); }
-  .limits b { font-variant-numeric:tabular-nums; }
+  .limits b { font-variant-numeric:tabular-nums; white-space:nowrap; }
   .feat { list-style:none; padding:0; margin:0; }
   .feat li { padding:5px 0; font-size:15px; display:flex; gap:10px; align-items:flex-start; line-height:1.7; }
   .dot { width:9px; height:9px; border-radius:50%; margin-top:9px; flex:none; background:var(--moss); }
@@ -176,11 +187,18 @@ const STYLE = `
  * التي يُفوتر بها.
  */
 /** سُلّم L0..L6 مضاءٌ حتى سقف الباقة؛ الأرقام من حدود الباقة نفسها لا من نص. */
+/** اسم المستوى بكلمات عادية — الأرقام تبقى لأنها السلّم الحقيقي، لكن معناها مكتوب بجانبها. */
+export function autonomyPlain(level: number): string {
+  const cap = Math.max(0, Math.min(6, Math.floor(level)));
+  const meaning = cap <= 1 ? "يراقب ويقترح" : cap <= 3 ? "يُنجز بموافقتك" : cap <= 5 ? "يُنجز وحده ضمن حدود" : "تشغيل كامل";
+  return `مستوى ${cap} من 6 — ${meaning}`;
+}
+
 function autonomyLadder(cap: number): string {
   const top = Math.max(0, Math.min(6, Math.floor(cap)));
   const cells = Array.from({ length: 7 }, (_, level) =>
-    `<li class="${level <= top ? "lit" : ""}${level === top ? " cap" : ""}"><i class="n"></i><span>L${level}</span></li>`).join("");
-  return `<ol class="jr" data-cap="${top}" role="img" aria-label="${escapeHtml(`سقف الاستقلالية: حتى L${top} من L6`)}">${cells}</ol>`;
+    `<li class="${level <= top ? "lit" : ""}${level === top ? " cap" : ""}"><i class="n"></i><span>${level}</span></li>`).join("");
+  return `<ol class="jr" data-cap="${top}" role="img" aria-label="${escapeHtml(`سقف الاستقلالية: حتى المستوى ${top} من 6 — ${autonomyPlain(top)}`)}">${cells}</ol>`;
 }
 
 export function renderPricingPage(): string {
@@ -197,7 +215,7 @@ export function renderPricingPage(): string {
         <li><span>المقاعد</span><b>${escapeHtml(plan.limits.seats)}</b></li>
         <li><span>المهارات</span><b>${escapeHtml(plan.limits.skills)}</b></li>
         <li><span>حالات العمل شهرياً</span><b>${escapeHtml(plan.limits.workItems)}</b></li>
-        <li><span>سقف الاستقلالية</span><b>${escapeHtml(plan.limits.autonomy)}</b></li>
+        <li><span>الاستقلالية</span><b>${escapeHtml(plan.limits.autonomy)}</b></li>
       </ul>
       ${autonomyLadder(plan.autonomyCap)}
       <ul class="feat">
@@ -222,7 +240,8 @@ export function renderPricingPage(): string {
     <button type="button" data-cycle="quarterly" aria-pressed="false">ربع سنوي</button>
     <button type="button" data-cycle="annual" aria-pressed="false">سنوي</button>
   </div>
-  <div class="plans">${cards}</div>` : `
+  <div class="plans">${cards}</div>
+  <p class="ladder-legend"><b>مستوى الاستقلالية:</b> 0–1 يراقب ويقترح · 2–3 يُنجز بموافقتك · 4–5 يُنجز وحده ضمن حدود · 6 تشغيل كامل لما أثبت إتقانه.</p>` : `
   <div class="honest"><p>لا باقات علنية منشورة بعد. تواصل معنا لنعرض عليك عرضاً مفصّلاً.</p></div>`}
   </section>
 

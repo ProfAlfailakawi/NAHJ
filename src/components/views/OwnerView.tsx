@@ -40,8 +40,8 @@ const FEATURE_KEYS: PlanFeatureKey[] = [
   "apiAccess", "sso", "customPolicies", "whiteLabel", "onPremise", "prioritySupport", "dedicatedSuccessManager",
 ];
 const FEATURE_AR: Record<PlanFeatureKey, string> = {
-  teachMode: "وضع التعليم", processIntelligence: "ذكاء العمليات", shadowEngine: "محرّك الظل",
-  mcp: "MCP", externalConnectors: "موصلات خارجية", apiAccess: "واجهة برمجية", sso: "دخول موحّد",
+  teachMode: "وضع التعليم", processIntelligence: "ذكاء العمليات", shadowEngine: "مقارنة قرارات نهج بقرارات الموظف",
+  mcp: "ربط وكلاء ذكاء خارجيين", externalConnectors: "موصلات خارجية", apiAccess: "واجهة برمجية", sso: "دخول موحّد",
   customPolicies: "سياسات مخصّصة", whiteLabel: "علامة المؤسسة", onPremise: "نشر داخلي",
   prioritySupport: "دعم بأولوية", dedicatedSuccessManager: "مدير نجاح مخصّص",
 };
@@ -49,7 +49,7 @@ const FEATURE_AR: Record<PlanFeatureKey, string> = {
 const LIMIT_KEYS = ["seats", "skills", "workItemsPerMonth", "connectors", "mcpServers", "aiCallsPerMonth", "auditRetentionDays"] as const;
 const LIMIT_AR: Record<string, string> = {
   seats: "المقاعد", skills: "المهارات", workItemsPerMonth: "حالات/شهر", connectors: "الموصلات",
-  mcpServers: "خوادم MCP", aiCallsPerMonth: "نداءات ذكاء/شهر", auditRetentionDays: "احتفاظ التدقيق (يوم)",
+  mcpServers: "وكلاء ذكاء خارجيون", aiCallsPerMonth: "نداءات ذكاء/شهر", auditRetentionDays: "احتفاظ التدقيق (يوم)",
 };
 
 const shortDate = (value: string | null | undefined) =>
@@ -232,7 +232,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
       {/* ---------------------------------------------- الاشتراك الجاري */}
       <section className="surface-strong owner-block">
         <SectionTitle title="اشتراك المؤسسة" icon={<Crown />}
-          meta={subscription ? `${shortDate(subscription.startedAt)} → ${shortDate(subscription.currentPeriodEnd)}` : "لا اشتراك"} />
+          meta={subscription ? `${shortDate(subscription.startedAt)} ← ${shortDate(subscription.currentPeriodEnd)}` : "لا اشتراك"} />
 
         {!subscription ? (
           <div className="owner-start">

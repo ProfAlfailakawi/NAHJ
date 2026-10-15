@@ -169,7 +169,7 @@ export function PartnerPortalView({ lang, notify }: Props) {
                       ) : (
                         clientCommissions.map(commission => (
                           <div key={commission.id} className="partner-commission-row">
-                            <span>{shortDate(commission.periodStart)} → {shortDate(commission.periodEnd)}</span>
+                            <span>{shortDate(commission.periodStart)} ← {shortDate(commission.periodEnd)}</span>
                             <span className="mono">{money(commission.amount, commission.currency, ar)}</span>
                             <span><i className={`ledger-badge tone-${commission.status === "paid" ? "moss" : commission.status === "void" ? "muted" : "amber"}`}>
                               {COMMISSION_STATUS_AR[commission.status]}

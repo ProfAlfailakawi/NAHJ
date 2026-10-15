@@ -110,7 +110,7 @@ export const BASE_STYLE = `${FONT_FACE_CSS}
   .brand { display:flex; align-items:center; gap:10px; font-weight:900; font-size:21px; text-decoration:none; }
   .brand svg { width:34px; height:34px; }
   .top nav { margin-inline-start:auto; display:flex; align-items:center; gap:6px; }
-  .top nav a { text-decoration:none; padding:8px 12px; border-radius:10px; font-weight:700; font-size:15px; color:var(--muted); }
+  .top nav a { text-decoration:none; padding:8px 12px; min-height:44px; display:inline-flex; align-items:center; border-radius:10px; font-weight:700; font-size:15px; color:var(--muted); }
   .top nav a:hover { color:var(--ink); background:var(--card); }
   .top nav a.cta { background:var(--ink); color:var(--bg); }
   .top nav a { white-space:nowrap; }
@@ -133,7 +133,8 @@ export const BASE_STYLE = `${FONT_FACE_CSS}
   .btn:focus-visible, .top nav a:focus-visible, .sector a:focus-visible { outline:3px solid var(--moss); outline-offset:2px; }
   footer { border-top:1px solid var(--line); margin-top:72px; padding:32px 0 48px; color:var(--muted); font-size:15px; }
   footer .wrap { display:flex; flex-wrap:wrap; gap:14px 26px; align-items:center; }
-  footer nav { display:flex; flex-wrap:wrap; gap:18px; }
+  footer nav { display:flex; flex-wrap:wrap; gap:4px 18px; }
+  footer nav a { display:inline-flex; align-items:center; min-height:44px; }
   footer a { text-decoration:none; font-weight:700; }
   footer a:hover { color:var(--ink); }
   @media (max-width:720px) {
@@ -256,7 +257,11 @@ const LANDING_STYLE = `
   .sector p { margin:0; color:var(--muted); font-size:15.5px; }
   .sector ul { margin:0; padding:0; list-style:none; display:flex; flex-wrap:wrap; gap:6px; }
   .sector li { font-size:13.5px; font-weight:700; background:color-mix(in srgb, var(--accent) 12%, var(--card)); color:var(--accent); padding:4px 10px; border-radius:999px; }
-  .sector a.more { margin-top:auto; padding-top:6px; display:inline-flex; align-items:center; gap:8px; font-weight:800; font-size:15.5px; color:var(--accent); text-decoration:none; }
+  .sector a.try { position:relative; z-index:2; align-self:flex-start; display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 14px; border:1.5px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius:999px; font-weight:800; font-size:15px; color:var(--accent); text-decoration:none; background:var(--card); }
+  .sector a.try svg { width:18px; height:18px; }
+  .sector a.try:hover { background:color-mix(in srgb, var(--accent) 10%, var(--card)); }
+  .sector a.try:focus-visible { outline:3px solid var(--moss); outline-offset:2px; }
+  .sector a.more { margin-top:auto; min-height:44px; padding-top:6px; display:inline-flex; align-items:center; gap:8px; font-weight:800; font-size:15.5px; color:var(--accent); text-decoration:none; }
   .sector a.more::after { content:""; position:absolute; inset:0; border-radius:inherit; }
   .sector a.more svg { width:18px; height:18px; transition:transform .2s; }
   .sector:hover a.more svg { transform:translateX(-5px); }
@@ -327,7 +332,7 @@ const LANDING_STYLE = `
   .contact input:focus, .contact select:focus, .contact textarea:focus { outline:none; border-color:var(--moss); background:var(--card); box-shadow:0 0 0 4px color-mix(in srgb, var(--moss) 22%, transparent); }
   .contact input:focus-visible, .contact select:focus-visible, .contact textarea:focus-visible { outline:2px solid transparent; }
   .contact .trust-cue { display:flex; align-items:center; gap:8px; margin:0; font-size:14px; color:var(--muted); }
-  .contact .trust-cue a { font-weight:700; color:var(--muted); }
+  .contact .trust-cue a { font-weight:700; color:var(--muted); display:inline-flex; align-items:center; min-height:44px; padding-inline:4px; }
   .contact .trust-cue svg { width:18px; height:18px; flex:none; color:var(--moss); }
   .contact .hp { position:absolute; inset-inline-start:-9999px; width:1px; height:1px; overflow:hidden; }
   .form-status { margin:0; min-height:1.6em; font-weight:700; }
@@ -363,6 +368,8 @@ export function renderLandingPage(): string {
     : "";
   const sectorOptions = sectors.map(sector => `<option value="${escapeHtml(sector.code)}">${escapeHtml(sector.nameAr)}</option>`).join("");
 
+  /* رابط /try يُعرض فقط ما دام العرض التجريبي مفعّلاً (نفس شرط مسار /try في server.ts). */
+  const tryEnabled = process.env.NAHJ_DEMO_ENABLED !== "false";
   const sectorCards = sectors.map(sector => {
     const examples = sector.code === EDUCATION_CODE
       ? EDUCATION_EXAMPLES
@@ -374,6 +381,7 @@ export function renderLandingPage(): string {
       <p>${escapeHtml(sector.descriptionAr)}</p>
       <ul aria-label="أمثلة على ما يتولّاه">${examples.map(example => `<li>${escapeHtml(example)}</li>`).join("")}</ul>
       <a class="more" href="?sector=${encodeURIComponent(sector.code)}#contact" data-sector="${escapeHtml(sector.code)}" aria-label="اطلب عرضاً لقطاع ${escapeHtml(sector.nameAr)}">اطلب عرضاً لقطاعك ${ARROW}</a>
+      ${tryEnabled ? `<a class="try" href="/try/${encodeURIComponent(sector.code)}" aria-label="شاهد تجربة قطاع ${escapeHtml(sector.nameAr)} الآن">شاهده الآن ${ARROW}</a>` : ""}
     </article>`;
   }).join("");
 
@@ -412,11 +420,11 @@ export function renderLandingPage(): string {
   <section id="how" aria-labelledby="how-title">
     <h2 id="how-title">كيف يعمل — في أربع خطوات</h2>
     <p class="sub">لا يُمنح نهج الثقة؛ يكسبها خطوةً بخطوة، وتبقى أنت صاحب القرار في كل مرحلة.</p>
-    <figure class="trail" id="trail" aria-label="نهج يصعد درجات الصلاحية من L0 إلى L6، ويقف عند بوابة موافقتك قبل القرارات الحسّاسة">
+    <figure class="trail" id="trail" aria-label="نهج يصعد درجات الصلاحية من المستوى 0 إلى 6، ويقف عند بوابة موافقتك قبل القرارات الحسّاسة">
       <div class="trail-line" aria-hidden="true">
         <div class="trail-fill"></div>
         <i class="trail-gate"></i>
-        <i class="trail-node lit"><span>L0</span></i><i class="trail-node lit"><span>L1</span></i><i class="trail-node lit"><span>L2</span></i><i class="trail-node lit"><span>L3</span></i><i class="trail-node lit"><span>L4</span></i><i class="trail-node lit"><span>L5</span></i><i class="trail-node lit"><span>L6</span></i>
+        <i class="trail-node lit"><span>0</span></i><i class="trail-node lit"><span>1</span></i><i class="trail-node lit"><span>2</span></i><i class="trail-node lit"><span>3</span></i><i class="trail-node lit"><span>4</span></i><i class="trail-node lit"><span>5</span></i><i class="trail-node lit"><span>6</span></i>
       </div>
       <figcaption class="trail-say" aria-live="off">يكسب الثقة درجةً درجة، وتبقى البوابة بيدك.</figcaption>
     </figure>
@@ -427,10 +435,10 @@ export function renderLandingPage(): string {
       <div class="step"><b>4</b><h3>يعمل ويُسجِّل</h3><p>كل ما يفعله يُكتب في سجلٍّ لا يُعدَّل: من فعل، ولماذا، وبأي سياسة. وزرّ إيقافٍ واحد يوقفه فوراً.</p></div>
     </div>
     <div class="levels" aria-label="درجات الصلاحية">
-      <span><b>L0–L1</b>يراقب ويقترح</span>
-      <span><b>L2–L3</b>يُنجز بموافقتك</span>
-      <span><b>L4–L5</b>يُنجز وحده ضمن حدود</span>
-      <span><b>L6</b>تشغيل كامل لما أثبت إتقانه</span>
+      <span><b>مستوى 0–1</b>يراقب ويقترح</span>
+      <span><b>مستوى 2–3</b>يُنجز بموافقتك</span>
+      <span><b>مستوى 4–5</b>يُنجز وحده ضمن حدود</span>
+      <span><b>مستوى 6</b>تشغيل كامل لما أثبت إتقانه</span>
     </div>
   </section>
 

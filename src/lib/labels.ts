@@ -518,7 +518,7 @@ export const currencyLabel = (code: string | undefined | null, ar = true): strin
 /** مبلغ ينسّقه الخادم («395.000 KWD») ← «395.000 د.ك» في العرض العربي. */
 export const formattedMoney = (value: string | undefined | null, ar = true): string => {
   const raw = String(value ?? "");
-  return ar ? raw.replace(/\s([A-Z]{3})$/, (_m, code: string) => ` ${currencyLabel(code, true)}`) : raw;
+  return ar ? raw.replace(/\.0+(?=\s[A-Z]{3}$)/, "").replace(/\s([A-Z]{3})$/, (_m, code: string) => ` ${currencyLabel(code, true)}`) : raw;
 };
 /** مفتاح مستوى من الخادم («L5») ← «مستوى 5». */
 export const levelKeyLabel = (key: string, ar = true): string => {

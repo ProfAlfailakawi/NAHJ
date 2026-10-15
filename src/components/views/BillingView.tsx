@@ -50,11 +50,11 @@ const STATUS_META: Record<SubscriptionStatus, { ar: string; en: string; tone: st
 const FEATURE_LABELS: Record<PlanFeatureKey, { ar: string; en: string }> = {
   teachMode: { ar: "وضع التعليم", en: "Teach Mode" },
   processIntelligence: { ar: "ذكاء العمليات واكتشاف التعارض", en: "Process intelligence" },
-  shadowEngine: { ar: "محرّك الظل والمقارنة", en: "Shadow engine" },
-  mcp: { ar: "بروتوكول MCP", en: "MCP protocol" },
+  shadowEngine: { ar: "مقارنة قرارات نهج بقرارات الموظف", en: "Shadow engine" },
+  mcp: { ar: "ربط وكلاء ذكاء خارجيين", en: "MCP protocol" },
   externalConnectors: { ar: "موصلات خارجية", en: "External connectors" },
   apiAccess: { ar: "واجهة برمجية", en: "API access" },
-  sso: { ar: "دخول موحّد (SSO)", en: "Single sign-on" },
+  sso: { ar: "دخول موحّد لموظفيكم", en: "Single sign-on" },
   customPolicies: { ar: "سياسات مخصّصة", en: "Custom policies" },
   whiteLabel: { ar: "علامة المؤسسة", en: "White label" },
   onPremise: { ar: "نشر داخل المؤسسة", en: "On-premise" },
@@ -332,7 +332,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
 
       <section className="surface-strong sub-block">
         <SectionTitle title={ar ? "مدّة الاشتراك" : "Subscription term"} icon={<CalendarClock />}
-          meta={subscription ? `${shortDate(subscription.startedAt, ar)} → ${shortDate(subscription.currentPeriodEnd, ar)}` : undefined} />
+          meta={subscription ? `${shortDate(subscription.startedAt, ar)} ${ar?"←":"→"} ${shortDate(subscription.currentPeriodEnd, ar)}` : undefined} />
         <LifeBar snapshot={snapshot} ar={ar} />
         {snapshot.scheduledPlanChange && (
           <div className="sub-scheduled">
@@ -444,7 +444,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
           </p>
           <div className="export-actions">
             <button className="btn-primary" onClick={() => archiveApi.download("/export/full.json")}>
-              <Download /> {ar ? "نسخة كاملة (JSON)" : "Full export (JSON)"}
+              <Download /> {ar ? "نسخة كاملة من البيانات" : "Full export (JSON)"}
             </button>
             {exportSummary.ledgers.map(ledger => (
               <button key={ledger.name} className="btn-secondary"
@@ -502,7 +502,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
                 <React.Fragment key={invoice.id}>
                   <button className={`ledger-row ${open ? "open" : ""}`} onClick={() => setOpenInvoice(open ? null : invoice.id)}>
                     <span className="mono">{invoice.number}</span>
-                    <span>{invoice.periodStart ? `${shortDate(invoice.periodStart, ar)} → ${shortDate(invoice.periodEnd, ar)}` : shortDate(invoice.issuedAt, ar)}</span>
+                    <span>{invoice.periodStart ? `${shortDate(invoice.periodStart, ar)} ${ar?"←":"→"} ${shortDate(invoice.periodEnd, ar)}` : shortDate(invoice.issuedAt, ar)}</span>
                     <span>{shortDate(invoice.dueAt, ar)}</span>
                     <span className="mono">{money(invoice.total, invoice.currency, ar)}</span>
                     <span className="mono">{money(invoice.amountPaid, invoice.currency, ar)}</span>

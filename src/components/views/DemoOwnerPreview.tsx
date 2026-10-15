@@ -22,21 +22,23 @@ const fmt = (date: Date, ar: boolean) =>
   date.toLocaleDateString(ar ? "ar-KW-u-nu-latn" : "en-GB", { year: "numeric", month: "short", day: "numeric" });
 const kwd = (value: number, ar: boolean) => `${value.toLocaleString("en-US")} ${ar ? "د.ك" : "KWD"}`;
 
+/* الأسماء والأسعار مطابقة لباقات server/billing.ts (SEED_PLANS): بداية 149 / نمو 395 / مؤسسي 950 د.ك شهرياً، والسيادي بعقدٍ مخصّص. */
 const PLANS = [
-  { ar: "أساسية", en: "Starter", monthly: 85, seats: 5, orgs: 3 },
-  { ar: "احترافية", en: "Professional", monthly: 240, seats: 25, orgs: 5 },
-  { ar: "مؤسسية", en: "Enterprise", monthly: 690, seats: 120, orgs: 2 },
+  { ar: "بداية", en: "Starter", monthly: 149 as number | null, seats: "10", orgs: 3 },
+  { ar: "نمو", en: "Growth", monthly: 395 as number | null, seats: "40", orgs: 5 },
+  { ar: "مؤسسي", en: "Enterprise", monthly: 950 as number | null, seats: "بلا حدّ", orgs: 2 },
+  { ar: "سيادي", en: "Sovereign", monthly: null as number | null, seats: "—", orgs: 1 },
 ] as const;
 
 type OrgStatus = "active" | "trial" | "overdue";
 const ORGS: Array<{ ar: string; en: string; sector: [string, string]; plan: number; status: OrgStatus; renew: number; amount: number }> = [
-  { ar: "أكاديمية المستقبل الدولية", en: "Future Academy International", sector: ["تعليم", "Education"], plan: 2, status: "active", renew: 41, amount: 690 },
-  { ar: "مركز الشفاء التخصصي", en: "Al-Shifa Specialist Centre", sector: ["عيادة", "Clinic"], plan: 1, status: "active", renew: 19, amount: 240 },
-  { ar: "مكتب الميزان للمحاماة", en: "Al-Mizan Law Office", sector: ["محاماة", "Law"], plan: 1, status: "active", renew: 63, amount: 240 },
-  { ar: "متاجر الواحة", en: "Al-Waha Stores", sector: ["تجزئة", "Retail"], plan: 1, status: "overdue", renew: -6, amount: 240 },
+  { ar: "أكاديمية المستقبل الدولية", en: "Future Academy International", sector: ["تعليم", "Education"], plan: 2, status: "active", renew: 41, amount: 950 },
+  { ar: "مركز الشفاء التخصصي", en: "Al-Shifa Specialist Centre", sector: ["عيادة", "Clinic"], plan: 1, status: "active", renew: 19, amount: 395 },
+  { ar: "مكتب الميزان للمحاماة", en: "Al-Mizan Law Office", sector: ["محاماة", "Law"], plan: 1, status: "active", renew: 63, amount: 395 },
+  { ar: "متاجر الواحة", en: "Al-Waha Stores", sector: ["تجزئة", "Retail"], plan: 1, status: "overdue", renew: -6, amount: 395 },
   { ar: "شركة المسار للشحن", en: "Al-Masar Shipping", sector: ["لوجستيات", "Logistics"], plan: 0, status: "trial", renew: 12, amount: 0 },
-  { ar: "شركة الديرة العقارية", en: "Al-Dira Real Estate", sector: ["عقارات", "Real estate"], plan: 1, status: "active", renew: 27, amount: 240 },
-  { ar: "مدرسة النور الأهلية", en: "Al-Noor Private School", sector: ["تعليم", "Education"], plan: 0, status: "active", renew: 33, amount: 85 },
+  { ar: "شركة الديرة العقارية", en: "Al-Dira Real Estate", sector: ["عقارات", "Real estate"], plan: 1, status: "active", renew: 27, amount: 395 },
+  { ar: "مدرسة النور الأهلية", en: "Al-Noor Private School", sector: ["تعليم", "Education"], plan: 0, status: "active", renew: 33, amount: 149 },
   { ar: "عيادات الرعاية الأسرية", en: "Family Care Clinics", sector: ["عيادة", "Clinic"], plan: 0, status: "trial", renew: 5, amount: 0 },
 ];
 const STATUS_LABEL: Record<OrgStatus, [string, string]> = { active: ["ساري", "Active"], trial: ["تجربة", "Trial"], overdue: ["متأخر", "Overdue"] };
@@ -92,7 +94,7 @@ export function DemoOwnerPreview({ lang, kind }: { lang: "ar" | "en"; kind: "own
             <SectionTitle title={t("الباقات", "Plans")} />
             <div className="demo-ledger"><table>
               <thead><tr><th>{t("الباقة", "Plan")}</th><th>{t("شهرياً", "Monthly")}</th><th>{t("المقاعد", "Seats")}</th><th>{t("مؤسسات", "Organisations")}</th></tr></thead>
-              <tbody>{PLANS.map(plan => <tr key={plan.en}><td data-l={t("الباقة", "Plan")}>{ar ? plan.ar : plan.en}</td><td data-l={t("شهرياً", "Monthly")}>{kwd(plan.monthly, ar)}</td><td data-l={t("المقاعد", "Seats")}>{plan.seats}</td><td data-l={t("مؤسسات", "Organisations")}>{plan.orgs}</td></tr>)}</tbody>
+              <tbody>{PLANS.map(plan => <tr key={plan.en}><td data-l={t("الباقة", "Plan")}>{ar ? plan.ar : plan.en}</td><td data-l={t("شهرياً", "Monthly")}>{plan.monthly === null ? t("سعر مخصّص", "Custom") : kwd(plan.monthly, ar)}</td><td data-l={t("المقاعد", "Seats")}>{plan.seats}</td><td data-l={t("مؤسسات", "Organisations")}>{plan.orgs}</td></tr>)}</tbody>
             </table></div>
           </section>
           <section className="surface-strong owner-block">
