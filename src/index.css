@@ -1539,3 +1539,9 @@
 .scroll-hint{display:none;margin:0 0 6px;font-size:14px;color:var(--muted)}
 .people-matrix-scroll{background:linear-gradient(to right,var(--paper) 30%,transparent) left center/28px 100% no-repeat local,linear-gradient(to left,var(--paper) 30%,transparent) right center/28px 100% no-repeat local,radial-gradient(farthest-side at 0 50%,rgba(16,37,31,.18),transparent) left center/12px 100% no-repeat scroll,radial-gradient(farthest-side at 100% 50%,rgba(16,37,31,.18),transparent) right center/12px 100% no-repeat scroll}
 @media(max-width:900px){.scroll-hint{display:block}}
+
+/* حدّ أدنى لأهداف اللمس والنص على كل الأحجام (سطح المكتب كان يترك أزراراً بارتفاع 31–38px). */
+small{font-size:var(--fs-xs)}
+.accounts-list h3 small{font-size:var(--fs-sm)}
+.content-stage :is(button,summary,[role="tab"]):not(.term):not(.metric-basis-toggle){min-height:40px;min-width:40px}
+.metric-basis-toggle{width:40px;height:40px;inset-block-start:0;inset-inline-end:0}

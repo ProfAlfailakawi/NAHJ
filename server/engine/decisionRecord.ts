@@ -81,7 +81,7 @@ export function buildDecisionRecord(
   if (skill) {
     evidence.push({ label: "موثوقية المهارة", value: `${skill.reliabilityScore}%` });
     if (stats?.passRate !== null && stats) evidence.push({ label: "نجاح التدرّب", value: `${stats.testsPassed}/${stats.testsTotal} (${stats.passRate}%)` });
-    if (stats?.shadowAgreement !== null && stats) evidence.push({ label: "التطابق في الظل", value: `${stats.shadowMatched}/${stats.shadowCompared} (${stats.shadowAgreement}%)` });
+    if (stats?.shadowAgreement !== null && stats) evidence.push({ label: "توافق قرار نهج مع الموظف", value: `${stats.shadowMatched}/${stats.shadowCompared} (${stats.shadowAgreement}%)` });
   }
 
   return {

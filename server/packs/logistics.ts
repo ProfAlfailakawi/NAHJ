@@ -30,7 +30,7 @@ export const logisticsPack: SectorPack = {
   ],
 
   sources: [
-    { title: "نظام إدارة النقل (TMS)", type: "system_sis", authorityLevel: "live_authoritative", owner: "العمليات", summary: "الشحنات والمسارات وحالات التسليم. المرجع الحيّ." },
+    { title: "نظام إدارة النقل", type: "system_sis", authorityLevel: "live_authoritative", owner: "العمليات", summary: "الشحنات والمسارات وحالات التسليم. المرجع الحيّ." },
     { title: "جدول التعرفة الجمركية", type: "catalog", authorityLevel: "approved_data", owner: "التخليص الجمركي", summary: "بنود التعرفة ونسب الرسوم والمستندات المطلوبة لكل صنف." },
     { title: "لائحة البضائع المقيّدة", type: "approved_policy", authorityLevel: "approved_policy", owner: "الالتزام", summary: "ما يُمنع شحنه وما يحتاج تصريحاً مسبقاً." },
     { title: "سياسة مطالبات التلف", type: "approved_policy", authorityLevel: "approved_policy", owner: "العمليات", summary: "حدود التعويض والمستندات والمهل." },
@@ -130,7 +130,7 @@ export const logisticsPack: SectorPack = {
   ],
 
   connectors: [
-    { name: "نظام إدارة النقل (TMS)", type: "sis", permissions: ["قراءة الشحنات", "تحديث حالة", "تسوية مطالبة"] },
+    { name: "نظام إدارة النقل", type: "sis", permissions: ["قراءة الشحنات", "تحديث حالة", "تسوية مطالبة"] },
     { name: "بوابة الجمارك", type: "crm", permissions: ["قراءة التعرفة", "تقديم بيان"], status: "degraded" },
     { name: "أرشيف المستندات", type: "storage", permissions: ["قراءة", "رفع"] },
     { name: "قناة العملاء", type: "whatsapp", permissions: ["استقبال", "إرسال"] },

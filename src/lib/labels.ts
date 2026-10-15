@@ -137,7 +137,7 @@ export const ACTION_LABEL_AR: Record<string, string> = {
   EMERGENCY_RESUME_AUTOPILOT: "استئناف بعد الإيقاف الطارئ",
   HUMAN_TAKEOVER: "استلام بشري",
   RESUME_AI_EXECUTION: "إعادة التنفيذ إلى نهج",
-  RUN_SHADOW_COMPARISON: "مقارنة الظل",
+  RUN_SHADOW_COMPARISON: "مقارنة قرار نهج بقرار الموظف",
   ASSIGN_SKILL_BACKUP: "إسناد بديل لمهارة",
   UPDATE_SKILL_TRANSLATION: "تحديث النص الإنجليزي",
   ORGANIZATION_CONFIGURED: "إعداد المؤسسة",
@@ -169,7 +169,7 @@ export const ACTION_LABEL_AR: Record<string, string> = {
   APPROVE_AND_CODIFY_TAUGHT_SKILL: "اعتماد مهارة مُعلَّمة",
   EXECUTE_PRACTICE_EVALS: "تشغيل التدرّب",
   RESOLVE_CLARIFICATION_RULE: "حسم قاعدة توضيح",
-  REGISTER_MCP_SERVER: "تسجيل خادم MCP",
+  REGISTER_MCP_SERVER: "تسجيل خادم أدوات ذكاء",
   getOfficialFees: "جلب الرسوم المعتمدة",
   checkSeatAvailability: "فحص المقاعد المتاحة",
   verifyCivilIdQuality: "فحص صورة البطاقة المدنية",
@@ -355,7 +355,7 @@ export const ACTOR_AR: Record<string, string> = {
   "Campus Tour Subskill": "مهارة الجولة التعريفية",
   "Vision OCR Engine": "محرّك قراءة المستندات",
   "Skill Executor": "منفّذ المهارات",
-  "Shadow Evaluation Engine": "محرّك التقييم بالظل",
+  "Shadow Evaluation Engine": "مقارنة قرارات نهج بقرارات الموظف",
   "Practice Test Suite": "مجموعة اختبارات التدرّب",
 };
 const ACTOR_EN: Record<string, string> = {

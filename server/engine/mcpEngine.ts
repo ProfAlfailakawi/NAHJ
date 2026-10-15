@@ -28,7 +28,7 @@ export class McpEngine {
     {
       id: "sis-mcp-server",
       name: "Future SIS Core MCP Server",
-      description: "يوفر أدوات الاستعلام عن مقاعد الطلاب، تسجيل الشعب، والرسوم الدراسية المعتمدة عبر بروتوكول MCP.",
+      description: "يوفر أدوات الاستعلام عن مقاعد الطلاب، تسجيل الشعب، والرسوم الدراسية المعتمدة عبر ربط أدوات الذكاء.",
       transport: "sse",
       endpointUrl: "",
       status: "disconnected",
@@ -50,7 +50,7 @@ export class McpEngine {
     {
       id: "docvault-ocr-mcp-server",
       name: "DocVault Vision & OCR MCP Server",
-      description: "خادم MCP متخصص في قراءة وفحص البطاقات المدنية، استخراج تاريخ الميلاد، ومطابقة الهوية.",
+      description: "خادم أدوات متخصص في قراءة وفحص البطاقات المدنية، استخراج تاريخ الميلاد، ومطابقة الهوية.",
       transport: "http",
       endpointUrl: "",
       status: "disconnected",
@@ -115,7 +115,7 @@ export class McpEngine {
     },
     {
       id: "company-brain-mcp-server",
-      name: "نهج — خادم MCP (يستقبل JSON-RPC فعلاً)",
+      name: "نهج — خادم MCP (يستقبل الطلبات فعلاً)",
       description: "خادم الذاكرة المؤسسية واللوائح الإدارية المعتمدة وتحديد تضارب السياسات وسجل الحوكمة.",
       transport: "in_memory",
       endpointUrl: "/api/mcp/rpc",
@@ -143,7 +143,7 @@ export class McpEngine {
       serverId: "sis-mcp-server",
       serverName: "Future SIS Core MCP Server",
       description: "Query real-time available classroom capacity and open sections for a target academic grade.",
-      descriptionAr: "الاستعلام اللحظي من نظام SIS عن المقاعد المتاحة والشعب المفتوحة للمرحلة الدراسية.",
+      descriptionAr: "الاستعلام اللحظي من نظام شؤون الطلبة عن المقاعد المتاحة والشعب المفتوحة للمرحلة الدراسية.",
       category: "sis",
       requiresPolicyCheck: false,
       idempotent: true,
@@ -308,7 +308,7 @@ export class McpEngine {
       name: "سعة مقاعد مرحلة الروضة الثانية KG2 (حي)",
       serverId: "sis-mcp-server",
       mimeType: "application/json",
-      description: "بيانات حية محدثة فورياً من قاعدة بيانات SIS توضح إجمالي المقاعد (25) والمقاعد الشاغرة (4).",
+      description: "بيانات حية محدثة فورياً من قاعدة بيانات شؤون الطلبة توضح إجمالي المقاعد (25) والمقاعد الشاغرة (4).",
       previewContent: JSON.stringify(
         {
           grade: "KG2",
@@ -353,7 +353,7 @@ export class McpEngine {
       mimeType: "text/markdown",
       description: "اللائحة المالية الصريحة: يحظر على الذكاء الاصطناعي إصدار فواتير أو دفعات أعلى من 50 د.ك دون توقيع بشري.",
       previewContent: `# لائحة الصلاحيات المالية 2026 (POL-FIN-02)
-- الحد الأقصى للإجراء المالي التلقائي (Autopilot): 50 د.ك (فقط لفتح الملفات).
+- الحد الأقصى للإجراء المالي التلقائي (تنفيذ آلي): 50 د.ك (فقط لفتح الملفات).
 - أي فاتورة سداد، رسوم تسجيل، أو طلب استرجاع تتجاوز 50 د.ك تتطلب موافقة صريحة من (مديرة القبول نورة خالد).
 - لا يجوز التجاوز أو الاستثناء الودي بدون توقيع خطي موثق في سجل التدقيق.`,
     },
@@ -789,11 +789,11 @@ export class McpEngine {
         const code = args.policyCodeOrTopic || "POL-FIN-02";
         result = {
           code,
-          title: "سياسة الحوكمة المالية والصلاحيات (Financial Approval Limits)",
+          title: "سياسة الحوكمة المالية والصلاحيات",
           riskLevel: "medium",
           effectiveDate: "2025-09-01",
           rules: [
-            "المعاملات حتى 50 د.ك: عمل ذاتي بالكامل (Autopilot)",
+            "المعاملات حتى 50 د.ك: عمل ذاتي بالكامل (تنفيذ آلي)",
             "المعاملات أكثر من 50 د.ك: موافقة صريحة من نورة خالد (مديرة القبول)",
             "أي خصم إضافي غير أشقاء: موافقة المدير العام",
           ],

@@ -917,7 +917,7 @@ export const initialMcpServers = [
   {
     id: "sis-mcp-server",
     name: "Future SIS Core MCP Server",
-    description: "يوفر أدوات الاستعلام عن مقاعد الطلاب، تسجيل الشعب، والرسوم الدراسية المعتمدة عبر بروتوكول MCP.",
+    description: "يوفر أدوات الاستعلام عن مقاعد الطلاب، تسجيل الشعب، والرسوم الدراسية المعتمدة عبر ربط أدوات الذكاء.",
     transport: "sse" as const,
     endpointUrl: "http://0.0.0.0:3000/api/mcp/sse/sis",
     status: "connected" as const,
@@ -938,7 +938,7 @@ export const initialMcpServers = [
   {
     id: "docvault-ocr-mcp-server",
     name: "DocVault Vision & OCR MCP Server",
-    description: "خادم MCP متخصص في قراءة وفحص البطاقات المدنية، استخراج تاريخ الميلاد، ومطابقة الهوية.",
+    description: "خادم أدوات متخصص في قراءة وفحص البطاقات المدنية، استخراج تاريخ الميلاد، ومطابقة الهوية.",
     transport: "http" as const,
     endpointUrl: "http://0.0.0.0:3000/api/mcp/rpc/ocr",
     status: "connected" as const,
@@ -1027,7 +1027,7 @@ export const initialMcpTools = [
     serverId: "sis-mcp-server",
     serverName: "Future SIS Core MCP Server",
     description: "Query real-time available classroom capacity and open sections for a target academic grade.",
-    descriptionAr: "الاستعلام اللحظي من نظام SIS عن المقاعد المتاحة والشعب المفتوحة للمرحلة الدراسية.",
+    descriptionAr: "الاستعلام اللحظي من نظام شؤون الطلبة عن المقاعد المتاحة والشعب المفتوحة للمرحلة الدراسية.",
     category: "sis" as const,
     requiresPolicyCheck: false,
     idempotent: true,
@@ -1164,7 +1164,7 @@ export const initialMcpResources = [
     name: "سعة مقاعد مرحلة الروضة الثانية KG2 (حي)",
     serverId: "sis-mcp-server",
     mimeType: "application/json",
-    description: "بيانات حية محدثة فورياً من قاعدة بيانات SIS توضح إجمالي المقاعد (25) والمقاعد الشاغرة (4).",
+    description: "بيانات حية محدثة فورياً من قاعدة بيانات شؤون الطلبة توضح إجمالي المقاعد (25) والمقاعد الشاغرة (4).",
     previewContent: JSON.stringify(
       {
         grade: "KG2",
@@ -1206,7 +1206,7 @@ export const initialMcpResources = [
     mimeType: "text/markdown",
     description: "اللائحة المالية الصريحة: يحظر على الذكاء الاصطناعي إصدار فواتير أعلى من 50 د.ك دون توقيع بشري.",
     previewContent: `# لائحة الصلاحيات المالية 2026 (POL-FIN-02)
-- الحد الأقصى للإجراء المالي التلقائي (Autopilot): 50 د.ك.
+- الحد الأقصى للإجراء المالي التلقائي (تنفيذ آلي): 50 د.ك.
 - أي معاملة تتجاوز 50 د.ك تتطلب موافقة صريحة من (مديرة القبول نورة خالد).
 - لا يجوز التجاوز أو الاستثناء الودي بدون توقيع خطي موثق في سجل التدقيق.`,
   },
