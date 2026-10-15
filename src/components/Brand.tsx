@@ -29,3 +29,18 @@ export function BrandLockup({ compact = false, inverted = false }: { compact?: b
     </div>
   );
 }
+
+/**
+ * رمز «نهج» المجرّد بحجم الأيقونات (خط واحد بلون الحاضن): المسار نفسه من العلامة الكاملة
+ * مختصراً، ويحلّ محل الروبوت في الأماكن التي تدل على أن الفاعل هو النظام.
+ */
+export function NahjGlyph(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>
+      <path d="M6 5v4.5A3.5 3.5 0 0 0 9.5 13h3a3.5 3.5 0 0 1 3.5 3.5V19" />
+      <circle cx="6" cy="5" r="1.4" fill="currentColor" />
+      <circle cx="16" cy="19" r="1.4" fill="currentColor" />
+      <circle cx="11" cy="13" r="1.1" fill="currentColor" />
+    </svg>
+  );
+}

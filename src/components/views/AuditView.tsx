@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { Bot, FileCheck2, LayoutList, Search, ShieldAlert, UserRound, Waypoints } from "lucide-react";
+import { FileCheck2, LayoutList, Search, ShieldAlert, UserRound, Waypoints } from "lucide-react";
+import { NahjGlyph } from "../Brand";
 import type { AuditEvent } from "../../types";
 import { Dt, PageHeader } from "../Primitives";
 import { DnaHeat, DnaSegmented } from "../dna";
@@ -87,7 +88,7 @@ export function AuditView({ lang, events }: Props) {
           onChange={k => { setKind(k); setShown(40); }}
           options={[
             { value: "all", label: ar ? "الكل" : "All", icon: <LayoutList />, count: kindCounts.all },
-            { value: "ai", label: ar ? "نهج" : "AI", icon: <Bot />, count: kindCounts.ai },
+            { value: "ai", label: ar ? "نهج" : "AI", icon: <NahjGlyph />, count: kindCounts.ai },
             { value: "human", label: ar ? "بشر" : "People", icon: <UserRound />, count: kindCounts.human },
             { value: "system", label: ar ? "النظام" : "System", icon: <Waypoints />, count: kindCounts.system },
             { value: "risk", label: ar ? "خطر" : "Risk", icon: <ShieldAlert />, count: kindCounts.risk },
@@ -114,7 +115,7 @@ export function AuditView({ lang, events }: Props) {
               )}
               <article className="audit-item" data-risk={e.risk}>
                 <span className={`audit-actor ${e.actorType} risk-${e.risk}`} aria-hidden="true">
-                  {e.actorType === "ai" ? <Bot /> : e.actorType === "human" ? <UserRound /> : e.risk === "high" || e.risk === "critical" ? <ShieldAlert /> : <Waypoints />}
+                  {e.actorType === "ai" ? <NahjGlyph /> : e.actorType === "human" ? <UserRound /> : e.risk === "high" || e.risk === "critical" ? <ShieldAlert /> : <Waypoints />}
                 </span>
                 <div>
                   <div className="audit-head"><strong title={e.action}>{actionLabel(e.action, ar)}</strong><small>{stampLabel(e.timestamp, ar)} · {actorLabel(e.actorName, ar)} · {riskLabel(e.risk, ar)}</small></div>

@@ -1,5 +1,6 @@
 import React from "react";
-import { Bot, CheckCircle2, CircleHelp, Equal, EqualNot, FlaskConical, GitCompareArrows, Play, ShieldCheck, UserRound, XCircle } from "lucide-react";
+import { CheckCircle2, CircleHelp, Equal, EqualNot, FlaskConical, GitCompareArrows, Play, ShieldCheck, UserRound, XCircle } from "lucide-react";
+import { NahjGlyph } from "../Brand";
 import type { ShadowComparison, TestCase } from "../../types";
 import { Dt, PageHeader, SectionTitle } from "../Primitives";
 import { decisionLabel, dataText, latencyLabel } from "../../lib/labels";
@@ -61,7 +62,7 @@ export function PracticeView({lang,cases,shadow,running,shadowRunning,onRunPract
         <details className="skills-more eval-fold"><summary>{ar?`عرض الكل (${shadow.length})`:`Show all (${shadow.length})`}</summary><div className="shadow-pairs">{shadow.map(s=>{
           /* حالةٌ لم تُقارَن بعد ليست انحرافاً: تُعرض «بانتظار المقارنة» حتى يُشغَّل الظل. */
           const pending=s.evaluated===undefined&&!(s.aiAction||s.aiDecision);
-          return <div key={s.id} className={pending||s.evaluated===false?"unmeasured":s.matched?"match":"drift"} title={pending?(ar?"لم تُقارَن بعد — اضغط تشغيل الظل":"Not compared yet"):s.evaluated===false?(ar?"لا وقائع مسجَّلة لهذه الحالة — لم يُشتق لها قرار":"No recorded facts"):s.divergenceReason||""}><span><i title={ar?"الموظف":"Staff"} aria-label={ar?"الموظف":"Staff"}><UserRound aria-hidden="true"/></i><small>{s.humanAction||s.humanDecision}</small></span><b aria-label={pending?"…":s.evaluated===false?"?":s.matched?"=":"≠"}>{pending?"…":s.evaluated===false?<CircleHelp aria-hidden="true"/>:s.matched?<Equal aria-hidden="true"/>:<EqualNot aria-hidden="true"/>}</b><span><i title={ar?"نهج":"AI"} aria-label={ar?"نهج":"AI"}><Bot aria-hidden="true"/></i><small title={s.aiAction||s.aiDecision||""}>{pending?(ar?"بانتظار المقارنة":"pending"):decisionLabel(s.aiAction||s.aiDecision,ar)}</small></span></div>})}</div></details>
+          return <div key={s.id} className={pending||s.evaluated===false?"unmeasured":s.matched?"match":"drift"} title={pending?(ar?"لم تُقارَن بعد — اضغط تشغيل الظل":"Not compared yet"):s.evaluated===false?(ar?"لا وقائع مسجَّلة لهذه الحالة — لم يُشتق لها قرار":"No recorded facts"):s.divergenceReason||""}><span><i title={ar?"الموظف":"Staff"} aria-label={ar?"الموظف":"Staff"}><UserRound aria-hidden="true"/></i><small>{s.humanAction||s.humanDecision}</small></span><b aria-label={pending?"…":s.evaluated===false?"?":s.matched?"=":"≠"}>{pending?"…":s.evaluated===false?<CircleHelp aria-hidden="true"/>:s.matched?<Equal aria-hidden="true"/>:<EqualNot aria-hidden="true"/>}</b><span><i title={ar?"نهج":"AI"} aria-label={ar?"نهج":"AI"}><NahjGlyph aria-hidden="true"/></i><small title={s.aiAction||s.aiDecision||""}>{pending?(ar?"بانتظار المقارنة":"pending"):decisionLabel(s.aiAction||s.aiDecision,ar)}</small></span></div>})}</div></details>
       </section>
     </div>
   </div>
