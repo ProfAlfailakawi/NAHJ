@@ -165,7 +165,7 @@ export function Shell({
                  في `aria-label` لمن يقرأ بالشاشة ولمن يمرّ على الأيقونة. */
               <div className="demo-chip demo-chip--icon" role="status" aria-label={ar ? "بيئة تجريبية معزولة — بيانات اصطناعية" : "Isolated demo environment — synthetic data"} title={ar ? "بيئة تجريبية معزولة — بيانات اصطناعية" : "Isolated demo environment — synthetic data"}>
                 <FlaskConical aria-hidden="true"/>
-                <i aria-hidden="true"/>
+                <span>{ar ? "تجريبي" : "Demo"}</span>
                 {/* إعادة التعيين والخروج في شريط العرض أسفل الرأس؛ تكرارهما هنا كان يزدحم على الهاتف. */}
               </div>
             ) : demoEnabled && isOwner ? (
