@@ -1528,3 +1528,4 @@
 @media(max-width:560px){.partner-stage .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.partner-stage .stat-tile{min-height:88px;padding:12px}}
 .user-chip small{max-width:190px}
 .manual-advanced{margin-top:12px}.manual-advanced>summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--muted);min-height:32px;display:flex;align-items:center}
+.sector-counts .sector-count{display:inline-flex;align-items:center;gap:5px}.sector-counts .sector-count small{font-size:14px;color:var(--muted);font-weight:600}

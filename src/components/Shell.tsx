@@ -80,10 +80,10 @@ export function Shell({
   /*
    * على الهاتف: كان الشريط السفلي يقصّ القائمة عند ثمانية مداخل، فالحوكمة
    * والسجلّ والحسابات والاشتراك ولوحة المالك لا تُبلَغ من الهاتف إطلاقاً.
-   * صار الشريط خمسة مداخل أساسية وزرّ «المزيد» يفتح كل الأقسام بأسمائها.
+   * صار الشريط أربعة مداخل أساسية وزرّ «المزيد» يفتح كل الأقسام بأسمائها.
    */
   const [moreOpen, setMoreOpen] = useState(false);
-  const dockItems = visibleNav.slice(0, 5);
+  const dockItems = visibleNav.slice(0, 4); /* أربعة مداخل + «المزيد»: ستة أزرار كانت تُزاحم أسماء «المهارات» و«التدرّب» في عرض 390px. */
   const moreActive = !dockItems.some(item => item.id === section);
   const go = (id: SectionId) => { setMoreOpen(false); onSection(id); };
   React.useEffect(() => {
@@ -166,8 +166,7 @@ export function Shell({
               <div className="demo-chip demo-chip--icon" role="status" aria-label={ar ? "بيئة تجريبية معزولة — بيانات اصطناعية" : "Isolated demo environment — synthetic data"} title={ar ? "بيئة تجريبية معزولة — بيانات اصطناعية" : "Isolated demo environment — synthetic data"}>
                 <FlaskConical aria-hidden="true"/>
                 <i aria-hidden="true"/>
-                <button type="button" onClick={onResetDemo} disabled={demoBusy} title={ar ? "إعادة تعيين البيانات التجريبية" : "Reset demo data"} aria-label={ar ? "إعادة تعيين البيانات التجريبية" : "Reset demo data"}><RefreshCw/></button>
-                <button type="button" onClick={onExitDemo} disabled={demoBusy} title={ar ? "الخروج من البيئة التجريبية" : "Exit demo"} aria-label={ar ? "الخروج من البيئة التجريبية" : "Exit demo"}><LogOut/></button>
+                {/* إعادة التعيين والخروج في شريط العرض أسفل الرأس؛ تكرارهما هنا كان يزدحم على الهاتف. */}
               </div>
             ) : demoEnabled && isOwner ? (
               /* للمالك وحده: العرض أداةُ عرضٍ على العملاء، لا شيءٌ يراه موظفو

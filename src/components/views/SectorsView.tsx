@@ -123,9 +123,9 @@ export function SectorsView({ lang, canApply, isDemo, notify, onApplied }: Props
                 </div>
                 <p className="sector-desc" title={sectorDescription(sector.code, sector.descriptionAr, ar)}>{sectorDescription(sector.code, sector.descriptionAr, ar)}</p>
                 <div className="sector-counts">
-                  <DnaCount icon={<BrainCircuit aria-hidden="true" />} value={sector.skills} label={ar ? "مهارة" : "skills"} />
-                  <DnaCount icon={<ShieldCheck aria-hidden="true" />} value={sector.policies} label={ar ? "سياسة" : "policies"} />
-                  <DnaCount icon={<PlugZap aria-hidden="true" />} value={sector.connectors} label={ar ? "موصل" : "connectors"} />
+                  <span className="sector-count"><DnaCount icon={<BrainCircuit aria-hidden="true" />} value={sector.skills} label={ar ? "مهارة" : "skills"} /><small aria-hidden="true">{ar ? "مهارة" : "skills"}</small></span>
+                  <span className="sector-count"><DnaCount icon={<ShieldCheck aria-hidden="true" />} value={sector.policies} label={ar ? "سياسة" : "policies"} /><small aria-hidden="true">{ar ? "سياسة" : "policies"}</small></span>
+                  <span className="sector-count"><DnaCount icon={<PlugZap aria-hidden="true" />} value={sector.connectors} label={ar ? "موصل" : "connectors"} /><small aria-hidden="true">{ar ? "موصل" : "connectors"}</small></span>
                 </div>
 
                 {!active && canApply && (!sector.isSeeded || !isDemo) && (
