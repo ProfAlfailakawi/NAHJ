@@ -30,7 +30,7 @@ export const clinicPack: SectorPack = {
   ],
 
   sources: [
-    { title: "نظام المعلومات الطبية (HIS)", type: "system_sis", authorityLevel: "live_authoritative", owner: "تقنية المعلومات", summary: "ملفات المرضى والمواعيد ونتائج الفحوص. المصدر الحيّ الوحيد المعتمد." },
+    { title: "نظام المعلومات الطبية", type: "system_sis", authorityLevel: "live_authoritative", owner: "تقنية المعلومات", summary: "ملفات المرضى والمواعيد ونتائج الفحوص. المصدر الحيّ الوحيد المعتمد." },
     { title: "جدول تغطية شركات التأمين", type: "catalog", authorityLevel: "approved_data", owner: "التأمين والمطالبات", summary: "ما تغطيه كل شركة، ونسب التحمّل، والإجراءات التي تحتاج موافقة مسبقة." },
     { title: "بروتوكول خصوصية بيانات المريض", type: "approved_policy", authorityLevel: "approved_policy", owner: "الالتزام والجودة", summary: "من يطّلع على ماذا، وكيف يُتحقَّق من هوية طالب المعلومة." },
     { title: "دليل التحويل للطوارئ", type: "sop", authorityLevel: "approved_policy", owner: "الإدارة الطبية", summary: "علامات الخطر التي توجب تحويلاً فورياً بدل حجز موعد." },
@@ -130,7 +130,7 @@ export const clinicPack: SectorPack = {
   ],
 
   connectors: [
-    { name: "نظام المعلومات الطبية (HIS)", type: "sis", permissions: ["قراءة الملفات", "قراءة المواعيد", "إنشاء موعد"] },
+    { name: "نظام المعلومات الطبية", type: "sis", permissions: ["قراءة الملفات", "قراءة المواعيد", "إنشاء موعد"] },
     { name: "بوابة شركات التأمين", type: "crm", permissions: ["فحص التغطية", "تقديم مطالبة"] },
     { name: "تقويم الأطباء", type: "calendar", permissions: ["قراءة التوفّر", "حجز"] },
     { name: "قناة واتساب للمرضى", type: "whatsapp", permissions: ["استقبال", "إرسال تأكيد"] },

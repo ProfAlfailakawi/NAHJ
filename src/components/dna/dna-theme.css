@@ -47,14 +47,14 @@
 .work-focus-river>strong{position:static;flex:none}
 .queue-card .dna-steps,.work-mini .dna-steps{margin-top:10px}
 .work-focus .work-timeline{margin-top:14px}
-.work-tl-badge{display:inline-block;margin-inline-start:6px;padding:0 7px;border-radius:99px;background:var(--mint);color:var(--moss-dark);font-size:13px;font-weight:700}
+.work-tl-badge{display:inline-block;margin-inline-start:6px;padding:0 7px;border-radius:var(--r-pill);background:var(--mint);color:var(--moss-dark);font-size:13px;font-weight:700}
 /* Connections: cloud mirror card. */
 .cloud-card{margin-bottom:24px;padding:18px 20px}
 .cloud-card .dna-htitle{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
 .cloud-card .cloud-sync{min-height:44px}
 .cloud-card .cloud-sync svg{width:16px;height:16px}
 .cloud-facts{display:flex;flex-wrap:wrap;gap:8px}
-.cloud-facts>span{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;background:var(--paper);border:1px solid var(--line);font-size:13px;color:var(--muted)}
+.cloud-facts>span{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:var(--r-pill);background:var(--paper);border:1px solid var(--line);font-size:13px;color:var(--muted)}
 .cloud-facts svg,.cloud-note svg{width:14px;height:14px;flex:none}
 .cloud-note{display:flex;align-items:flex-start;gap:6px;margin-top:8px;font-size:var(--fs-sm);font-weight:600}
 .cloud-note.warn{color:var(--amber-ink)}
@@ -63,7 +63,7 @@
 .brain-hero>.dna-hub{border:0;box-shadow:none;background:transparent}
 .hero-grid .brain-hero{min-height:0}
 /* Today: whole-app hub (display only). */
-.apphub{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px;align-items:center;margin-bottom:16px;padding:18px;border-radius:28px}
+.apphub{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px;align-items:center;margin-bottom:16px;padding:18px;border-radius:var(--r-xl)}
 .apphub-stage{position:relative;grid-column:2;grid-row:1;height:560px;min-width:0}
 .apphub-spokes{position:absolute;inset:0;width:100%;height:100%}
 .apphub-spokes line{stroke:var(--line-strong);stroke-width:1}
@@ -79,20 +79,20 @@
 .apphub-disc circle{fill:none;stroke:var(--moss);stroke-width:2.5;stroke-linecap:round}
 .apphub-node.attn .apphub-disc{border-color:var(--amber);color:var(--amber-ink)}
 .apphub-node.sel .apphub-disc{box-shadow:0 0 0 4px var(--mint)}
-.apphub-node:focus-visible{outline:2px solid var(--moss);outline-offset:2px;border-radius:14px}
+.apphub-node:focus-visible{outline:2px solid var(--moss);outline-offset:2px;border-radius:var(--r-md)}
 .apphub-label{font-size:13px;font-weight:700;white-space:nowrap}
 .apphub-val{font-size:14px;font-weight:700;white-space:nowrap}
-.apphub-focus{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:24px;background:var(--white);border:1px solid var(--line);box-shadow:var(--shadow-1)}
+.apphub-focus{grid-column:1;grid-row:1;display:flex;flex-direction:column;gap:14px;padding:20px;border-radius:var(--r-xl);background:var(--white);border:1px solid var(--line);box-shadow:var(--shadow-1)}
 .apphub-focus em{font-style:normal;font-size:13px;color:var(--muted)}
 .apphub-focus h3{margin:2px 0 0;font-size:20px;font-weight:700}
 .apphub-big{display:block;margin-top:10px;font-size:40px;line-height:1.1;font-weight:700}
 .apphub-focus p{margin:6px 0 0;font-size:var(--fs-body);color:var(--muted)}
-.apphub-open{align-self:flex-start;min-height:44px;padding:0 16px;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-strong);border-radius:99px;background:transparent;font-weight:700;cursor:pointer}
+.apphub-open{align-self:flex-start;min-height:44px;padding:0 16px;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-strong);border-radius:var(--r-pill);background:transparent;font-weight:700;cursor:pointer}
 .apphub-open svg{width:16px;height:16px}
 @media(max-width:900px){
-  .apphub{grid-template-columns:1fr;padding:12px;border-radius:24px}
+  .apphub{grid-template-columns:1fr;padding:12px;border-radius:var(--r-xl)}
   .apphub-stage{grid-column:1;grid-row:1;height:560px}
-  .apphub-focus{grid-column:1;grid-row:2;flex-direction:row;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:20px}
+  .apphub-focus{grid-column:1;grid-row:2;flex-direction:row;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:var(--r-lg)}
   .apphub-focus-text{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;min-width:0}
   .apphub-focus em{display:none}
   .apphub-focus h3{font-size:16px;margin:0}

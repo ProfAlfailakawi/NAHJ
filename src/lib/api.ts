@@ -41,10 +41,11 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    const message =
-      payload && typeof payload === "object" && "message" in payload
-        ? String((payload as { message?: unknown }).message || "API request failed")
-        : `API request failed (${response.status})`;
+    /* رسالة الخادم العربية إن وُجدت (message أو error)، وإلا جملة عربية بدل نصٍّ تقني إنجليزي. */
+    const body = payload && typeof payload === "object" ? (payload as { message?: unknown; error?: unknown }) : null;
+    const arabicUi = typeof document === "undefined" || document.documentElement.lang !== "en";
+    const fallback = arabicUi ? `تعذّر إتمام الطلب (${response.status}). حاول مجدداً.` : `API request failed (${response.status})`;
+    const message = String(body?.message || body?.error || fallback);
     throw new ApiError(message, response.status, payload);
   }
 

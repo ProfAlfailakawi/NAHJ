@@ -107,7 +107,7 @@ export const BASE_STYLE = `${FONT_FACE_CSS}
   .wrap { max-width:1120px; margin:0 auto; padding:0 20px; }
   .top { position:sticky; top:0; z-index:5; background:color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter:blur(14px); border-bottom:1px solid var(--line); }
   .top .wrap { display:flex; align-items:center; gap:18px; height:66px; }
-  .brand { display:flex; align-items:center; gap:10px; font-weight:900; font-size:21px; text-decoration:none; }
+  .brand { display:flex; align-items:center; min-height:44px; gap:10px; font-weight:900; font-size:21px; text-decoration:none; }
   .brand svg { width:34px; height:34px; }
   .top nav { margin-inline-start:auto; display:flex; align-items:center; gap:6px; }
   .top nav a { text-decoration:none; padding:8px 12px; min-height:44px; display:inline-flex; align-items:center; border-radius:10px; font-weight:700; font-size:15px; color:var(--muted); }
@@ -618,7 +618,7 @@ const DOC_STYLE = `
   .toc { position:sticky; top:90px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:16px 12px; }
   .toc b { display:block; font-size:14px; color:var(--muted); padding:0 10px 8px; }
   .toc ol { list-style:none; margin:0; padding:0; display:grid; gap:2px; }
-  .toc a { display:block; text-decoration:none; font-weight:700; font-size:15px; line-height:1.5; padding:7px 10px; border-radius:10px; color:var(--ink); }
+  .toc a { display:flex; align-items:center; min-height:44px; text-decoration:none; font-weight:700; font-size:15px; line-height:1.5; padding:7px 10px; border-radius:10px; color:var(--ink); }
   .toc a:hover { background:var(--moss-soft); color:var(--moss); }
   .toc a:focus-visible { outline:3px solid var(--moss); outline-offset:1px; }
   article.doc { max-width:780px; min-width:0; }

@@ -33,7 +33,7 @@ export const retailPack: SectorPack = {
   ],
 
   sources: [
-    { title: "نظام نقاط البيع (POS)", type: "system_sis", authorityLevel: "live_authoritative", owner: "العمليات", summary: "الطلبات والفواتير والمرتجعات. المصدر الحيّ للمبيعات." },
+    { title: "نظام نقاط البيع", type: "system_sis", authorityLevel: "live_authoritative", owner: "العمليات", summary: "الطلبات والفواتير والمرتجعات. المصدر الحيّ للمبيعات." },
     { title: "قائمة المنتجات والمكوّنات", type: "catalog", authorityLevel: "approved_data", owner: "الجودة", summary: "كل صنف ومكوّناته ومسبّبات الحساسية فيه." },
     { title: "سياسة الاسترجاع والاستبدال", type: "approved_policy", authorityLevel: "approved_policy", owner: "العمليات", summary: "المدد والشروط وحدود المبالغ لكل فئة." },
     { title: "مستويات المخزون الآمنة", type: "sop", authorityLevel: "approved_data", owner: "المخزون", summary: "حدّ إعادة الطلب لكل صنف حسب معدل الدوران." },
@@ -147,7 +147,7 @@ export const retailPack: SectorPack = {
   ],
 
   connectors: [
-    { name: "نظام نقاط البيع (POS)", type: "sis", permissions: ["قراءة الطلبات", "تنفيذ استرجاع", "قراءة المخزون"] },
+    { name: "نظام نقاط البيع", type: "sis", permissions: ["قراءة الطلبات", "تنفيذ استرجاع", "قراءة المخزون"] },
     { name: "بوابة الدفع", type: "payment", permissions: ["إرجاع مبلغ"] },
     { name: "قناة واتساب للعملاء", type: "whatsapp", permissions: ["استقبال", "إرسال"] },
     { name: "منصّة التوصيل", type: "crm", permissions: ["قراءة حالة الشحنة", "تعديل عنوان"] },

@@ -43,7 +43,7 @@ const NAV: Array<{ id: SectionId; ar: string; en: string; hintAr: string }> = [
   { id: "learn", ar: "يتعلّم", en: "Learn", hintAr: "ما اكتشفه نهج وينتظر حسمك" },
   { id: "teach", ar: "علّم نهج", en: "Teach", hintAr: "نفّذ عملك بينما يسجّل خطواتك" },
   { id: "skills", ar: "المهارات", en: "Skills", hintAr: "كل ما تعرف المؤسسة أن تفعله" },
-  { id: "practice", ar: "التدرّب والظل", en: "Practice", hintAr: "اختبارات المهارات قبل التشغيل" },
+  { id: "practice", ar: "التدرّب والمقارنة", en: "Practice", hintAr: "اختبارات المهارات قبل التشغيل" },
   { id: "work", ar: "العمل", en: "Work", hintAr: "الحالات الجارية" },
   { id: "simulator", ar: "المحادثة", en: "Simulator", hintAr: "قناة العميل الخارجية" },
   { id: "connections", ar: "الربط", en: "Connections", hintAr: "الأنظمة الموصولة وصلاحياتها" },
