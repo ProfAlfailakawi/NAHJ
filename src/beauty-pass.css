@@ -203,3 +203,14 @@
 
 /* ISO dates inside Arabic sentences never break at their hyphens. */
 .sub-banner bdi, .sub-headline-body bdi { white-space: nowrap; }
+
+/* Empty Skills and Impact boxes (no skills / no daily points yet): a quiet dashed, softly tinted slot of the same height the content would take, so the empty box reads as intentional. Purely visual, no text. */
+.skills-lanes:empty,
+.top-skills:empty,
+.bars:empty {
+  min-height: 150px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+}
+.skills-lanes:empty { min-height: 260px; }
