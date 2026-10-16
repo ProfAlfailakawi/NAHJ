@@ -165,3 +165,40 @@
 
 /* partner hero bar: the empty track stays visible on dark (var(--paper-2) disappears into the dark card at 0% paid) */
 .partner-hero-bar { background: color-mix(in srgb, var(--ink) 9%, transparent); }
+
+/* Billing money tiles on tablets: five tiles sit as a balanced 3 + 2 instead of 4 + 1 (the last two share the second row). */
+@media (min-width: 621px) and (max-width: 1099px) {
+  .sub-stats, .owner-view > .stat-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .sub-stats > .stat-tile, .owner-view > .stat-grid > .stat-tile { grid-column: span 2; }
+  .sub-stats > .stat-tile:nth-last-child(-n+2):nth-child(n+4),
+  .owner-view > .stat-grid > .stat-tile:nth-last-child(-n+2):nth-child(n+4) { grid-column: span 3; }
+  /* four plans wrap as 2 + 2 rather than 3 + 1 */
+  .plan-grid:has(> :nth-child(4):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Billing status card: the icon stays beside the text on tablets (it only stacks above on phones). */
+@media (min-width: 481px) { .sub-headline { flex-direction: row; } }
+
+/* Plan cards: a limit's value (e.g. "Level 5") stays whole; the setup fee never leaves its currency alone on a second line. */
+.plan-limits b { white-space: nowrap; flex: none; }
+.plan-setup, .plan-annual { text-wrap: balance; }
+
+/* Section titles on phones: a long note drops under the title instead of squeezing the title into two short lines. */
+@media (max-width: 480px) {
+  .section-title { flex-wrap: wrap; row-gap: 2px; }
+  .section-title > div { flex: 0 0 auto; max-width: 100%; }
+}
+
+/* A billing block whose body is empty (no subscription yet) keeps just its title row, without the trailing gap. */
+.sub-block > .section-title:only-child { margin-bottom: 0; }
+
+.nowrap-date { white-space: nowrap; }
+
+/* Teach composer on tablets (two-column controls): the Synthesize button takes the full second row instead of being squeezed into the 44px record column. */
+@media (max-width: 900px) { .teach-controls > .synthesize-button { grid-column: 1 / -1; justify-content: center; } }
+
+/* "Your first steps" on tablets: with two columns, an odd last step spans the full row instead of sitting alone at half width. */
+@media (min-width: 621px) and (max-width: 820px) { .getting-started ol > :last-child:nth-child(odd) { grid-column: 1 / -1; } }
+
+/* ISO dates inside Arabic sentences never break at their hyphens. */
+.sub-banner bdi, .sub-headline-body bdi { white-space: nowrap; }

@@ -44,7 +44,7 @@ export function SubscriptionBanner({ snapshot, lang, onOpen }: Props) {
   return (
     <div className={`sub-banner sub-banner--${tone}`} role="status">
       <Icon aria-hidden="true" />
-      <span>{text}</span>
+      <span>{ar ? text.split(/(\d{4}-\d{2}-\d{2})/).map((part, i) => /^\d{4}-\d{2}-\d{2}$/.test(part) ? <bdi key={i} dir="ltr">{part}</bdi> : part) : text}</span>
       <button type="button" onClick={onOpen}>{ar ? "تفاصيل الاشتراك" : "Subscription details"}</button>
     </div>
   );
