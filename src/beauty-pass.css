@@ -166,12 +166,13 @@
 /* partner hero bar: the empty track stays visible on dark (var(--paper-2) disappears into the dark card at 0% paid) */
 .partner-hero-bar { background: color-mix(in srgb, var(--ink) 9%, transparent); }
 
-/* Billing money tiles on tablets: five tiles sit as a balanced 3 + 2 instead of 4 + 1 (the last two share the second row). */
+/* Billing money tiles on tablets: five tiles sit as a balanced 3 + 2 instead of 4 + 1 (the last two share the second row).
+   The owner-view rules apply only to a grid of exactly five tiles, so the four-tile grid on the partner admin page keeps its single row. */
 @media (min-width: 621px) and (max-width: 1099px) {
-  .sub-stats, .owner-view > .stat-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .sub-stats > .stat-tile, .owner-view > .stat-grid > .stat-tile { grid-column: span 2; }
+  .sub-stats, .owner-view > .stat-grid:has(> .stat-tile:nth-child(5):last-child) { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .sub-stats > .stat-tile, .owner-view > .stat-grid:has(> .stat-tile:nth-child(5):last-child) > .stat-tile { grid-column: span 2; }
   .sub-stats > .stat-tile:nth-last-child(-n+2):nth-child(n+4),
-  .owner-view > .stat-grid > .stat-tile:nth-last-child(-n+2):nth-child(n+4) { grid-column: span 3; }
+  .owner-view > .stat-grid:has(> .stat-tile:nth-child(5):last-child) > .stat-tile:nth-last-child(-n+2):nth-child(n+4) { grid-column: span 3; }
   /* four plans wrap as 2 + 2 rather than 3 + 1 */
   .plan-grid:has(> :nth-child(4):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
