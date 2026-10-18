@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FlaskConical, LogIn, TriangleAlert } from "lucide-react";
+import { LogIn, TriangleAlert } from "lucide-react";
 import { NahjMark } from "./Brand";
 import { ApiError, authApi } from "../lib/api";
 
@@ -8,16 +8,14 @@ interface Props {
   /** true عند أول تشغيل: لا يوجد أي حساب بعد، فنُنشئ حسابك بدل طلب الدخول. */
   needsSetup: boolean;
   onAuthenticated: () => void;
-  demoEnabled: boolean;
-  demoBusy: boolean;
-  onEnterDemo: () => void;
 }
 
 /**
  * بوابة الدخول. لا يُعرض أي سطح تشغيلي قبلها — المنصة تدير مفاتيح إيقاف وموافقات
  * ومستويات استقلالية، ولا معنى لأي منها على سطح مفتوح.
  */
-export function LoginScreen({ lang, needsSetup, onAuthenticated, demoEnabled, demoBusy, onEnterDemo }: Props) {
+/* زرّ «جرّب بدون حساب» أُزيل من البطاقة: أيقونة القارورة في الشريط العلوي تؤدي الغرض نفسه فلا يتكرّر. */
+export function LoginScreen({ lang, needsSetup, onAuthenticated }: Props) {
   const ar = lang === "ar";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -127,19 +125,6 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated, demoEnabled, de
               ? ar ? "إنشاء الحساب والدخول" : "Create account and sign in"
               : ar ? "تسجيل الدخول" : "Sign in"}
         </button>
-
-        {demoEnabled && (
-          <button
-            type="button"
-            className="login-demo-text"
-            onClick={onEnterDemo}
-            disabled={demoBusy}
-            title={ar ? "بيئة تجريبية معزولة — لا حساب ولا بيانات حقيقية" : "Isolated sandbox — no account, no real data"}
-          >
-            <FlaskConical aria-hidden="true" />
-            {demoBusy ? (ar ? "جارٍ تجهيز التجربة..." : "Preparing demo...") : (ar ? "جرّب بدون حساب" : "Try without an account")}
-          </button>
-        )}
 
         {!needsSetup && marketing && (
           <div className="login-links-row">

@@ -20,7 +20,7 @@ import { ensureSubscription, startBillingWorker, stopBillingWorker } from "./ser
 import { normalizeLang } from "./server/demoLocale.ts";
 import { db, DemoSandbox, DEMO_SESSION_TTL_MS, normalizeDemoSector, persistence } from "./server/db.ts";
 import { listSectors } from "./server/packs/index.ts";
-import { neonMirror } from "./server/persistence.ts";
+import { assertDurableStorage, neonMirror } from "./server/persistence.ts";
 import { startBackupWorker, stopBackupWorker } from "./server/archive.ts";
 import { startNotifyWorker, stopNotifyWorker } from "./server/notify.ts";
 import { randomBytes } from "node:crypto";
@@ -273,6 +273,7 @@ async function startServer() {
     res.status(status).json({ error: message, code: status >= 500 ? "SERVER_ERROR" : "BAD_REQUEST" });
   });
 
+  assertDurableStorage();
   await bootstrapFirstAccount();
   /*
    * الترخيص يُهيَّأ قبل الاستماع لا بعده.

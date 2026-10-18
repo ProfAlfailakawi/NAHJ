@@ -220,7 +220,9 @@ export class Store {
       },
     ],
     };
-    this.simulatorState = seed ? freshSimulator : persisted("simulatorState", freshSimulator);
+    this.sharedSimulator = seed ? freshSimulator : persisted("simulatorState", freshSimulator);
+    /* محادثةٌ لكل موظف: تُحفظ باسم حسابه. القديمة المشتركة تبقى كما هي (للقراءة والتوافق) ولا يكتب فيها أحد. */
+    this.simulatorByUser = seed ? {} : persisted<Record<string, SimulatorState>>("simulatorByUser", {});
   }
 
   /*
@@ -228,7 +230,44 @@ export class Store {
    * `this.isDemo` ما تزال undefined وتأخذ كل بيئة تجريبية الحالة المحفوظة من القرص —
    * أي العكس تماماً من الغرض.
    */
-  public simulatorState: SimulatorState;
+  /** المحادثة المشتركة القديمة (قبل العزل لكل موظف) — تُستعمل خارج أي طلب وفي صندوق العرض. */
+  public sharedSimulator: SimulatorState;
+  /** محادثة التجربة لكل موظف، بمعرّف حسابه. */
+  public simulatorByUser: Record<string, SimulatorState>;
+
+  /**
+   * محادثة التجربة للمستخدم الحالي — لا تُشارَك بين الموظفين.
+   *
+   * كانت محادثةً واحدة للمؤسسة كلها: موظفان يجرّبان معاً يُربك كلٌّ منهما الآخر (يُكمل أحدهما
+   * خطوات الثاني، ويُصفّر الثالث الجميع). والآن لكل حسابٍ محادثته، وتُنشأ عند أول استعمال.
+   */
+  get simulatorState(): SimulatorState {
+    const account = this.isDemo ? undefined : requestAccount.getStore();
+    if (!account) return this.sharedSimulator;
+    let state = this.simulatorByUser[account.id];
+    if (!state) {
+      state = this.buildFreshSimulator();
+      this.simulatorByUser[account.id] = state;
+      const ids = Object.keys(this.simulatorByUser);
+      /* سقف الذاكرة: تُزاح أقدم المحادثات حين تتجاوز ألفاً. */
+      if (ids.length > 1000) delete this.simulatorByUser[ids[0]];
+    }
+    return state;
+  }
+  set simulatorState(value: SimulatorState) {
+    const account = this.isDemo ? undefined : requestAccount.getStore();
+    if (!account) this.sharedSimulator = value;
+    else this.simulatorByUser[account.id] = value;
+  }
+  /** محادثة حسابٍ بعينه إن وُجدت (يُحسم طلبُه من حسابٍ آخر). */
+  public simulatorOf(accountId: string | undefined): SimulatorState | undefined {
+    if (!accountId) return undefined;
+    return this.simulatorByUser[accountId];
+  }
+  /** كل المحادثات الحيّة — لطلب اعتمادٍ لا يُعرف صاحبه (سجلّات ما قبل العزل). */
+  public allSimulators(): SimulatorState[] {
+    return [this.sharedSimulator, ...Object.values(this.simulatorByUser)];
+  }
 
   public getCurrentUser(): User {
     /*
@@ -338,6 +377,8 @@ export class Store {
     this.shadowComparisons = [];
     this.learningSessions = [];
     this.resetSimulator();
+    /* تبديل النشاط يُنهي محادثات كل الموظفين: بقاؤها يُظهر مراحل قطاعٍ سابق. */
+    this.simulatorByUser = {};
   }
 
   public applySector(code: string, actorName: string): { ok: boolean; reason?: string } {
@@ -531,9 +572,9 @@ export class Store {
   /** نصوص الأحداث الأصلية بالعربية — ليُترجَم الحدث ويعود. صندوق العرض وحده. */
   private auditOriginals = new Map<string, { details: string; actorName: string }>();
 
-  public resetSimulator(): void {
+  private buildFreshSimulator(): SimulatorState {
     const chat = this.isDemo && this.sectorCode !== EDUCATION_CODE ? getSectorPack(this.sectorCode)?.demo?.chat : undefined;
-    this.simulatorState = {
+    return {
       step: "initial",
       messages: [
         {
@@ -547,6 +588,10 @@ export class Store {
       orgName: this.organization.name,
       ...(chat ? { stages: chat.stages, stage: 0, turn: 0 } : {}),
     };
+  }
+
+  public resetSimulator(): void {
+    this.simulatorState = this.buildFreshSimulator();
     if (!this.isDemo) void syncDocToFirestore("simulator", "state", this.simulatorState);
   }
 
@@ -575,7 +620,7 @@ export class Store {
       ...this.auditEvents.slice(0, 30).map((e) => ["auditEvents", e.id, e] as [string, string, any]),
       ...this.testCases.map((t) => ["testCases", t.id, t] as [string, string, any]),
       ...this.shadowComparisons.map((sc) => ["shadowComparisons", sc.id, sc] as [string, string, any]),
-      ["simulator", "state", this.simulatorState],
+      ["simulator", "state", this.sharedSimulator],
     ];
 
     let count = 0;
@@ -766,7 +811,8 @@ export function snapshotState(): Record<string, unknown> {
     connectors: baseStore.connectors,
     testCases: baseStore.testCases,
     shadowComparisons: baseStore.shadowComparisons,
-    simulatorState: baseStore.simulatorState,
+    simulatorState: baseStore.sharedSimulator,
+    simulatorByUser: baseStore.simulatorByUser,
     sectorCode: baseStore.sectorCode,
     channel: baseStore.channel,
     organizationConfigured: baseStore.organizationConfigured,

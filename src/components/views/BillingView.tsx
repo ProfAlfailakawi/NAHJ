@@ -155,7 +155,11 @@ function UsageMeter({ label, used, limit, ar }: { label: string; used: number; l
       <div className="usage-meter-top"><span>{label}</span><b>{used.toLocaleString("en-US")} / {limit.toLocaleString("en-US")}</b></div>
       <DnaDraw className="usage-track" playKey={`billing:usage:${label}`}><div className={`usage-fill dna-grow tone-${tone}`} style={{ width: `${percent}%` }} /></DnaDraw>
       <small className={`tone-text-${tone}`}>
-        {percent >= 100 ? (ar ? "بلغت الحدّ" : "Limit reached") : ar ? `${percent}% من الحدّ` : `${percent}% of limit`}
+        {percent >= 100
+          ? (ar ? "بلغتم الحدّ — الإضافة الجديدة متوقفة وما أُنجز محفوظ. رقّوا الباقة لمتابعة الإضافة." : "Limit reached — new additions are paused, nothing is lost. Upgrade to continue.")
+          : percent >= 80
+            ? (ar ? `${percent}% من الحدّ — اقتربتم منه، فكّروا في الترقية قبل أن يتوقف شيء.` : `${percent}% of limit — consider upgrading before anything pauses.`)
+            : ar ? `${percent}% من الحدّ` : `${percent}% of limit`}
       </small>
     </div>
   );
@@ -354,9 +358,10 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
           <div className="usage-grid">
             <UsageMeter ar={ar} label={ar ? "المقاعد (الحسابات)" : "Seats"} used={usage.seats} limit={limits.seats === null ? null : Math.max(limits.seats, subscription?.seatsPurchased ?? 0)} />
             <UsageMeter ar={ar} label={ar ? "المهارات الموثّقة" : "Codified skills"} used={usage.skills} limit={limits.skills} />
-            <UsageMeter ar={ar} label={ar ? "حالات العمل هذه الدورة" : "Work items this period"} used={usage.workItemsThisPeriod} limit={limits.workItemsPerMonth} />
+            <UsageMeter ar={ar} label={ar ? "حالات العمل هذا الشهر" : "Work items this period"} used={usage.workItemsThisPeriod} limit={limits.workItemsPerMonth} />
             <UsageMeter ar={ar} label={ar ? "الموصلات" : "Connectors"} used={usage.connectors} limit={limits.connectors} />
-            <UsageMeter ar={ar} label={ar ? "نداءات الذكاء هذه الدورة" : "AI calls this period"} used={usage.aiCallsThisPeriod} limit={limits.aiCallsPerMonth} />
+            <UsageMeter ar={ar} label={ar ? "خوادم MCP" : "MCP servers"} used={usage.mcpServers} limit={limits.mcpServers} />
+            <UsageMeter ar={ar} label={ar ? "نداءات الذكاء هذا الشهر" : "AI calls this period"} used={usage.aiCallsThisPeriod} limit={limits.aiCallsPerMonth} />
           </div>
         </section>
       )}

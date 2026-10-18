@@ -175,3 +175,49 @@ export function closeDatabase() {
   database.close();
   database = null;
 }
+
+
+/*
+ * هل بقاء البيانات مضمون في هذا النشر؟
+ *
+ * لا تستطيع العملية أن تُثبت أن قرصها دائم، لكنها تعرف الكثير: مع NAHJ_NEON_URL تُعكس القاعدة إلى
+ * Postgres خارجي وتُستعاد عند الإقلاع (دائم). وعلى Cloud Run / AI Studio (يُعرف بـK_SERVICE) القرص
+ * مؤقت يُمحى مع كل إعادة تشغيل أو نشر — فبلا Neon تضيع الحسابات والموافقات وسجلّ التدقيق. ومسارٌ
+ * داخل مجلد التطبيق أو /tmp في الإنتاج مؤشرٌ قوي على الشيء نفسه.
+ */
+export interface StorageStatus {
+  durable: "yes" | "no" | "unknown";
+  mode: "neon" | "volume" | "ephemeral" | "development";
+  message: string;
+}
+
+export function storageStatus(): StorageStatus {
+  const filename = resolveDatabasePath();
+  if (process.env.NODE_ENV !== "production") return { durable: "unknown", mode: "development", message: "بيئة تطوير — القاعدة محلية." };
+  if ((process.env.NAHJ_NEON_URL || "").trim()) {
+    return { durable: "yes", mode: "neon", message: "القاعدة تُعكس إلى Neon كل 20 ثانية وتُستعاد منه عند الإقلاع — تبقى البيانات بعد إعادة التشغيل والنشر." };
+  }
+  const resolved = filename === ":memory:" ? filename : path.resolve(filename);
+  const inApp = resolved.startsWith(path.resolve(process.cwd()) + path.sep) || resolved.startsWith("/tmp/") || resolved === ":memory:";
+  if (process.env["K_SERVICE"] || inApp) {
+    return {
+      durable: "no", mode: "ephemeral",
+      message: process.env["K_SERVICE"]
+        ? "النشر على Cloud Run / AI Studio وقرصه مؤقت: تُمحى الحسابات والموافقات وسجلّ التدقيق مع كل إعادة تشغيل أو نشر. اضبط NAHJ_NEON_URL (قاعدة Neon مجانية) لتبقى البيانات."
+        : "مسار القاعدة داخل مجلد التطبيق أو /tmp — غالباً قرصٌ مؤقت يُمحى مع النشر. ركّب قرصاً دائماً أو اضبط NAHJ_NEON_URL.",
+    };
+  }
+  return { durable: "unknown", mode: "volume", message: "القاعدة على مسارٍ خارج مجلد التطبيق (قرص مركّب). تأكد أنه قرص دائم وليس مؤقتاً." };
+}
+
+/** عند الإقلاع في الإنتاج: صوتٌ عالٍ إن كانت البيانات معرّضة للضياع، وإيقافٌ اختياري بـNAHJ_REQUIRE_DURABLE_STORAGE=true. */
+export function assertDurableStorage(): void {
+  const status = storageStatus();
+  if (status.durable !== "no") return;
+  const banner = `\n[NAHJ] ⚠⚠⚠ تحذير تخزين: ${status.message}\n`;
+  console.error(banner);
+  if ((process.env.NAHJ_REQUIRE_DURABLE_STORAGE || "").toLowerCase() === "true") {
+    console.error("[NAHJ] NAHJ_REQUIRE_DURABLE_STORAGE=true — رفض الإقلاع على تخزينٍ مؤقت.");
+    process.exit(1);
+  }
+}

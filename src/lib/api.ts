@@ -255,6 +255,7 @@ export interface RevenueSummary {
 
 export interface OwnerOverview {
   snapshot: BillingSnapshot; revenue: RevenueSummary; plans: Plan[]; events: BillingEvent[];
+  storage?: { durable: "yes" | "no" | "unknown"; mode: string; message: string };
 }
 
 const post = <T>(path: string, body: unknown) =>

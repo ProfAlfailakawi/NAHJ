@@ -216,6 +216,13 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
         action={<button className="btn-secondary" onClick={() => void load()}><RefreshCw /> تحديث</button>}
       />
 
+      {data?.storage && data.storage.durable === "no" && (
+        <div className="sub-banner sub-banner--danger" role="alert">
+          <AlertTriangle aria-hidden="true" />
+          <span><b>البيانات معرّضة للضياع:</b> {data.storage.message}</span>
+        </div>
+      )}
+
       {revenue && (
         <div className="stat-grid">
           <Stat label="الإيراد الشهري المتكرّر" value={formattedMoney(revenue.formatted.mrr, ar)} tone="moss" icon={<TrendingUp />} />
