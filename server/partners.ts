@@ -291,6 +291,22 @@ export function upsertPartner(input: PartnerInput, id?: string, actor = "system"
 
   const existing = current;
 
+  /*
+   * ربط حساب الدخول بالمسوّق.
+   *
+   * كان المعرّف يُقبل كما كُتب: حسابٌ غير موجود (فلا يدخل المسوّق أبداً ولا يُقال له
+   * لماذا)، أو حسابُ موظفٍ أو مالك (فيُربط ملفُّ عمولةٍ بحسابٍ ليس مسوّقاً)، أو حسابٌ
+   * مربوطٌ بمسوّقٍ آخر (فيرى اثنان لوحةً واحدة، ويُقرأ الأول منهما دائماً).
+   */
+  const linkedAccountId = merged.accountId === undefined ? existing?.accountId ?? null : (merged.accountId || null);
+  if (linkedAccountId && linkedAccountId !== existing?.accountId) {
+    const account = db().prepare("SELECT role FROM accounts WHERE id = ? LIMIT 1").get(String(linkedAccountId)) as { role?: string } | undefined;
+    if (!account) throw Object.assign(new Error("لا حساب بهذا المعرّف. أنشئ حساباً بدور «مسوّق» من شاشة الحسابات ثم انسخ معرّفه."), { status: 404 });
+    if (account.role !== "partner") throw Object.assign(new Error("هذا الحساب ليس بدور «مسوّق». غيّر دوره من شاشة الحسابات أو استعمل حساباً آخر."), { status: 400 });
+    const taken = db().prepare("SELECT id FROM partners WHERE account_id = ? AND id != ? LIMIT 1").get(String(linkedAccountId), existing?.id ?? "") as { id?: string } | undefined;
+    if (taken) throw Object.assign(new Error("هذا الحساب مربوط بمسوّق آخر."), { status: 409 });
+  }
+
   const duplicate = db().prepare("SELECT id FROM partners WHERE email = ? AND id != ? LIMIT 1")
     .get(email, existing?.id ?? "") as { id?: string } | undefined;
   if (duplicate) throw Object.assign(new Error("هذا البريد مسجَّل لمسوّق آخر."), { status: 409 });
@@ -396,8 +412,14 @@ export function upsertClient(input: ClientInput, id?: string, actor = "system"):
 
   const cycle = (["monthly", "quarterly", "annual"].includes(String(input.cycle))
     ? input.cycle : existing?.cycle ?? "monthly") as BillingCycle;
-  const startedAt = input.startedAt ? new Date(input.startedAt).toISOString() : existing?.startedAt || now();
-  const endsAt = input.endsAt ? new Date(input.endsAt).toISOString() : existing?.endsAt || addMonths(startedAt, cycleMonths(cycle));
+  /* تاريخٌ غير صالح يُقال بلغة المستخدم — كان يخرج «Invalid time value» من محرّك الجافاسكربت. */
+  const isoDate = (value: unknown, label: string) => {
+    const parsed = new Date(String(value));
+    if (Number.isNaN(parsed.getTime())) throw Object.assign(new Error(`${label} غير صالح.`), { status: 400 });
+    return parsed.toISOString();
+  };
+  const startedAt = input.startedAt ? isoDate(input.startedAt, "تاريخ بدء العقد") : existing?.startedAt || now();
+  const endsAt = input.endsAt ? isoDate(input.endsAt, "تاريخ نهاية العقد") : existing?.endsAt || addMonths(startedAt, cycleMonths(cycle));
   if (endsAt <= startedAt) throw Object.assign(new Error("نهاية العقد يجب أن تكون بعد بدايته."), { status: 400 });
 
   const client: Client = {

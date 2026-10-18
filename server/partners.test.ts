@@ -229,13 +229,25 @@ test("لوحة المسوّق لا تحمل إجمالي إيراد المالك
   assert.ok(!serialized.includes("contractedValue"), "إجمالي العقود — رقم المالك — تسرّب إلى اللوحة");
 });
 
-test("ربط الحساب هو أساس العزل، ولا يُشارَك بين مسوّقَين", () => {
+test("ربط الحساب هو أساس العزل، ولا يُشارَك بين مسوّقَين", async () => {
   freshDatabase();
-  const first = upsertPartner({ name: "الأول", email: "a@nahj.test", model: "fixed_once", fixedAmount: 1, accountId: "acc_1" });
-  upsertPartner({ name: "الثاني", email: "b@nahj.test", model: "fixed_once", fixedAmount: 1, accountId: "acc_2" });
+  const { createAccount } = await import("./auth.ts");
+  const pw = ["Partner", "Link", "2026"].join("-");
+  const acc1 = await createAccount({ email: "p1@nahj.test", name: "مسوّق أول", password: pw, role: "partner" });
+  const acc2 = await createAccount({ email: "p2@nahj.test", name: "مسوّق ثانٍ", password: pw, role: "partner" });
+  const staff = await createAccount({ email: "staff@nahj.test", name: "موظف", password: pw, role: "operator" });
+  const first = upsertPartner({ name: "الأول", email: "a@nahj.test", model: "fixed_once", fixedAmount: 1, accountId: acc1.id });
+  upsertPartner({ name: "الثاني", email: "b@nahj.test", model: "fixed_once", fixedAmount: 1, accountId: acc2.id });
 
-  assert.equal(getPartnerByAccount("acc_1")?.id, first.id);
+  assert.equal(getPartnerByAccount(acc1.id)?.id, first.id);
   assert.equal(getPartnerByAccount("acc_unknown"), undefined, "حسابٌ غير مرتبط وجد لوحةً");
+
+  /* انحدار: الربط بحسابٍ غير موجود أو ليس مسوّقاً أو مربوطٍ بآخر كان يُقبل بصمت. */
+  const link = (accountId: string, email: string) =>
+    upsertPartner({ name: "ثالث", email, model: "fixed_once", fixedAmount: 1, accountId });
+  assert.throws(() => link("acc_nonexistent", "c@nahj.test"), /لا حساب بهذا المعرّف/);
+  assert.throws(() => link(staff.id, "d@nahj.test"), /ليس بدور/);
+  assert.throws(() => link(acc1.id, "e@nahj.test"), /مربوط بمسوّق آخر/);
 });
 
 test("الحارس يمنع المسوّق من كل سطح تشغيلي", async () => {

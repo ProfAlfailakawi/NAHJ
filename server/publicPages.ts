@@ -333,14 +333,17 @@ publicRouter.post("/api/public/leads", (req: Request, res: Response) => {
   const nowMs = Date.now();
   const hit = leadHits.get(ip);
   if (hit && hit.resetAt > nowMs && hit.count >= LEAD_MAX_PER_WINDOW) {
-    return void res.status(429).json({ error: "وصلنا طلبك. إن احتجت شيئاً آخر حاول بعد قليل." });
+    return void res.status(429).json({ error: "أرسلتَ عدة طلبات خلال وقتٍ قصير. إن كان طلبك الأخير قد وصل فسنتواصل معك، وإلا حاول بعد قليل." });
   }
-  if (!hit || hit.resetAt <= nowMs) leadHits.set(ip, { count: 1, resetAt: nowMs + LEAD_WINDOW_MS });
-  else hit.count += 1;
-  if (leadHits.size > 10_000) for (const [key, value] of leadHits) if (value.resetAt <= nowMs) leadHits.delete(key);
-
   try {
     createLead(req.body || {});
+    /*
+     * يُحتسب الطلب بعد قبوله لا قبل فحصه: زائرٌ أخطأ في بريده خمس مرات كان يُحظر
+     * ساعةً كاملة قبل أن يُسجَّل له طلبٌ واحد — وبرسالةٍ تقول «وصلنا طلبك» وهو لم يصل.
+     */
+    if (!hit || hit.resetAt <= nowMs) leadHits.set(ip, { count: 1, resetAt: nowMs + LEAD_WINDOW_MS });
+    else hit.count += 1;
+    if (leadHits.size > 10_000) for (const [key, value] of leadHits) if (value.resetAt <= nowMs) leadHits.delete(key);
     res.status(201).json({ ok: true });
   } catch (error) {
     if (error instanceof LeadError) return void res.status(error.status).json({ error: error.message });
