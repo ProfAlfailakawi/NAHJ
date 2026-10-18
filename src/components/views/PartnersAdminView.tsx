@@ -37,6 +37,14 @@ export function PartnersAdminView({ lang, notify }: Props) {
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [reference, setReference] = useState("");
+  /* القوائم الكبيرة تُرسَم دفعاتٍ: مئات الشركات والعمولات دفعةً واحدة تُثقل الشاشة وتُضيّع ما يُبحث عنه. */
+  const [partnerShown, setPartnerShown] = useState(25);
+  const [clientShown, setClientShown] = useState(25);
+  const [commissionShown, setCommissionShown] = useState(50);
+  const [clientQuery, setClientQuery] = useState("");
+  const confirmAsk = (text: string) => (typeof window === "undefined" ? true : window.confirm(text));
+  /* التحرير يعيد المستخدم إلى النموذج: كان النقر على «تحرير» في آخر قائمة طويلة لا يُظهر شيئاً. */
+  const toForm = (selector: string) => window.setTimeout(() => document.querySelector(selector)?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
 
   const [partnerForm, setPartnerForm] = useState({
     id: "", name: "", email: "", phone: "", accountId: "",
@@ -67,6 +75,10 @@ export function PartnersAdminView({ lang, notify }: Props) {
   const currency = data?.totals.currency || "KWD";
   const partners = useMemo(() => data?.partners || [], [data]);
   const clients = useMemo(() => data?.clients || [], [data]);
+  const filteredClients = useMemo(() => {
+    const needle = clientQuery.trim().toLowerCase();
+    return needle ? clients.filter(client => client.name.toLowerCase().includes(needle) || (client.sector || "").toLowerCase().includes(needle)) : clients;
+  }, [clients, clientQuery]);
   const unpaid = useMemo(
     () => (data?.commissions || []).filter(commission => commission.status !== "paid" && commission.status !== "void"),
     [data],
@@ -129,7 +141,7 @@ export function PartnersAdminView({ lang, notify }: Props) {
       <section className="surface-strong owner-block">
         <SectionTitle title="المسوّقون" icon={<UserPlus />} meta={`${partners.length}`} />
 
-        <div className="owner-form">
+        <div className="owner-form" data-partner-form>
           <label>الاسم<input value={partnerForm.name} onChange={e => setPartnerForm(v => ({ ...v, name: e.target.value }))} /></label>
           <label>البريد<input type="email" value={partnerForm.email} onChange={e => setPartnerForm(v => ({ ...v, email: e.target.value }))} /></label>
           <label>الهاتف<input value={partnerForm.phone} onChange={e => setPartnerForm(v => ({ ...v, phone: e.target.value }))} /></label>
@@ -153,7 +165,7 @@ export function PartnersAdminView({ lang, notify }: Props) {
             <Save /> {partnerForm.id ? "احفظ التعديل" : "أضف مسوّقاً"}
           </button>
           {partnerForm.id && (
-            <button className="btn-secondary" onClick={() => setPartnerForm(v => ({ ...v, id: "", name: "", email: "" }))}>إلغاء التحرير</button>
+            <button className="btn-secondary" onClick={() => setPartnerForm({ id: "", name: "", email: "", phone: "", accountId: "", model: "percent_of_contract", rate: "15", fixed: "0", durationMonths: "0", notes: "" })}>إلغاء التحرير</button>
           )}
         </div>
         <p className="owner-hint">
@@ -161,7 +173,7 @@ export function PartnersAdminView({ lang, notify }: Props) {
         </p>
 
         <div className="partner-rows">
-          {partners.map(partner => (
+          {partners.slice(0, partnerShown).map(partner => (
             <article key={partner.id} className={partner.status === "active" ? "" : "is-suspended"}>
               <div className="partner-identity">
                 <strong>{partner.name}</strong>
@@ -184,25 +196,28 @@ export function PartnersAdminView({ lang, notify }: Props) {
                   accountId: partner.accountId || "", model: partner.model,
                   rate: (partner.rateBps / 100).toString(), fixed: fromMinor(partner.fixedAmount, partner.currency),
                   durationMonths: String(partner.durationMonths), notes: partner.notes || "",
-                })}>تحرير</button>
+                }, toForm("[data-partner-form]"))}>تحرير</button>
                 <button className="btn-secondary" disabled={busy}
                   onClick={() => void run(() => partnersApi.updatePartner(partner.id, { status: partner.status === "active" ? "suspended" : "active" }),
                     partner.status === "active" ? "عُلّق المسوّق" : "أُعيد تفعيله")}>
                   {partner.status === "active" ? "تعليق" : "تفعيل"}
                 </button>
-                <button className="icon-button" disabled={busy} aria-label="حذف"
-                  onClick={() => void run(() => partnersApi.deletePartner(partner.id), "حُذف المسوّق")}><Trash2 /></button>
+                <button className="icon-button" disabled={busy} aria-label={`حذف المسوّق ${partner.name}`}
+                  onClick={() => { if (confirmAsk(`حذف المسوّق «${partner.name}» نهائياً؟ لا يمكن التراجع.`)) void run(() => partnersApi.deletePartner(partner.id), "حُذف المسوّق"); }}><Trash2 /></button>
               </div>
             </article>
           ))}
           {!partners.length && <p className="owner-hint">لا مسوّقين بعد.</p>}
+          {partners.length > partnerShown && (
+            <button type="button" className="btn-secondary" onClick={() => setPartnerShown(n => n + 25)}>عرض المزيد ({partners.length - partnerShown} متبقٍّ)</button>
+          )}
         </div>
       </section>
 
       {/* ------------------------------------------------ الشركات */}
       <section className="surface-strong owner-block">
         <SectionTitle title="الشركات" icon={<Building2 />} meta={`${clients.length}`} />
-        <div className="owner-form">
+        <div className="owner-form" data-client-form>
           <label>اسم الشركة<input value={clientForm.name} onChange={e => setClientForm(v => ({ ...v, name: e.target.value }))} /></label>
           <label>النشاط<input value={clientForm.sector} onChange={e => setClientForm(v => ({ ...v, sector: e.target.value }))} /></label>
           <label>المسوّق
@@ -234,11 +249,18 @@ export function PartnersAdminView({ lang, notify }: Props) {
           <button className="btn-primary" disabled={busy || !clientForm.name} onClick={() => void saveClient()}>
             <Plus /> {clientForm.id ? "احفظ التعديل" : "أضف شركة"}
           </button>
-          {clientForm.id && <button className="btn-secondary" onClick={() => setClientForm(v => ({ ...v, id: "", name: "" }))}>إلغاء التحرير</button>}
+          {clientForm.id && <button className="btn-secondary" onClick={() => setClientForm({ id: "", name: "", sector: "", contactName: "", contactEmail: "", contactPhone: "", partnerId: "", cycle: "monthly", contractValue: "", startedAt: "", endsAt: "", status: "active", deploymentUrl: "", notes: "" })}>إلغاء التحرير</button>}
         </div>
 
+        {clients.length > 8 && (
+          <div className="owner-form">
+            <label className="owner-wide">بحث في الشركات
+              <input type="search" value={clientQuery} onChange={e => { setClientQuery(e.target.value); setClientShown(25); }} placeholder="اسم الشركة أو النشاط" maxLength={120} />
+            </label>
+          </div>
+        )}
         <div className="partner-rows">
-          {clients.map(client => (
+          {filteredClients.slice(0, clientShown).map(client => (
             <article key={client.id}>
               <div className="partner-identity">
                 <strong>{client.name}</strong>
@@ -258,13 +280,17 @@ export function PartnersAdminView({ lang, notify }: Props) {
                   contractValue: fromMinor(client.contractValue, client.currency),
                   startedAt: forInput(client.startedAt), endsAt: forInput(client.endsAt),
                   status: client.status, deploymentUrl: client.deploymentUrl, notes: client.notes,
-                })}>تحرير</button>
-                <button className="icon-button" disabled={busy} aria-label="حذف"
-                  onClick={() => void run(() => partnersApi.deleteClient(client.id), "حُذفت الشركة")}><Trash2 /></button>
+                }, toForm("[data-client-form]"))}>تحرير</button>
+                <button className="icon-button" disabled={busy} aria-label={`حذف الشركة ${client.name}`}
+                  onClick={() => { if (confirmAsk(`حذف الشركة «${client.name}» نهائياً؟ لا يمكن التراجع.`)) void run(() => partnersApi.deleteClient(client.id), "حُذفت الشركة"); }}><Trash2 /></button>
               </div>
             </article>
           ))}
           {!clients.length && <p className="owner-hint">لا شركات بعد.</p>}
+          {clients.length > 0 && !filteredClients.length && <p className="owner-hint">لا شركة تطابق البحث.</p>}
+          {filteredClients.length > clientShown && (
+            <button type="button" className="btn-secondary" onClick={() => setClientShown(n => n + 25)}>عرض المزيد ({filteredClients.length - clientShown} متبقٍّ)</button>
+          )}
         </div>
       </section>
 
@@ -276,7 +302,7 @@ export function PartnersAdminView({ lang, notify }: Props) {
         ) : (
           <>
             <div className="commission-rows">
-              {unpaid.map(commission => {
+              {unpaid.slice(0, commissionShown).map(commission => {
                 const checked = selected.includes(commission.id);
                 return (
                   <label key={commission.id} className={`commission-row ${checked ? "is-selected" : ""}`}>
@@ -288,18 +314,21 @@ export function PartnersAdminView({ lang, notify }: Props) {
                     <span className="mono">{money(commission.amount, commission.currency, ar)}</span>
                     <span><i className="ledger-badge tone-amber">{COMMISSION_STATUS_AR[commission.status]}</i></span>
                     <button type="button" className="icon-button" aria-label="إلغاء"
-                      onClick={event => { event.preventDefault(); void run(() => partnersApi.voidCommission(commission.id, "إلغاء بقرار المالك"), "أُلغيت العمولة"); }}><X /></button>
+                      onClick={event => { event.preventDefault(); if (confirmAsk("إلغاء هذه العمولة؟")) void run(() => partnersApi.voidCommission(commission.id, "إلغاء بقرار المالك"), "أُلغيت العمولة"); }}><X /></button>
                   </label>
                 );
               })}
             </div>
+            {unpaid.length > commissionShown && (
+              <button type="button" className="btn-secondary" onClick={() => setCommissionShown(n => n + 50)}>عرض المزيد ({unpaid.length - commissionShown} متبقٍّ)</button>
+            )}
             <div className="owner-form">
               <label>مرجع الدفع<input value={reference} onChange={e => setReference(e.target.value)} placeholder="رقم الحوالة" /></label>
             </div>
             <div className="owner-actions">
               <button className="btn-primary" disabled={busy || !selected.length}
-                onClick={() => void run(async () => { await partnersApi.payCommissions(selected, reference); setSelected([]); setReference(""); },
-                  "سُجّل دفع العمولات")}>
+                onClick={() => { if (confirmAsk(`تسجيل دفع ${selected.length} عمولة؟ الدفع لا يُلغى بعد تسجيله.`)) void run(async () => { await partnersApi.payCommissions(selected, reference); setSelected([]); setReference(""); },
+                  "سُجّل دفع العمولات"); }}>
                 <Wallet /> سجّل دفع {selected.length ? `(${selected.length})` : ""}
               </button>
               <button className="btn-secondary" disabled={busy}

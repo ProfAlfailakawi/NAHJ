@@ -230,6 +230,17 @@
 .accounts-controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 .accounts-controls select { flex:0 0 auto; }
 .accounts-empty { font-size:var(--fs-body); opacity:.6; margin:0; }
+.accounts-filter { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 12px; }
+.accounts-filter input, .accounts-filter select {
+  flex:1 1 200px; min-width:0; padding:9px 12px; border-radius:var(--r-sm);
+  border:1px solid color-mix(in srgb,var(--white) 12%,transparent); background:color-mix(in srgb,var(--white) 4%,transparent);
+  color:inherit; font:inherit; font-size:var(--fs-md); min-height:40px;
+}
+.accounts-more {
+  display:block; margin:14px auto 0; padding:9px 18px; border-radius:var(--r-sm); font:inherit; font-size:var(--fs-sm);
+  font-weight:700; cursor:pointer; color:inherit; min-height:40px;
+  background:rgba(120,170,255,.16); border:1px solid rgba(120,170,255,.3);
+}
 .accounts-locked { display:flex; align-items:center; gap:10px; }
 .accounts-locked svg { width:18px; height:18px; }
 .accounts-locked p { margin:0; font-size:var(--fs-body); opacity:.8; }
@@ -1545,3 +1556,12 @@ small{font-size:var(--fs-xs)}
 .accounts-list h3 small{font-size:var(--fs-sm)}
 .content-stage :is(button,summary,[role="tab"]):not(.term):not(.metric-basis-toggle){min-height:40px;min-width:40px}
 .metric-basis-toggle{width:40px;height:40px;inset-block-start:0;inset-inline-end:0}
+
+/* ---- نصٌّ طويل بلا فواصل (اسم، عنوان، لصقٌ مفرط) لا يوسّع الصفحة ------------- */
+.audit-timeline article { grid-template-columns: 38px minmax(0, 1fr); }
+.audit-timeline article > *, .audit-head, .audit-tags { min-width: 0; }
+main p, main h1, main h2, main h3, main h4, main strong, main small, main li, main em,
+.audit-detail, .audit-head, .audit-tags span, .audit-record { overflow-wrap: anywhere; }
+.lead-filter{display:flex;flex-wrap:wrap;gap:6px}
+.lead-filter .btn-secondary{height:36px;padding:0 12px;font-size:var(--fs-sm)}
+.lead-filter .btn-secondary[aria-pressed="true"]{background:var(--ink);color:var(--white);border-color:var(--ink)}

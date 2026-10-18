@@ -4,6 +4,14 @@ import { DemoSandbox } from "./db.ts";
 
 let geminiClient: GoogleGenAI | null = null;
 
+const AI_TIMEOUT_MS = Math.max(1_000, Number(process.env.NAHJ_AI_TIMEOUT_MS) || 15_000);
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error(`AI request timed out after ${ms}ms`)), ms); });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 export function getGemini(): GoogleGenAI | null {
   if (!geminiClient) {
     const key = process.env.GEMINI_API_KEY;
@@ -30,14 +38,18 @@ export async function generateAiResponse(prompt: string, systemInstruction?: str
   const client = getGemini();
   if (client) {
     try {
-      const response = await client.models.generateContent({
+      /*
+       * مهلة قصوى: نداءٌ معلّق عند المزوّد كان يُبقي رسالة المستخدم في المحادثة دائرةً
+       * بلا نهاية (الطلب لا يعود). بعد المهلة نرتدّ إلى المنطق الحتمي كما نفعل عند أي خطأ.
+       */
+      const response = await withTimeout(client.models.generateContent({
         model: "gemini-3.8-flash",
         contents: prompt,
         config: {
           systemInstruction: systemInstruction || "You are NAHJ (نهج), an operational intelligence engine.",
           temperature: 0.2,
         },
-      });
+      }), AI_TIMEOUT_MS);
       /*
        * القياس يقع عند النداء الفعلي لا عند الطلب: ارتداد المحرّك إلى المنطق
        * الحتمي (بلا مفتاح، أو عند خطأ) لا يُحتسب على حصّة المؤسسة — وإلا حاسبناها

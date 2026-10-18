@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Router, Request, Response, NextFunction } from "express";
 import { db, DemoSandbox, requestAccount } from "./db.ts";
 import { setupSectorCodes } from "./packs/cleanStart.ts";
@@ -153,7 +154,8 @@ authRouter.get("/me", requireAuth, (req: AuthenticatedRequest, res: Response) =>
 /* تغيير المستخدم كلمة مروره بنفسه — متاح لكل حساب مسجَّل، لا للمشرف وحده. */
 authRouter.post("/change-password", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    await changeOwnPassword(req.account!.id, req.body?.currentPassword, req.body?.newPassword);
+    const sessionMatch = String(req.headers.cookie || "").split(";").map(part => part.trim().split("=")).find(([key]) => key === authCookieNames.session);
+    await changeOwnPassword(req.account!.id, req.body?.currentPassword, req.body?.newPassword, sessionMatch ? decodeURIComponent(sessionMatch.slice(1).join("=")) : undefined);
     res.json({ ok: true });
   } catch (error) {
     const status = Number((error as { status?: number })?.status) || 400;
@@ -311,6 +313,21 @@ apiRouter.use((req: AuthenticatedRequest, _res: Response, next: NextFunction) =>
   const account = req.account;
   if (!account) return next();
   requestAccount.run({ id: account.id, name: account.name, email: account.email, role: account.role }, next);
+});
+
+/*
+ * حساب المشاهدة للقراءة فقط — في كل مسار، لا في المسارات التي تذكّر أحدٌ حراستها.
+ *
+ * كانت مسارات كاملة (استلام حالة عمل، استئناف الذكاء الاصطناعي، جلسة تعليم،
+ * إجابة سؤال توضيحي، فحص موصل) بلا حارس دور، فيستطيع حسابُ «مشاهدة» أن يغيّر
+ * العمل ويكتب في سجلّ التدقيق باسمه. القاعدة الآن: أي طلب غير آمن (غير
+ * GET/HEAD/OPTIONS) من مشاهِد يُردّ 403 قبل بلوغ أي معالج.
+ */
+apiRouter.use((req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (req.account?.role === "viewer" && !["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    return res.status(403).json({ error: "حساب المشاهدة للقراءة فقط.", code: "FORBIDDEN" });
+  }
+  next();
 });
 
 /*
@@ -615,16 +632,28 @@ apiRouter.get("/learn", (req: Request, res: Response) => {
 });
 
 apiRouter.post("/learn/clarify", (req: Request, res: Response) => {
-  const { proposalId, clarificationId, selectedAnswer } = req.body;
+  const { proposalId, clarificationId, selectedAnswer } = req.body || {};
   const proposal = db.learningProposals.find((p) => p.id === proposalId);
   if (!proposal) {
     return res.status(404).json({ success: false, message: "المقترح غير موجود" });
   }
+  /* القرار يُتَّخذ مرة: إعادة الإجابة كانت تُبدّل القاعدة المعتمدة وتُسجَّل قراراً جديداً فوق القديم. */
+  if (proposal.status !== "pending") {
+    return res.status(409).json({ success: false, message: "حُسم هذا المقترح من قبل." });
+  }
+  const answer = typeof selectedAnswer === "string" ? selectedAnswer.trim().slice(0, 500) : "";
+  if (!answer) {
+    return res.status(400).json({ success: false, message: "اختر إجابةً قبل الاعتماد." });
+  }
 
   const clar = proposal.clarifications?.find((c) => c.id === clarificationId);
+  if (proposal.clarifications?.length && !clar) {
+    return res.status(404).json({ success: false, message: "السؤال التوضيحي غير موجود في هذا المقترح." });
+  }
   if (clar) {
-    clar.selectedAnswer = selectedAnswer;
-    proposal.status = "resolved";
+    clar.selectedAnswer = answer;
+    /* يُحسم المقترح حين تُجاب كل أسئلته لا عند أولها. */
+    if (proposal.clarifications!.every((c) => Boolean(c.selectedAnswer))) proposal.status = "resolved";
 
     db.logAudit({
       actorType: "human",
@@ -633,7 +662,7 @@ apiRouter.post("/learn/clarify", (req: Request, res: Response) => {
       provenance: "Learn Feed Resolution Gate",
       risk: "medium",
       latencyMs: 35,
-      details: `اعتماد قرار تشغيلي: "${selectedAnswer}" لحل التضارب في ${proposal.title}. تم تحويله إلى قاعدة رسمية.`,
+      details: `اعتماد قرار تشغيلي: "${answer}" لحل التضارب في ${proposal.title}. تم تحويله إلى قاعدة رسمية.`,
       status: "success",
     });
   }
@@ -675,8 +704,9 @@ apiRouter.get("/teach/sample", (_req: Request, res: Response) => {
 apiRouter.post("/teach/start", (req: Request, res: Response) => {
   const { title } = req.body;
   const session: LearningSession = {
-    id: `sess_${Date.now()}`,
-    title: (typeof title === "string" && title.trim()) || teachSample().title,
+    /* UUID لا الوقت وحده: ضغطتان في الملّي ثانية نفسها كانتا تُنتجان جلستين بمعرّف واحد. */
+    id: `sess_${Date.now()}_${randomUUID().slice(0, 8)}`,
+    title: (typeof title === "string" && title.trim().slice(0, 160)) || teachSample().title,
     startedAt: "الآن",
     status: "recording",
     teacherName: db.getCurrentUser().name,
@@ -702,25 +732,51 @@ apiRouter.post("/teach/start", (req: Request, res: Response) => {
 });
 
 apiRouter.post("/teach/record-event", (req: Request, res: Response) => {
-  const { sessionId, action, system, inputValue, voiceNote, screenshotLabel } = req.body;
+  const { sessionId, action, system, inputValue, voiceNote, screenshotLabel, eventKey } = req.body || {};
   /* معرّفٌ مجهول يُرفض — كان يُعاد إلى أول جلسة فيُركَّب من عملٍ غير المقصود. */
   const session = sessionId ? db.learningSessions.find((s) => s.id === sessionId) : db.learningSessions[0];
   if (!session) {
     return res.status(404).json({ success: false, message: "جلسة التعلم غير متوفرة" });
+  }
+  /* جلسةٌ اعتُمدت مهارتها لا تُضاف إليها أحداث: كانت تُغيّر ما رُكّب منه شيءٌ معتمد. */
+  if (session.status === "approved") {
+    return res.status(409).json({ success: false, message: "اعتُمدت هذه الجلسة. ابدأ جلسة تعليم جديدة." });
+  }
+  /* نصوصٌ فقط وبحدّ طول: كائنٌ مكان النص كان يُحفظ ثم يُكسر به رسم الشاشة. */
+  const text = (value: unknown, max: number) => (typeof value === "string" ? value.trim().slice(0, max) : "");
+  const actionText = text(action, 200);
+  if (!actionText) {
+    return res.status(400).json({ success: false, message: "اكتب ما فعلتَه في هذه الخطوة." });
   }
 
   const now = new Date();
   const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 
   const event = {
-    id: `ev_${Date.now()}`,
+    id: `ev_${Date.now()}_${randomUUID().slice(0, 6)}`,
     timestamp: timeStr,
-    action: action || "إدخال بيانات في النظام",
-    system: system || "النظام الرئيسي",
-    inputValue,
-    voiceNote,
-    screenshotLabel,
+    action: actionText,
+    system: text(system, 120) || "النظام الرئيسي",
+    inputValue: text(inputValue, 500) || undefined,
+    voiceNote: text(voiceNote, 1000) || undefined,
+    screenshotLabel: text(screenshotLabel, 200) || undefined,
+    clientKey: text(eventKey, 80) || undefined,
   };
+  /*
+   * إرسال الحدث نفسه ثانيةً يُحدّثه ولا يُكرّره.
+   *
+   * الواجهة تُرسل الخطوة حين تُضاف ثم تُعيد إرسال كل الخطوات (بملاحظاتها الصوتية)
+   * عند الاستخلاص — فكانت كل خطوةٍ تُسجَّل مرتين، وتتضاعف مع كل ضغطة «استخلص»،
+   * فتخرج المهارة بخطواتٍ مكرّرة وعناوين من نوع «س حتى س».
+   */
+  const existing = event.clientKey ? session.events.find((candidate) => (candidate as { clientKey?: string }).clientKey === event.clientKey) : undefined;
+  if (existing) {
+    Object.assign(existing, { action: event.action, system: event.system, inputValue: event.inputValue, voiceNote: event.voiceNote, screenshotLabel: event.screenshotLabel });
+    return res.json({ success: true, session });
+  }
+  if (session.events.length >= 200) {
+    return res.status(409).json({ success: false, message: "بلغت الجلسة حدّها (200 حدث). رَكِّب المهارة أو ابدأ جلسة جديدة." });
+  }
   session.events.push(event);
 
   res.json({ success: true, session });
@@ -791,26 +847,31 @@ apiRouter.post("/teach/synthesize", async (req: Request, res: Response) => {
 
 // 4b. Approve & Codify a taught process into a versioned Skill
 apiRouter.post("/teach/codify", (req: Request, res: Response) => {
-  const { sessionId, title, answers } = req.body;
+  const { sessionId, title, answers } = req.body || {};
   /* معرّفٌ مجهول يُرفض — كان يُعاد إلى أول جلسة فيُركَّب من عملٍ غير المقصود. */
   const session = sessionId ? db.learningSessions.find((s) => s.id === sessionId) : db.learningSessions[0];
   if (!session || session.discoveredSteps.length === 0) {
     return res.status(400).json({ success: false, message: "لا توجد جلسة تعليم مكتملة يمكن اعتمادها" });
   }
+  /* الاعتماد مرة واحدة: ضغطتان كانتا تُنتجان مهارتين متطابقتين في عقل المؤسسة. */
+  if (session.status === "approved") {
+    return res.status(409).json({ success: false, message: "اعتُمدت مهارة هذه الجلسة من قبل." });
+  }
+  const skillTitle = typeof title === "string" ? title.trim().slice(0, 160) : "";
 
-  const id = `sk_taught_${Date.now()}`;
+  const id = `sk_taught_${Date.now()}_${randomUUID().slice(0, 6)}`;
   const now = new Date().toISOString().slice(0, 10);
   const rules = [...session.discoveredRules];
   if (answers && typeof answers === "object") {
     Object.entries(answers).forEach(([questionId, answer]) => {
-      if (typeof answer === "string" && answer.trim()) rules.push(`Clarification ${questionId}: ${answer.trim()}`);
+      if (typeof answer === "string" && answer.trim()) rules.push(`Clarification ${questionId.slice(0, 60)}: ${answer.trim().slice(0, 500)}`);
     });
   }
 
   const skill: Skill = {
     id,
     slug: id,
-    name: title || session.title || "مهارة جديدة متعلّمة",
+    name: skillTitle || session.title || "مهارة جديدة متعلّمة",
     nameEn: "Newly Taught Operational Skill",
     category: "تعلم مباشر",
     purpose: "مهارة تشغيلية تم استخلاصها من جلسة Teach Mode مصرح بها ثم اعتمادها بشريًا.",
@@ -883,17 +944,18 @@ apiRouter.post("/skills/:id/promote", requireRole("admin", "manager"), (req: Req
    * الترقية. هذا سقفٌ تجاري فوقه: باقة «بداية» لا تُشغّل طياراً آلياً مهما بلغت
    * موثوقية المهارة، والرسالة تقول ذلك صراحةً بدل أن تُرفض الترقية بلا سبب مفهوم.
    */
-  const ceiling = maxAutonomyLevel();
-  if (Number(targetLevel) > ceiling) {
-    return res.status(402).json({
-      success: false,
-      code: "PLAN_AUTONOMY_CEILING",
-      message: `باقتك الحالية تسمح حتى المستوى L${ceiling}. الترقية إلى L${targetLevel} تحتاج باقة أعلى.`,
-    });
-  }
+  /* صلاحية القيمة أولاً: «L99 تحتاج باقة أعلى» رسالةٌ مضلِّلة لقيمةٍ لا وجود لها أصلاً. */
   const level = Number(targetLevel);
   if (!Number.isInteger(level) || level < 0 || level > 6) {
     return res.status(400).json({ success: false, message: "مستوى الاستقلالية يجب أن يكون بين 0 و6." });
+  }
+  const ceiling = maxAutonomyLevel();
+  if (level > ceiling) {
+    return res.status(402).json({
+      success: false,
+      code: "PLAN_AUTONOMY_CEILING",
+      message: `باقتك الحالية تسمح حتى المستوى L${ceiling}. الترقية إلى L${level} تحتاج باقة أعلى.`,
+    });
   }
   const skill = db.skills.find((candidate) => candidate.id === req.params.id);
   if (!skill) return res.status(404).json({ success: false, message: "المهارة غير موجودة" });
@@ -1131,7 +1193,9 @@ apiRouter.get("/work/:id", (req: Request, res: Response) => {
 
 apiRouter.post("/work/:id/takeover", (req: Request, res: Response) => {
   const item = db.workItems.find((w) => w.id === req.params.id);
-  if (!item) return res.status(404).json({ success: false });
+  if (!item) return res.status(404).json({ success: false, message: "المعاملة غير متوفرة" });
+  /* مُستلَمة فعلاً: ضغطةٌ ثانية (أو موظفٌ ثانٍ) لا تُكرّر سطر الخطّ الزمني ولا سجلّ التدقيق. */
+  if (item.assignedMode === "human_takeover") return res.json({ success: true, item, unchanged: true });
 
   item.assignedMode = "human_takeover";
   item.timeline.unshift({
@@ -1158,7 +1222,8 @@ apiRouter.post("/work/:id/takeover", (req: Request, res: Response) => {
 
 apiRouter.post("/work/:id/resume-ai", (req: Request, res: Response) => {
   const item = db.workItems.find((w) => w.id === req.params.id);
-  if (!item) return res.status(404).json({ success: false });
+  if (!item) return res.status(404).json({ success: false, message: "المعاملة غير متوفرة" });
+  if (item.assignedMode === "ai") return res.json({ success: true, item, unchanged: true });
 
   item.assignedMode = "ai";
   item.timeline.unshift({
@@ -1208,6 +1273,20 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
   const appr = db.approvalRequests.find((a) => a.id === req.params.id);
   if (!appr) {
     return res.status(404).json({ success: false, message: "طلب الموافقة غير موجود" });
+  }
+  /*
+   * صلاحية المعتمِد من الطلب نفسه.
+   *
+   * السياسة تحدّد من يعتمد (استرداد الرسوم: «المدير العام أو المدير المالي»)، وكان المسار
+   * يكتفي بأن يكون المعتمِد مديراً أو مشرفاً — فيعتمد مديرُ قسمٍ ما اشترطت السياسة أعلى منه.
+   * «owner» في الطلب هو أعلى سلطةٍ في المؤسسة، ويقابلها حساب المشرف (أو مالك المنصة).
+   */
+  const needsAdmin = appr.requiredRole === "owner" || appr.requiredRole === "admin";
+  if (needsAdmin && !["admin", "owner"].includes(String(req.account?.role))) {
+    return res.status(403).json({
+      success: false, code: "APPROVER_ROLE",
+      message: "هذا الطلب تشترط سياسته اعتماد مشرف المؤسسة — لا يكفي دور «مدير».",
+    });
   }
   /* قرارٌ واحد لكل طلب: إعادة الاعتماد كانت تُعيد تنفيذ الإجراء على النظام الخارجي. */
   if (appr.status !== "pending") {
@@ -1363,6 +1442,11 @@ apiRouter.post("/simulator/message", requireRole("admin", "manager", "operator")
   if (typeof text !== "string" || !text.trim()) {
     return res.status(400).json({ success: false, message: "الرسالة فارغة." });
   }
+  if (text.length > 2000) {
+    return res.status(413).json({ success: false, message: "الرسالة طويلة جداً (الحدّ 2000 حرف)." });
+  }
+  /* المحادثة التجريبية تنمو مع كل رسالة وتُحفظ كاملة؛ نُبقي أحدث ٢٠٠ فقط. */
+  if (db.simulatorState.messages.length > 400) db.simulatorState.messages.splice(0, db.simulatorState.messages.length - 200);
   const userMsg = {
     id: `msg_${Date.now()}`,
     sender: "customer" as const,
@@ -1812,11 +1896,20 @@ apiRouter.get("/mcp/servers", (req: Request, res: Response) => {
  * عنوانٍ باسمها. وسجلُّ التدقيق يكتب اسمه — لكن بعد وقوع الفعل.
  */
 apiRouter.post("/mcp/servers", requireAuth, requireRole("admin"), (req: AuthenticatedRequest, res: Response) => {
-  const server = McpEngine.registerServer(req.body);
-  res.json({ success: true, server });
+  try {
+    const server = McpEngine.registerServer(req.body);
+    res.json({ success: true, server });
+  } catch (error) {
+    const status = Number((error as { status?: number })?.status) || 400;
+    res.status(status).json({ success: false, message: (error as Error).message, error: (error as Error).message });
+  }
 });
 
 apiRouter.delete("/mcp/servers/:id", requireAuth, requireRole("admin"), (req: AuthenticatedRequest, res: Response) => {
+  /* الخوادم المدمجة (self/simulated) ليست للحذف: حذفها يُسقط أدوات المؤسسة الأساسية بلا رجعة حتى إعادة التشغيل. */
+  const target = McpEngine.getServers().find((candidate) => candidate.id === req.params.id);
+  if (!target) return res.status(404).json({ success: false, message: "الخادم غير موجود." });
+  if (target.mode !== "declared") return res.status(409).json({ success: false, message: "لا يُحذف خادمٌ مدمج — يُحذف ما سجّلتَه أنت وحده." });
   const success = McpEngine.removeServer(req.params.id);
   res.json({ success });
 });

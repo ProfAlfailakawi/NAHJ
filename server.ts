@@ -1,4 +1,15 @@
+/*
+ * المنطقة الزمنية.
+ *
+ * أوقات سجلّ التدقيق وحالات العمل تُكتب من ساعة الخادم («اليوم، 03:36 ص»). والحاويات تعمل
+ * بتوقيت UTC افتراضاً، فكان مستخدمٌ في الكويت يرى كل وقتٍ متأخراً ثلاث ساعات عمّا حدث
+ * فعلاً — في السجلّ الذي يُرجَع إليه عند الخلاف. النظام كويتي (الدينار، الأرقام، القطاعات)،
+ * فالافتراضي توقيت الكويت، ويُغيَّر بـNAHJ_TIMEZONE لمن ينشر في منطقةٍ أخرى.
+ */
+process.env["TZ"] = process.env.NAHJ_TIMEZONE || "Asia/Kuwait";
+
 import express from "express";
+import compression from "compression";
 import path from "path";
 import fs from "fs";
 import { apiRouter, authRouter } from "./server/routes.ts";
@@ -87,6 +98,25 @@ async function startServer() {
    * زائرٌ من الإنترنت ترويسة X-Forwarded-For.
    */
   app.set("trust proxy", "loopback, linklocal, uniquelocal");
+
+  /*
+   * ضغط الاستجابات.
+   *
+   * صفحةٌ واحدة تجلب ثمانية ردودٍ JSON (العمل وحده 1.4MB، والتدقيق 0.8MB) وحزمة
+   * واجهةٍ تقارب 0.8MB — بلا ضغط. على اتصال هاتفٍ هذا هو الفرق بين فتحٍ في ثانيتين
+   * وفتحٍ في عشر، ومئات المستخدمين المتزامنين كانوا يشبعون الشبكة قبل المعالج.
+   * النص العربي المتكرّر يُضغط إلى نحو عُشره.
+   */
+  app.use(compression());
+
+  /*
+   * ردود الواجهة البرمجية خاصةٌ بصاحب الجلسة: لا تُخزَّن في متصفحٍ مشترك ولا وكيل.
+   * (المسارات العامة المقصود تخزينها — الأسعار والقطاعات — تضبط ترويستها بنفسها بعد هذا.)
+   */
+  app.use("/api", (_req, res, next) => {
+    res.setHeader("Cache-Control", "no-store");
+    next();
+  });
 
   // Conservative security response headers. No X-Frame-Options / frame-ancestors
   // so embedding in the AI Studio applet host keeps working.
@@ -265,6 +295,17 @@ async function startServer() {
     console.log(`[NAHJ] Server running on http://0.0.0.0:${PORT}`);
   });
 
+  /*
+   * مهلة الاتصالات الخاملة أطول من مهلة الوكيل.
+   *
+   * مهلة Node الافتراضية خمس ثوانٍ، وCaddy (وأي موازن حمل) يُبقي اتصاله بالخادم
+   * مفتوحاً دقائق ليعيد استعماله. فإذا أغلق Node الاتصال الخامل في اللحظة التي يرسل
+   * فيها الوكيل عليه طلباً جديداً، ردّ الوكيل 502 لمستخدمٍ لم يخطئ بشيء — وتتكرّر
+   * متقطعةً تحت الحمل فلا تُفهم. الحدّ الأعلى لـheadersTimeout يجب أن يزيد عن الأول.
+   */
+  server.keepAliveTimeout = 125_000;
+  server.headersTimeout = 130_000;
+
   // إيقاف نظيف: آخر لقطة تُكتب قبل الخروج فلا تضيع ثوانٍ من العمل.
   const shutdown = (signal: string) => {
     console.log(`[NAHJ] ${signal} received — flushing state.`);
@@ -287,6 +328,15 @@ async function startServer() {
       server: {
         middlewareMode: true,
         hmr: { server }, // Bind HMR to the Express server to avoid port 24678 conflicts
+        /*
+         * خادم التطوير يُقدّم ملفات المشروع كما هي: كان `GET /var/nahj.sqlite` يُنزّل قاعدة
+         * البيانات كاملةً (الحسابات ومُجزَّآت كلمات المرور وكل الحالة التشغيلية)، وكذلك
+         * كود الخادم والنسخ الاحتياطية. الإنتاج لا يتأثر (يخدم `dist` وحده)، لكن من يشغّل
+         * `npm run dev` على خادمٍ مكشوف يفتح بابها. فتُحجب هذه المسارات صراحةً.
+         */
+        fs: {
+          deny: [".env", ".env.*", "*.{crt,pem}", "**/.git/**", "**/var/**", "**/*.sqlite*", "**/backups/**", "**/server/**", "**/scripts/**", "**/server.ts"],
+        },
       },
       appType: "spa",
     });

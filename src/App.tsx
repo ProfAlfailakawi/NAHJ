@@ -28,7 +28,7 @@ import { DemoOwnerPreview } from "./components/views/DemoOwnerPreview";
 import { DemoBanner, type DemoSector } from "./components/DemoBanner";
 import { PeopleView } from "./components/views/PeopleView";
 import type { PromoteOptions } from "./components/views/SkillsView";
-import { api, ApiError, setApiLang, apiOrNull, authApi, SubscriptionBlockedError, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
+import { api, apiStrict, ApiError, setApiLang, apiOrNull, authApi, SubscriptionBlockedError, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
 import { LoginScreen } from "./components/LoginScreen";
 import { OrgSetupView } from "./components/OrgSetupView";
 import type { ApprovalRequest,AuditEvent,AutonomyLevel,Connector,LearningProposal,Organization,ShadowComparison,Skill,TestCase,User,WorkItem } from "./types";
@@ -123,6 +123,8 @@ export default function App(){
   // "setup" = لا يوجد أي حساب بعد، فالشاشة تُنشئ حسابك بدل أن تطلب الدخول.
   const [authState,setAuthState]=useState<"checking"|"setup"|"anonymous"|"authenticated">("checking");
   const [account,setAccount]=useState<{id:string;role:string}|null>(null);
+  /* الدور متاح لـloadAll فور تغيّر authState — قبل أن يُرسَم الـstate الجديد. */
+  const roleRef=useRef("");
   /*
    * حالة الترخيص تُحمَّل مع كل شيء آخر لا عند فتح شاشة الاشتراك وحدها: الشريط
    * التحذيري يجب أن يظهر لمن يعمل في «اليوم» أو «العمل»، لا لمن ذهب يتفقّد فاتورته.
@@ -155,6 +157,8 @@ export default function App(){
       setApprovalBusy(false); setTestingConnector(null);
       if(error instanceof SubscriptionBlockedError){ setToast({text:error.message,error:true}); window.setTimeout(()=>setToast(null),5200); void refreshBilling(); return }
       if(error instanceof UnauthorizedError){ setAuthState("anonymous"); return }
+      /* رفض الخادم له سببٌ مكتوب بالعربية (صلاحية، حُسم من قبل، مدخل ناقص): يُقال كما هو. */
+      if(error instanceof ApiError){ setToast({text:error.message,error:true}); window.setTimeout(()=>setToast(null),4200); return }
       setToast({text:lang==="ar"?"تعذّرت العملية. حاول مرة أخرى.":"Action failed. Try again.",error:true});
       window.setTimeout(()=>setToast(null),3200);
     }
@@ -202,7 +206,7 @@ export default function App(){
    * يدخل صاحب المنصة فلا يجد شاشته، ولا شيء يفسّر له لماذا.
    */
   const checkAuth=useCallback(async()=>{
-    try{ const me=await authApi.me(); setAccount({id:me.account.id,role:me.account.role}); setAuthState("authenticated"); return true; }
+    try{ const me=await authApi.me(); roleRef.current=me.account.role; setAccount({id:me.account.id,role:me.account.role}); setAuthState("authenticated"); return true; }
     catch{ /* لا جلسة — نفحص هل النظام مُهيَّأ أصلاً قبل عرض شاشة دخول لا تنفع. */ }
     try{
       const status=await authApi.status();
@@ -217,6 +221,8 @@ export default function App(){
   const loadAll=useCallback(async()=>{
     try{
       const health=await apiOrNull<{status:string}>("/health"); setServerLive(health?.status==="ok");
+      /* المسوّق يرى لوحته وحدها: كل ما عداها 403 له بالتصميم، فلا يُطلب. */
+      if(roleRef.current==="partner")return;
       void refreshBilling();
       const [context,learn,sk,wo,ap,co,au,an,gv,td,si,pr]=await Promise.all([
         apiOrNull<ContextResponse>("/context"),
@@ -252,6 +258,12 @@ export default function App(){
   },[]);
 
   useEffect(()=>{void refreshDemoConfig();void checkAuth()},[refreshDemoConfig,checkAuth]);
+  /* انتهاء الجلسة أثناء العمل (من أي شاشة): نعود إلى بوابة الدخول ونقول السبب. */
+  useEffect(()=>{
+    const onExpired=()=>{ setAuthState(prev=>prev==="authenticated"?"anonymous":prev); notify(lang==="ar"?"انتهت جلستك. سجّل الدخول من جديد.":"Your session ended. Please sign in again.",true) };
+    window.addEventListener("nahj:session-expired",onExpired);
+    return()=>window.removeEventListener("nahj:session-expired",onExpired);
+  },[lang,notify]);
   useEffect(()=>{if(authState==="authenticated")void loadAll()},[authState,loadAll]);
 
   /* لغة الواجهة تسبق كل طلب (الخادم يولّد نصوص تاريخ العرض بها)؛ وتبديلها وسط العرض يُعيد القراءة. */
@@ -313,7 +325,7 @@ export default function App(){
   };
 
   const resolve=guarded(async(proposalId:string,clarificationId:string,answer:string)=>{
-    const d=await apiOrNull<{proposal:LearningProposal}>("/learn/clarify",{method:"POST",body:JSON.stringify({proposalId,clarificationId,selectedAnswer:answer})});
+    const d=await apiStrict<{proposal:LearningProposal}>("/learn/clarify",{method:"POST",body:JSON.stringify({proposalId,clarificationId,selectedAnswer:answer})});
     if(d?.proposal)setProposals(v=>v.map(p=>p.id===proposalId?d.proposal:p));
     else setProposals(v=>v.map(p=>p.id===proposalId?{...p,status:"resolved",clarifications:p.clarifications?.map(c=>c.id===clarificationId?{...c,selectedAnswer:answer}:c)}:p));
     notify(lang==="ar"?"تم اعتماد القرار في عقل المؤسسة":"Decision verified in Company Brain");void refreshAudit();
@@ -328,16 +340,16 @@ export default function App(){
     catch(error){
       if(error instanceof ApiError&&error.status===409){notify(error.message,true);return}
       if(error instanceof ApiError&&error.status===402)throw new SubscriptionBlockedError(error.message);
-      if(error instanceof ApiError&&(error.status===401||error.status===403))throw new UnauthorizedError();
+      if(error instanceof ApiError&&(error.status===401||(error.status===403&&(error.payload as {code?:string}|null)?.code==="CSRF_INVALID")))throw new UnauthorizedError();
       throw error;
     }
     if(d?.success&&d.skill)setSkills(v=>v.map(s=>s.id===id?d.skill!:s));
     else{notify(d?.message||(lang==="ar"?"لم تُحدَّث الاستقلالية":"Autonomy not updated"),true);return}
     notify(lang==="ar"?"تم تحديث مستوى الاستقلالية":"Autonomy updated");void refreshAudit();void refreshAutopilot();
   });
-  const rollback=guarded(async(id:string,v:number)=>{const d=await apiOrNull<{success:boolean;message:string;skill?:Skill}>(`/skills/${id}/rollback`,{method:"POST",body:JSON.stringify({targetVersion:v})});if(d?.skill)setSkills(x=>x.map(s=>s.id===id?d.skill!:s));else setSkills(x=>x.map(s=>s.id===id?{...s,activeVersion:v}:s));notify(d?.message|| (lang==="ar"?`تم الرجوع إلى v${v}`:`Rolled back to v${v}`));void refreshAudit()});
-  const toggleSkill=guarded(async(id:string)=>{const d=await apiOrNull<{skill?:Skill;active?:boolean}>(`/skills/${id}/killswitch`,{method:"POST",body:"{}"});if(d?.skill)setSkills(x=>x.map(s=>s.id===id?d.skill!:s));else setSkills(x=>x.map(s=>s.id===id?{...s,killSwitchActive:!s.killSwitchActive}:s));notify(lang==="ar"?"تم تحديث حالة المهارة":"Skill state updated");void refreshAudit()});
-  const runPractice=guarded(async()=>{setPracticeBusy(true);const d=await apiOrNull<{testCases:TestCase[];passRate:number|null;passedCount:number;totalCount:number}>("/practice/run",{method:"POST",body:"{}"});if(d?.testCases)setPractice(d.testCases);setPracticeBusy(false);
+  const rollback=guarded(async(id:string,v:number)=>{const d=await apiStrict<{success:boolean;message:string;skill?:Skill}>(`/skills/${id}/rollback`,{method:"POST",body:JSON.stringify({targetVersion:v})});if(d?.skill)setSkills(x=>x.map(s=>s.id===id?d.skill!:s));else setSkills(x=>x.map(s=>s.id===id?{...s,activeVersion:v}:s));notify(d?.message|| (lang==="ar"?`تم الرجوع إلى v${v}`:`Rolled back to v${v}`));void refreshAudit()});
+  const toggleSkill=guarded(async(id:string)=>{const d=await apiStrict<{skill?:Skill;active?:boolean}>(`/skills/${id}/killswitch`,{method:"POST",body:"{}"});if(d?.skill)setSkills(x=>x.map(s=>s.id===id?d.skill!:s));else setSkills(x=>x.map(s=>s.id===id?{...s,killSwitchActive:!s.killSwitchActive}:s));notify(lang==="ar"?"تم تحديث حالة المهارة":"Skill state updated");void refreshAudit()});
+  const runPractice=guarded(async()=>{setPracticeBusy(true);const d=await apiStrict<{testCases:TestCase[];passRate:number|null;passedCount:number;totalCount:number}>("/practice/run",{method:"POST",body:"{}"});if(d?.testCases)setPractice(d.testCases);setPracticeBusy(false);
     /*
      * النتيجة تُقال كما هي، نجحت أو رسبت. كان المحرّك يُنجح الكل دائماً، فلم يكن
      * لهذا الإشعار معنى — والآن الرسوب وارد، وهو أهمّ ما يُقال للمستخدم.
@@ -345,19 +357,22 @@ export default function App(){
     notify(lang==="ar"
       ?(d?.passRate==null?"لا حالات اختبار معرَّفة — لم يجرِ تقييم":`اكتمل التقييم — اجتازت ${d.passedCount} من ${d.totalCount} (${d.passRate}%)`)
       :"Practice complete", Boolean(d&&d.passRate!==null&&d.passRate<100));void refreshAudit()});
-  const runShadow=guarded(async()=>{setShadowBusy(true);const d=await apiOrNull<{comparisons:ShadowComparison[];matchRate:number|null}>("/shadow/run",{method:"POST",body:"{}"});if(d?.comparisons)setShadow(d.comparisons);setShadowBusy(false);
+  const runShadow=guarded(async()=>{setShadowBusy(true);const d=await apiStrict<{comparisons:ShadowComparison[];matchRate:number|null}>("/shadow/run",{method:"POST",body:"{}"});if(d?.comparisons)setShadow(d.comparisons);setShadowBusy(false);
     /* النسبة قد تكون null بحقّ: لا حالة تحمل قراراً بشرياً يُقارَن به. */
     notify(lang==="ar"?(d?.matchRate==null?"لا حالات تحمل قراراً بشرياً — لم تجرِ مقارنة":`اكتملت المقارنة — توافق ${d.matchRate}%`):"Shadow comparison complete");void refreshAudit()});
-  const takeOver=guarded(async(id:string)=>{const d=await apiOrNull<{item:WorkItem}>(`/work/${id}/takeover`,{method:"POST",body:"{}"});if(d?.item)setWork(v=>v.map(w=>w.id===id?d.item:w));else setWork(v=>v.map(w=>w.id===id?{...w,assignedMode:"human_takeover"}:w));setActiveApproval(null);notify(lang==="ar"?"استلم الموظف الحالة":"Human takeover active");void refreshAudit()});
-  const resume=guarded(async(id:string)=>{const d=await apiOrNull<{item:WorkItem}>(`/work/${id}/resume-ai`,{method:"POST",body:"{}"});if(d?.item)setWork(v=>v.map(w=>w.id===id?d.item:w));else setWork(v=>v.map(w=>w.id===id?{...w,assignedMode:"ai"}:w));notify(lang==="ar"?"عاد التنفيذ إلى نهج":"NAHJ resumed");void refreshAudit()});
-  const decideApproval=guarded(async(id:string,decision:"approved"|"rejected",comments="")=>{setApprovalBusy(true);const d=await apiOrNull<{success:boolean}>(`/approvals/${id}/decide`,{method:"POST",body:JSON.stringify({decision,comments})});setApprovalBusy(false);
+  const takeOver=guarded(async(id:string)=>{const d=await apiStrict<{item:WorkItem}>(`/work/${id}/takeover`,{method:"POST",body:"{}"});if(d?.item)setWork(v=>v.map(w=>w.id===id?d.item:w));else setWork(v=>v.map(w=>w.id===id?{...w,assignedMode:"human_takeover"}:w));setActiveApproval(null);notify(lang==="ar"?"استلم الموظف الحالة":"Human takeover active");void refreshAudit()});
+  const resume=guarded(async(id:string)=>{const d=await apiStrict<{item:WorkItem}>(`/work/${id}/resume-ai`,{method:"POST",body:"{}"});if(d?.item)setWork(v=>v.map(w=>w.id===id?d.item:w));else setWork(v=>v.map(w=>w.id===id?{...w,assignedMode:"ai"}:w));notify(lang==="ar"?"عاد التنفيذ إلى نهج":"NAHJ resumed");void refreshAudit()});
+  const decideApproval=guarded(async(id:string,decision:"approved"|"rejected",comments="")=>{setApprovalBusy(true);let d:{success:boolean}|null=null;
+    try{ d=await apiStrict<{success:boolean}>(`/approvals/${id}/decide`,{method:"POST",body:JSON.stringify({decision,comments})}); }
+    catch(error){ setApprovalBusy(false); void refreshApprovals(); throw error }
+    setApprovalBusy(false);
     /* رفض الخادم (صلاحية، أو حُسم من قبل) لا يُعرض نجاحاً ولا يُعلَّم محلياً معتمداً. */
     if(!d?.success){await refreshApprovals();notify(lang==="ar"?"لم يُنفَّذ القرار — تحقّق من صلاحيتك أو أن الطلب لم يُحسم من قبل":"Decision not applied — check your permission or whether it was already decided",true);return;}
     await Promise.all([refreshApprovals(),refreshWork(),refreshSimulator(),refreshAudit()]);setActiveApproval(null);notify(decision==="approved"?(lang==="ar"?"تم الاعتماد والتنفيذ":"Approved & executed"):(lang==="ar"?"تم الرفض":"Rejected"))});
-  const testConnector=guarded(async(id:string)=>{setTestingConnector(id);const d=await apiOrNull<{connector:Connector}>(`/connections/${id}/test`,{method:"POST",body:"{}"});if(d?.connector)setConnectors(v=>v.map(c=>c.id===id?d.connector:c));setTestingConnector(null);notify(lang==="ar"?"الاتصال سليم":"Connection healthy");void refreshAudit()});
-  const simSend=guarded(async(text:string)=>{setSimBusy(true);const d=await apiOrNull<{state:SimulatorState}>("/simulator/message",{method:"POST",body:JSON.stringify({text})});if(d?.state){setSim(d.state);/* طلب الموافقة الذي فتحته المحادثة يُحمَّل ليظهر في البوابة والتنبيهات. */if(d.state.approvalStatus==="pending")await loadAll();}else setSim(v=>({...v,messages:[...v.messages,{id:`c_${Date.now()}`,sender:"customer",text,timestamp:"الآن"},{id:`a_${Date.now()}`,sender:"ai",text:lang==="ar"?"وصلت رسالتك. أتابعها وفق الإجراء المعتمد.":"Got it. I’m following the verified process.",timestamp:"الآن"}]}));setSimBusy(false)});
-  const simReset=guarded(async()=>{const d=await apiOrNull<{state:SimulatorState}>("/simulator/reset",{method:"POST",body:"{}"});setSim(d?.state||fallbackSimulator)});
-  const simUpload=guarded(async()=>{setSimBusy(true);const d=await apiOrNull<{state:SimulatorState}>("/simulator/upload-doc",{method:"POST",body:"{}"});if(d?.state)setSim(d.state);await Promise.all([refreshApprovals(),refreshWork()]);setSimBusy(false);notify(lang==="ar"?"تم التحقق من المستند":"Document verified")});
+  const testConnector=guarded(async(id:string)=>{setTestingConnector(id);const d=await apiStrict<{connector:Connector}>(`/connections/${id}/test`,{method:"POST",body:"{}"});if(d?.connector)setConnectors(v=>v.map(c=>c.id===id?d.connector:c));setTestingConnector(null);notify(lang==="ar"?"الاتصال سليم":"Connection healthy");void refreshAudit()});
+  const simSend=guarded(async(text:string)=>{setSimBusy(true);const d=await apiStrict<{state:SimulatorState}>("/simulator/message",{method:"POST",body:JSON.stringify({text})});if(d?.state){setSim(d.state);/* طلب الموافقة الذي فتحته المحادثة يُحمَّل ليظهر في البوابة والتنبيهات. */if(d.state.approvalStatus==="pending")await loadAll();}else setSim(v=>({...v,messages:[...v.messages,{id:`c_${Date.now()}`,sender:"customer",text,timestamp:"الآن"},{id:`a_${Date.now()}`,sender:"ai",text:lang==="ar"?"وصلت رسالتك. أتابعها وفق الإجراء المعتمد.":"Got it. I’m following the verified process.",timestamp:"الآن"}]}));setSimBusy(false)});
+  const simReset=guarded(async()=>{const d=await apiStrict<{state:SimulatorState}>("/simulator/reset",{method:"POST",body:"{}"});setSim(d?.state||fallbackSimulator)});
+  const simUpload=guarded(async()=>{setSimBusy(true);const d=await apiStrict<{state:SimulatorState}>("/simulator/upload-doc",{method:"POST",body:"{}"});if(d?.state)setSim(d.state);await Promise.all([refreshApprovals(),refreshWork()]);setSimBusy(false);notify(lang==="ar"?"تم التحقق من المستند":"Document verified")});
   const emergency=guarded(async(reason:string)=>{
     setPauseBusy(true);
     const path=paused?"/autopilot/resume":"/autopilot/emergency-pause";
@@ -382,8 +397,8 @@ export default function App(){
 
   if(authState==="checking")return <div className="boot-gate" role="status" aria-busy="true" aria-label={lang==="ar"?"جارٍ التحقق":"Checking session"}><NahjMark size={56}/></div>;
   if(authState==="anonymous"||authState==="setup")
-    return <LoginScreen lang={lang} needsSetup={authState==="setup"} onAuthenticated={()=>void checkAuth()}
-      demoEnabled={demoEnabled} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()}/>;
+    return <><LoginScreen lang={lang} needsSetup={authState==="setup"} onAuthenticated={()=>void checkAuth()}
+      demoEnabled={demoEnabled} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()}/><ToastRegion toast={toast}/></>;
 
   /*
    * حساب المسوّق سطحٌ واحد.

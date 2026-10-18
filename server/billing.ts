@@ -66,6 +66,7 @@ export type InvoiceStatus = "draft" | "issued" | "partially_paid" | "paid" | "ov
 
 export type InvoiceKind = "subscription" | "setup" | "overage" | "adjustment" | "credit_note";
 
+export const PAYMENT_METHODS = ["bank_transfer", "knet", "card", "cash", "cheque", "online", "credit"] as const;
 export type PaymentMethod = "bank_transfer" | "knet" | "card" | "cash" | "cheque" | "online" | "credit";
 
 /** حدود الباقة. `null` تعني بلا حدّ. */
@@ -853,14 +854,26 @@ export function recordPayment(input: RecordPaymentInput, actor = "system"): { pa
     throw Object.assign(new Error(`الدفعة تتجاوز المتبقّي على الفاتورة (${formatMoney(invoice.total - invoice.amountPaid, invoice.currency)}).`), { status: 400 });
   }
 
+  /* طريقة دفعٍ مجهولة كانت تُحفظ كما وردت ثم تظهر في التقارير والتصدير؛ وتاريخٌ غير صالح كان يُكسر به الدفتر. */
+  const method = (input.method || "bank_transfer") as PaymentMethod;
+  if (!PAYMENT_METHODS.includes(method)) {
+    throw Object.assign(new Error(`طريقة الدفع غير معروفة: ${String(input.method).slice(0, 40)}.`), { status: 400 });
+  }
+  let paidAt = nowIso();
+  if (input.paidAt !== undefined && input.paidAt !== null && String(input.paidAt) !== "") {
+    const parsed = new Date(String(input.paidAt));
+    if (Number.isNaN(parsed.getTime())) throw Object.assign(new Error("تاريخ الدفع غير صالح."), { status: 400 });
+    paidAt = parsed.toISOString();
+  }
+
   const payment: Payment = {
     id: `pay_${randomUUID()}`,
     invoiceId: invoice?.id ?? null,
     amount,
     currency,
-    method: (input.method || "bank_transfer") as PaymentMethod,
+    method,
     reference: String(input.reference || "").slice(0, 120),
-    paidAt: input.paidAt || nowIso(),
+    paidAt,
     recordedBy: actor,
     note: String(input.note || "").slice(0, 500),
   };

@@ -39,6 +39,14 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
   const [ownPassword, setOwnPassword] = useState({ current: "", next: "" });
   /* كلمة المرور المؤقتة مخفية افتراضاً — تُكشف بزرّ، لا تُعرض لمن يمرّ خلف الشاشة. */
   const [showTemp, setShowTemp] = useState(false);
+  /*
+   * القوائم الكبيرة: مؤسسة بمئات الحسابات كانت تُرسَم كلها دفعة واحدة (آلاف العقد
+   * وتمرير لا ينتهي). تُرسَم دفعةً من خمسين، ويُضيَّق بالبحث والدور.
+   */
+  const PAGE = 50;
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [shown, setShown] = useState(PAGE);
 
   const load = useCallback(async () => {
     if (!isAdmin) { setLoading(false); return; }
@@ -52,6 +60,14 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
   }, [isAdmin, ar, notify]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { setShown(PAGE); }, [query, roleFilter]);
+
+  const filtered = React.useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return accounts.filter(account =>
+      (roleFilter === "all" || account.role === roleFilter) &&
+      (!needle || account.name.toLowerCase().includes(needle) || account.email.toLowerCase().includes(needle)));
+  }, [accounts, query, roleFilter]);
 
   /* كلمة مرور مقترحة تُحقق الشروط، حتى لا يخترع المشرف واحدة ضعيفة. */
   const suggestPassword = () => {
@@ -190,10 +206,24 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
             <h3><Users /> {ar ? "الحسابات" : "Accounts"} <small>{accounts.length}</small></h3>
             {loading ? <p className="accounts-empty">{ar ? "جارٍ التحميل..." : "Loading..."}</p> : null}
             {!loading && !accounts.length ? <p className="accounts-empty">{ar ? "لا حسابات." : "No accounts."}</p> : null}
+            {accounts.length > 8 && (
+              <div className="accounts-filter" role="search">
+                <input type="search" value={query} onChange={e => setQuery(e.target.value)} maxLength={120}
+                  aria-label={ar ? "بحث في الحسابات بالاسم أو البريد" : "Search accounts by name or email"}
+                  placeholder={ar ? "ابحث بالاسم أو البريد" : "Search by name or email"} />
+                <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} aria-label={ar ? "تصفية بالدور" : "Filter by role"}>
+                  <option value="all">{ar ? "كل الأدوار" : "All roles"}</option>
+                  {[...ROLES, "owner"].map(role => <option key={role} value={role}>{roleLabel(role, ar)}</option>)}
+                </select>
+              </div>
+            )}
+            {!loading && accounts.length > 0 && !filtered.length ? <p className="accounts-empty">{ar ? "لا حساب يطابق البحث." : "No account matches."}</p> : null}
             <div className="accounts-rows">
-              {accounts.map(account => {
+              {filtered.slice(0, shown).map(account => {
                 const isSelf = account.id === currentAccountId;
                 const busy = busyId === account.id;
+                /* حساب مالك المنصة لا يُغيَّر من هنا أبداً (يرفضه الخادم)؛ نُظهره كما هو لا كأنه «مشرف». */
+                const isOwnerAccount = account.role === "owner";
                 return (
                   <article key={account.id} className={account.status === "ACTIVE" ? "" : "is-suspended"}>
                     <div className="accounts-identity">
@@ -212,21 +242,23 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
                     <div className="accounts-controls">
                       <select
                         value={account.role}
-                        disabled={isSelf || busy}
+                        disabled={isSelf || busy || isOwnerAccount}
+                        aria-label={ar ? `دور ${account.name}` : `Role of ${account.name}`}
                         title={isSelf ? (ar ? "لا يمكنك تغيير دورك" : "You cannot change your own role") : undefined}
                         onChange={e => void guard(account.id, async () => { await accountsApi.update(account.id, { role: e.target.value }); })}
                       >
+                        {isOwnerAccount && <option value="owner">{roleLabel("owner", ar)}</option>}
                         {ROLES.map(role => <option key={role} value={role}>{roleLabel(role, ar)}</option>)}
                       </select>
 
-                      <button type="button" disabled={isSelf || busy}
+                      <button type="button" disabled={isSelf || busy || isOwnerAccount}
                         onClick={() => void guard(account.id, async () => {
                           await accountsApi.update(account.id, { status: account.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE" });
                         })}>
                         {account.status === "ACTIVE" ? (ar ? "تعليق" : "Suspend") : (ar ? "تفعيل" : "Activate")}
                       </button>
 
-                      <button type="button" disabled={busy} title={ar ? "إصدار كلمة مرور مؤقتة" : "Issue a temporary password"}
+                      <button type="button" disabled={busy || (isOwnerAccount && !isSelf)} title={ar ? "إصدار كلمة مرور مؤقتة" : "Issue a temporary password"}
                         onClick={() => {
                           const next = suggestPassword();
                           void guard(account.id, async () => {
@@ -237,7 +269,7 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
                         <KeyRound /> {ar ? "كلمة مؤقتة" : "Temp password"}
                       </button>
 
-                      <button type="button" disabled={busy || !account.activeSessions}
+                      <button type="button" disabled={busy || !account.activeSessions || (isOwnerAccount && !isSelf)}
                         title={ar ? "إنهاء كل جلساته" : "End all its sessions"}
                         onClick={() => void guard(account.id, async () => { await accountsApi.revokeSessions(account.id); })}>
                         <LogOut />
@@ -247,6 +279,11 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
                 );
               })}
             </div>
+            {filtered.length > shown && (
+              <button type="button" className="accounts-more" onClick={() => setShown(n => n + PAGE)}>
+                {ar ? `عرض المزيد (${filtered.length - shown} متبقٍّ)` : `Show more (${filtered.length - shown} left)`}
+              </button>
+            )}
           </section>
         </>
       )}

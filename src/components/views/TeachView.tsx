@@ -2,14 +2,14 @@ import React,{useEffect,useState} from "react";
 import { AudioLines, Check, CircleStop, FileCheck2, GraduationCap, Mic, Mic2, MicOff, Plus, Sparkles, WandSparkles } from "lucide-react";
 import { useDictation } from "../../lib/dictation";
 import type { SkillStep } from "../../types";
-import { apiOrNull } from "../../lib/api";
+import { apiOrNull, apiStrict, ApiError } from "../../lib/api";
 import { Dt, PageHeader } from "../Primitives";
 import { TeachStageVisual } from "../Visuals";
 import { DnaStepper, type DnaStepState } from "../dna";
 
 type EventRow={id:string;time:string;action:string;system:string;note?:string};
 type Synthesis={steps:SkillStep[];rules:string[];questions:{id:string;question:string;answered?:boolean}[]};
-type Props={lang:"ar"|"en";onSkillCodified:(skill?:unknown)=>void;onNotify:(message:string)=>void};
+type Props={lang:"ar"|"en";onSkillCodified:(skill?:unknown)=>void;onNotify:(message:string,error?:boolean)=>void};
 
 /*
  * المثال الأول يأتي من قطاع المؤسسة (`/teach/sample`) — لا من مدرسةٍ مكتوبة هنا.
@@ -50,44 +50,66 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
     return ()=>{alive=false};
   },[]);
 
+  /* سبب الفشل كما قاله الخادم إن قاله، وإلا جملةٌ عامة. */
+  const reason=(error:unknown,fallback:string)=>error instanceof ApiError&&error.message?error.message:fallback;
+
   const ensureSession=async()=>{
     if(sessionId)return sessionId;
-    const data=await apiOrNull<{success:boolean;session:{id:string}}>("/teach/start",{method:"POST",body:JSON.stringify({title})});
-    const id=data?.session?.id || `local_${Date.now()}`;
+    const data=await apiStrict<{success:boolean;session:{id:string}}>("/teach/start",{method:"POST",body:JSON.stringify({title})});
+    const id=data.session.id;
     setSessionId(id); return id;
   };
 
   const toggleRecording=async()=>{
-    if(!recording){await ensureSession();setRecording(true);onNotify(ar?"بدأت جلسة التعليم المصرّح بها":"Authorized teaching session started");}
+    if(!recording){
+      try{ await ensureSession(); }
+      catch(error){ onNotify(reason(error,ar?"تعذّر بدء جلسة التعليم":"Could not start the session"),true); return; }
+      setRecording(true);onNotify(ar?"بدأت جلسة التعليم المصرّح بها":"Authorized teaching session started");
+    }
     else setRecording(false);
   };
 
+  /* الحدث يُرسَل بمفتاحه: إعادة إرساله (مع شرحه الصوتي) تحدّثه عند الخادم ولا تُكرّره. */
+  const sendEvent=(id:string,ev:EventRow)=>apiStrict("/teach/record-event",{method:"POST",body:JSON.stringify({sessionId:id,eventKey:ev.id,action:ev.action,system:ev.system,voiceNote:ev.note})});
+
   const addEvent=async()=>{
-    if(!newAction.trim())return;
-    const id=await ensureSession();
-    const ev:EventRow={id:`ev_${Date.now()}`,time:new Date().toLocaleTimeString("ar-KW-u-nu-latn",{hour:"2-digit",minute:"2-digit"}),action:newAction,system:ar?"يدوي":"Manual"};
+    const action=newAction.trim();
+    if(!action)return;
+    const ev:EventRow={id:`ev_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,time:new Date().toLocaleTimeString("ar-KW-u-nu-latn",{hour:"2-digit",minute:"2-digit"}),action,system:ar?"يدوي":"Manual"};
     setEvents(v=>[...v,ev]); setNewAction("");
-    if(!id.startsWith("local_")) await apiOrNull("/teach/record-event",{method:"POST",body:JSON.stringify({sessionId:id,action:ev.action,system:ev.system})});
+    /* بترتيب الشاشة: ما قبلها من خطوات (كالمثال الجاهز) يصل أولاً، وإلا اختلف ترتيب المهارة عمّا يراه المعلِّم. */
+    try{ const id=await ensureSession(); for(const earlier of [...events,ev]) await sendEvent(id,earlier); }
+    /* الخطوة تبقى في القائمة وتُرسَل ثانيةً عند الاستخلاص — لا تضيع بسبب انقطاعٍ عابر. */
+    catch(error){ onNotify(reason(error,ar?"تعذّر حفظ الخطوة الآن — ستُرسَل عند الاستخلاص":"Could not save the step now — it will be sent on synthesis"),true); }
   };
 
   const synthesize=async()=>{
+    if(busy)return;
     setBusy(true);
-    const id=await ensureSession();
-    if(!id.startsWith("local_")){
-      for(const ev of events){await apiOrNull("/teach/record-event",{method:"POST",body:JSON.stringify({sessionId:id,action:ev.action,system:ev.system,voiceNote:ev.note})});}
-    }
-    const data=await apiOrNull<{steps:SkillStep[];rules:string[];questions:{id:string;question:string}[]}>("/teach/synthesize",{method:"POST",body:JSON.stringify({sessionId:id})});
-    setRecording(false);setBusy(false);
-    /* لا مهارةٌ بديلة مكتوبة سلفاً حين يفشل الاستخلاص — يُقال إنه فشل. */
-    if(!data||!Array.isArray(data.steps)){onNotify(ar?"تعذّر استخلاص المهارة — أضف خطوات أوضح وحاول مجدداً":"Could not synthesize — add clearer steps and retry");return;}
-    setResult({steps:data.steps,rules:data.rules||[],questions:data.questions||[]});
-    onNotify(ar?"نهج استخلص المهارة ووجد أسئلة قبل الاعتماد":"NAHJ synthesized the skill and found open questions");
+    try{
+      const id=await ensureSession();
+      for(const ev of events) await sendEvent(id,ev);
+      const data=await apiStrict<{success?:boolean;message?:string;steps:SkillStep[];rules:string[];questions:{id:string;question:string}[]}>("/teach/synthesize",{method:"POST",body:JSON.stringify({sessionId:id})});
+      setRecording(false);
+      /* لا مهارةٌ بديلة مكتوبة سلفاً حين يفشل الاستخلاص — يُقال إنه فشل. */
+      if(!data||!Array.isArray(data.steps)||data.success===false){onNotify(data?.message||(ar?"تعذّر استخلاص المهارة — أضف خطوات أوضح وحاول مجدداً":"Could not synthesize — add clearer steps and retry"),true);return;}
+      setResult({steps:data.steps,rules:data.rules||[],questions:data.questions||[]});
+      onNotify(ar?"نهج استخلص المهارة ووجد أسئلة قبل الاعتماد":"NAHJ synthesized the skill and found open questions");
+    }catch(error){
+      onNotify(reason(error,ar?"تعذّر استخلاص المهارة — أضف خطوات أوضح وحاول مجدداً":"Could not synthesize — add clearer steps and retry"),true);
+    }finally{ setBusy(false); }
   };
 
   const codify=async()=>{
+    if(busy||codified)return;
     setBusy(true);
-    const data=await apiOrNull<{success:boolean;skill?:unknown}>("/teach/codify",{method:"POST",body:JSON.stringify({sessionId,title,answers})});
-    setCodified(true);setBusy(false);onSkillCodified(data?.skill);onNotify(ar?"دخلت المهارة عقل المؤسسة":"Skill added to Company Brain");
+    try{
+      const data=await apiStrict<{success:boolean;skill?:unknown}>("/teach/codify",{method:"POST",body:JSON.stringify({sessionId,title,answers})});
+      setCodified(true);onSkillCodified(data?.skill);onNotify(ar?"دخلت المهارة عقل المؤسسة":"Skill added to Company Brain");
+    }catch(error){
+      /* فشل الاعتماد لا يُعرض نجاحاً: المهارة لم تدخل العقل. */
+      onNotify(reason(error,ar?"تعذّر اعتماد المهارة. حاول مجدداً.":"Could not approve the skill. Try again."),true);
+    }finally{ setBusy(false); }
   };
 
   return <div className="page-enter">

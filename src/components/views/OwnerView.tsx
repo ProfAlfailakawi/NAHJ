@@ -622,11 +622,11 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
         <div className="invoice-lines">
           {invoiceDraft.lines.map((line, index) => (
             <div key={index} className="invoice-line-row">
-              <input placeholder="وصف البند" value={line.description}
+              <input aria-label="وصف البند" placeholder="وصف البند" value={line.description}
                 onChange={event => setInvoiceDraft(v => ({ ...v, lines: v.lines.map((item, i) => i === index ? { ...item, description: event.target.value } : item) }))} />
-              <input placeholder="الكمية" inputMode="numeric" value={line.quantity}
+              <input aria-label="الكمية" placeholder="الكمية" inputMode="numeric" value={line.quantity}
                 onChange={event => setInvoiceDraft(v => ({ ...v, lines: v.lines.map((item, i) => i === index ? { ...item, quantity: event.target.value } : item) }))} />
-              <input placeholder={`سعر الوحدة (${currency})`} inputMode="decimal" value={line.unitAmount}
+              <input aria-label={`سعر الوحدة (${currency})`} placeholder={`سعر الوحدة (${currency})`} inputMode="decimal" value={line.unitAmount}
                 onChange={event => setInvoiceDraft(v => ({ ...v, lines: v.lines.map((item, i) => i === index ? { ...item, unitAmount: event.target.value } : item) }))} />
               <button type="button" className="icon-button" disabled={invoiceDraft.lines.length === 1}
                 onClick={() => setInvoiceDraft(v => ({ ...v, lines: v.lines.filter((_, i) => i !== index) }))} aria-label="احذف البند"><X /></button>
