@@ -166,6 +166,8 @@ export interface LearningSession {
   startedAt: string;
   status: 'recording' | 'synthesized' | 'approved';
   teacherName: string;
+  /** صاحب الجلسة (معرّف حسابه). الجلسات القديمة بلا صاحب تبقى مشتركة. */
+  ownerId?: string;
   events: TeachEvent[];
   discoveredSteps: SkillStep[];
   discoveredRules: string[];
@@ -208,6 +210,8 @@ export interface ApprovalRequest {
   riskLevel: RiskLevel;
   requiredRole: UserRole;
   requestedAt: string;
+  /** من فتح الطلب (معرّف حسابه) — ليُحدَّث محادثته هو عند حسم الطلب. */
+  requestedBy?: string;
   status: 'pending' | 'approved' | 'rejected';
   decidedBy?: string;
   decidedAt?: string;
