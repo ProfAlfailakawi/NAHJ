@@ -41,6 +41,14 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
+    /*
+     * جلسةٌ انتهت أثناء العمل: تُعلَن للتطبيق كله مرة واحدة. كانت الشاشات التي تستعمل
+     * `api` مباشرة (الاشتراك، المالك، الحسابات…) تعرض خطأً عاماً والمستخدم يظنّ أن
+     * الزرّ معطّل، بينما الحلّ الوحيد أن يدخل من جديد.
+     */
+    if (response.status === 401 && typeof window !== "undefined" && !["/auth/login", "/auth/setup", "/auth/status", "/auth/me"].includes(path)) {
+      window.dispatchEvent(new Event("nahj:session-expired"));
+    }
     /* رسالة الخادم العربية إن وُجدت (message أو error)، وإلا جملة عربية بدل نصٍّ تقني إنجليزي. */
     const body = payload && typeof payload === "object" ? (payload as { message?: unknown; error?: unknown }) : null;
     const arabicUi = typeof document === "undefined" || document.documentElement.lang !== "en";
@@ -77,11 +85,46 @@ export async function apiOrNull<T>(path: string, init?: RequestInit): Promise<T 
   try {
     return await api<T>(path, init);
   } catch (error) {
-    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) throw new UnauthorizedError();
+    /*
+     * 401 ورمز CSRF المنتهي وحدهما يعنيان «الجلسة انتهت».
+     *
+     * كان كل 403 يُعامل كذلك، فأي رفضِ صلاحيةٍ عادي (مسوّق يُطلب منه سطح تشغيلي،
+     * أو مشاهِد يصل نقطةً للمشرف) كان يطرد صاحبه إلى شاشة الدخول وهو ما يزال
+     * مسجَّلاً — فلا يستطيع المسوّق بلوغ لوحته أصلاً.
+     */
+    if (error instanceof ApiError) {
+      const code = error.payload && typeof error.payload === "object" ? (error.payload as { code?: unknown }).code : undefined;
+      if (error.status === 401 || (error.status === 403 && (code === "CSRF_INVALID" || code === "AUTH_REQUIRED"))) throw new UnauthorizedError();
+      /* رفض صلاحية: القراءة تُبتلع (الشاشة تعرض ما تملكه)، أما الكتابة فتُرفع ليُقال سببها ولا يُدّعى نجاحها محلياً. */
+      if (error.status === 403) {
+        if (String(init?.method || "GET").toUpperCase() === "GET") return null;
+        throw error;
+      }
+    }
     // 402 تعني «ادفع»، وهي رفضٌ نهائي لا تعذّرٌ مؤقت — تُرفع ولا تُبتلع.
     if (error instanceof ApiError && error.status === 402) throw new SubscriptionBlockedError(error.message);
     console.warn(`[NAHJ] API fallback for ${path}`, error);
     return null;
+  }
+}
+
+/**
+ * طلبٌ يُغيّر شيئاً ويجب ألّا يُدّعى نجاحه.
+ *
+ * `apiOrNull` يبتلع كل فشلٍ إلا الجلسة والاشتراك ويُعيد `null`، وبعض المسارات تقرأ
+ * `null` على أنه «الخادم بعيد، طبّق محلياً» فتعرض نجاحاً لم يقع (استلام حالة، اعتماد
+ * سؤال، اختبار موصل، رسالة محادثة ...). هذا يرفع كل فشلٍ بسببه الذي قاله الخادم.
+ */
+export async function apiStrict<T>(path: string, init?: RequestInit): Promise<T> {
+  try {
+    return await api<T>(path, init);
+  } catch (error) {
+    if (error instanceof ApiError) {
+      const code = error.payload && typeof error.payload === "object" ? (error.payload as { code?: unknown }).code : undefined;
+      if (error.status === 401 || (error.status === 403 && (code === "CSRF_INVALID" || code === "AUTH_REQUIRED"))) throw new UnauthorizedError();
+      if (error.status === 402) throw new SubscriptionBlockedError(error.message);
+    }
+    throw error;
   }
 }
 

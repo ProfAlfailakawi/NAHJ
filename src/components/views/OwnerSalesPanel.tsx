@@ -21,10 +21,17 @@ const STATUS_TONE: Record<LeadStatus, string> = { new: "sky", contacted: "amber"
 
 export function OwnerSalesPanel({ notify }: { notify: (message: string, error?: boolean) => void }) {
   const [leads, setLeads] = useState<Lead[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [sectors, setSectors] = useState<Sector[]>([]);
+  /* القائمة الطويلة: تصفية بالحالة ودفعاتٌ من ثلاثين — كان ما بعد أول خمسين طلباً (ولو جديداً) لا يُرى أبداً. */
+  const [filter, setFilter] = useState<"all" | LeadStatus>("all");
+  const [shown, setShown] = useState(30);
 
   const loadLeads = useCallback(() => {
-    api<{ leads: Lead[] }>("/owner/leads").then(data => setLeads(data.leads)).catch(() => setLeads([]));
+    api<{ leads: Lead[] }>("/owner/leads")
+      .then(data => { setLeads(data.leads); setLoadFailed(false); })
+      /* فشل التحميل لا يُعرض «لا طلبات»: صاحب المنصة يظنّ أن لا أحد طلب عرضاً. */
+      .catch(() => { setLoadFailed(true); setLeads(current => current ?? []); });
   }, []);
   useEffect(() => { loadLeads(); }, [loadLeads]);
   useEffect(() => {
@@ -50,18 +57,30 @@ export function OwnerSalesPanel({ notify }: { notify: (message: string, error?: 
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const fresh = leads?.filter(lead => lead.status === "new").length || 0;
+  const visible = (leads || []).filter(lead => filter === "all" || lead.status === filter);
+  const countOf = (status: LeadStatus) => (leads || []).filter(lead => lead.status === status).length;
 
   return (
     <>
       <section className="surface-strong owner-block">
         <SectionTitle title="طلبات العرض" icon={<Inbox />} meta={leads ? (fresh ? `${fresh} جديد` : `${leads.length} طلب`) : ""} />
+        {loadFailed && (
+          <p className="owner-hint" role="alert">تعذّر تحميل الطلبات. <button type="button" className="btn-secondary" onClick={loadLeads}>أعِد المحاولة</button></p>
+        )}
         {!leads ? (
           <p className="owner-hint">جارٍ التحميل...</p>
-        ) : leads.length === 0 ? (
+        ) : leads.length === 0 && loadFailed ? null : leads.length === 0 ? (
           <p className="owner-hint">لا طلبات بعد. تصل هنا من نموذج «اطلب عرضاً» في الصفحة الرئيسية، ويُرسل كل طلبٍ إلى بريدك إن رُبط البريد.</p>
         ) : (
           <div className="lead-list">
-            {leads.slice(0, 50).map(lead => (
+            <div className="lead-filter" role="group" aria-label="تصفية الطلبات بالحالة">
+              <button type="button" className="btn-secondary" aria-pressed={filter === "all"} onClick={() => { setFilter("all"); setShown(30); }}>الكل ({leads.length})</button>
+              {(Object.keys(STATUS_AR) as LeadStatus[]).map(status => (
+                <button key={status} type="button" className="btn-secondary" aria-pressed={filter === status} onClick={() => { setFilter(status); setShown(30); }}>{STATUS_AR[status]} ({countOf(status)})</button>
+              ))}
+            </div>
+            {visible.length === 0 && <p className="owner-hint">لا طلبات بهذه الحالة.</p>}
+            {visible.slice(0, shown).map(lead => (
               <article key={lead.id} className={`lead-card status-${lead.status}`}>
                 <div className="lead-head">
                   <strong>{lead.organization}</strong>
@@ -71,7 +90,7 @@ export function OwnerSalesPanel({ notify }: { notify: (message: string, error?: 
                   <span>{lead.name}</span>
                   <span>{sectorName(lead.sector)}</span>
                   <span className="mono" dir="ltr">{lead.contact}</span>
-                  <span>{new Date(lead.createdAt).toLocaleString("ar-KW-u-nu-latn")}</span>
+                  <span>{new Date(lead.createdAt).toLocaleString("ar-KW-u-nu-latn", { dateStyle: "medium", timeStyle: "short" })}</span>
                 </div>
                 {lead.message && <p>{lead.message}</p>}
                 <div className="lead-actions" role="group" aria-label="حالة الطلب">
@@ -81,6 +100,9 @@ export function OwnerSalesPanel({ notify }: { notify: (message: string, error?: 
                 </div>
               </article>
             ))}
+            {visible.length > shown && (
+              <button type="button" className="btn-secondary" onClick={() => setShown(n => n + 30)}>عرض المزيد ({visible.length - shown} متبقٍّ)</button>
+            )}
           </div>
         )}
       </section>

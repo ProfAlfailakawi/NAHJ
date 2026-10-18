@@ -156,6 +156,8 @@ export interface TeachEvent {
   inputValue?: string;
   voiceNote?: string;
   screenshotLabel?: string;
+  /** مفتاح الحدث عند العميل — يجعل إعادة الإرسال تحديثاً لا تكراراً. */
+  clientKey?: string;
 }
 
 export interface LearningSession {

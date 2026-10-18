@@ -198,12 +198,14 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
   const [exportSummary, setExportSummary] = useState<ExportSummary | null>(null);
 
   useEffect(() => {
+    /* التصدير للمشرف والمدير وحدهما (الخادم يردّ 403 لغيرهما) — فلا يُطلب من الأدوار الأدنى. */
+    if (!canPay) { setExportSummary(null); return; }
     let alive = true;
     archiveApi.summary()
       .then(summary => { if (alive) setExportSummary(summary); })
       .catch(() => { if (alive) setExportSummary(null); });
     return () => { alive = false; };
-  }, []);
+  }, [canPay]);
 
   useEffect(() => {
     let alive = true;
