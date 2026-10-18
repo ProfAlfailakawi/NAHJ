@@ -130,6 +130,18 @@ export function accountCount() {
   return Number(row?.count ?? 0);
 }
 
+/**
+ * المقاعد المستهلَكة من باقة المؤسسة: طاقمها الفعلي وحده.
+ *
+ * مالك المنصة (البائع) والمسوّقون (وسطاء خارجيون) ليسوا موظفي المؤسسة المشترية،
+ * وكان عدّهم يستهلك مقاعدها المدفوعة ويمنع إنشاء حساب موظف حقيقي بـ«حدّ الباقة».
+ * والحسابات المعلّقة لا تُعدّ كذلك: حساب علّقه المشرف لا يشغل مقعداً.
+ */
+export function seatCount() {
+  const row = openDatabase().prepare("SELECT COUNT(*) AS count FROM accounts WHERE role NOT IN ('owner','partner') AND status = 'ACTIVE'").get() as { count: number };
+  return Number(row?.count ?? 0);
+}
+
 /** هل النظام بلا أي حساب بعد؟ عندها فقط يُفتح مسار التهيئة الأولى. */
 export function needsFirstRunSetup() {
   return accountCount() === 0;
@@ -230,6 +242,12 @@ export async function login(email: unknown, password: unknown): Promise<LoginRes
     throw Object.assign(new Error("البريد الإلكتروني أو كلمة المرور غير صحيحة."), { status: 401 });
   }
   if (row.status !== "ACTIVE") {
+    /*
+     * حالة الإيقاف لا تُكشف إلا لمن يملك كلمة المرور: كشفُها لأي طالبٍ بالبريد وحده
+     * يُعدّد الحسابات الموقوفة ويفرّق بينها وبين غير الموجودة.
+     */
+    const proven = typeof password === "string" && (await verifyPassword(password, row.password_hash, row.password_salt));
+    if (!proven) throw Object.assign(new Error("البريد الإلكتروني أو كلمة المرور غير صحيحة."), { status: 401 });
     throw Object.assign(new Error("هذا الحساب موقوف. راجع مشرف النظام."), { status: 403 });
   }
   if (row.locked_until && row.locked_until > now()) {
@@ -462,7 +480,7 @@ export async function adminCreateAccount(input: CreateAccountInput): Promise<Acc
    * لا معنى لباقةٍ تقول "عشرة مقاعد" ثم يُنشئ النظام الحادي عشر بلا اعتراض. والرفض
    * هنا لا في الواجهة: الواجهة تُخبر، والخادم يمنع.
    */
-  const seats = checkLimit('seats', accountCount());
+  const seats = checkLimit('seats', seatCount());
   if (!seats.allowed) throw Object.assign(new Error(seats.reason), { status: 402, code: 'PLAN_LIMIT' });
   try {
     return await createAccount(input);
@@ -547,7 +565,7 @@ export async function adminSetPassword(accountId: string, newPassword: unknown, 
  * تغيير المستخدم كلمة مروره بنفسه. يتطلب كلمة المرور الحالية: بدونها يكفي جهاز
  * مفتوح بلا صاحبه لاختطاف الحساب نهائياً.
  */
-export async function changeOwnPassword(accountId: string, currentPassword: unknown, newPassword: unknown): Promise<void> {
+export async function changeOwnPassword(accountId: string, currentPassword: unknown, newPassword: unknown, keepSessionToken?: string): Promise<void> {
   const passwordError = validatePassword(newPassword);
   if (passwordError) throw Object.assign(new Error(passwordError), { status: 400 });
 
@@ -558,10 +576,23 @@ export async function changeOwnPassword(accountId: string, currentPassword: unkn
 
   const valid = typeof currentPassword === 'string' && (await verifyPassword(currentPassword, row.password_hash, row.password_salt));
   if (!valid) throw Object.assign(new Error('كلمة المرور الحالية غير صحيحة.'), { status: 403 });
+  if (currentPassword === newPassword) throw Object.assign(new Error('كلمة المرور الجديدة يجب أن تختلف عن الحالية.'), { status: 400 });
 
   const { hash, salt } = await hashPassword(String(newPassword));
   db.prepare('UPDATE accounts SET password_hash = ?, password_salt = ?, updated_at = ? WHERE id = ?')
     .run(hash, salt, now(), accountId);
+  /*
+   * تغيير كلمة المرور يُنهي بقية الجلسات.
+   *
+   * من يغيّر كلمته لأنه شكّ في اختراق حسابه يتوقّع أن يُطرد المخترق؛ وبدون هذا
+   * كانت الجلسة المسروقة تبقى صالحة حتى ثماني ساعات بعد «إصلاح» الحساب. جلسة
+   * صاحب الطلب نفسها تبقى كي لا يُرمى خارج الشاشة التي ضغط فيها «حفظ».
+   */
+  if (keepSessionToken) {
+    db.prepare('DELETE FROM sessions WHERE account_id = ? AND token_hash <> ?').run(accountId, sha256(keepSessionToken));
+  } else {
+    db.prepare('DELETE FROM sessions WHERE account_id = ?').run(accountId);
+  }
 }
 
 /**

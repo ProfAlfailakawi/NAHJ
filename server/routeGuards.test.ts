@@ -55,6 +55,11 @@ test("a viewer cannot change operations; a manager decides an approval once", as
       assert.equal((await viewer(url, { decision: "approved", name: "sis_check_seats", targetLevel: 1 })).status, 403, url);
     }
 
+    /* مسارات بلا حارس دور فردي: الحارس العام يردّها لحساب المشاهدة. */
+    for (const url of [`/work/${db.workItems[0]?.id || "x"}/takeover`, `/work/${db.workItems[0]?.id || "x"}/resume-ai`, "/teach/start", "/learn/clarify", "/connections/conn_x/test", "/mcp/servers/abc/ping"]) {
+      assert.equal((await viewer(url, {})).status, 403, `viewer must not POST ${url}`);
+    }
+
     const manager = await signIn(base, "manager@nahj.test");
     const pending = db.approvalRequests.find(a => a.status === "pending");
     assert.ok(pending, "seed carries a pending approval");

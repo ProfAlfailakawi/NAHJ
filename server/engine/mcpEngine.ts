@@ -467,12 +467,34 @@ export class McpEngine {
    * فيُبنى على وهم الاكتشاف سلوكٌ يُنفَّذ.
    */
   public static registerServer(newServer: Partial<McpServerInfo>): McpServerInfo {
+    /*
+     * التحقق من المدخل — كان كل شيء يُقبل كما وصل: اسمٌ كائنٌ (يكسر رسم الشاشة كلها)،
+     * عنوانٌ فارغ أو `javascript:`، ومعرّفٌ من العميل قد يطابق خادماً مدمجاً فيُكرّر
+     * معرّفه ويُحذف أحدهما بالآخر. المعرّف يُولَّد هنا دائماً.
+     */
+    const bad = (message: string) => Object.assign(new Error(message), { status: 400 });
+    const body = (newServer || {}) as Record<string, unknown>;
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    if (name.length < 2 || name.length > 120) throw bad("اسم الخادم يجب أن يكون بين حرفين و120 حرفاً.");
+    const endpoint = typeof body.endpointUrl === "string" ? body.endpointUrl.trim() : "";
+    let parsed: URL | null = null;
+    try { parsed = new URL(endpoint); } catch { parsed = null; }
+    if (!parsed || !["http:", "https:"].includes(parsed.protocol) || endpoint.length > 500) {
+      throw bad("عنوان الخادم يجب أن يكون رابط http أو https صالحاً.");
+    }
+    const transport = String(body.transport || "sse");
+    if (!["sse", "http", "stdio", "in_memory"].includes(transport)) throw bad("نوع النقل غير معروف.");
+    if (this.servers.some((existing) => existing.endpointUrl === endpoint)) throw Object.assign(new Error("هذا العنوان مسجَّل من قبل."), { status: 409 });
+    if (this.servers.length >= 50) throw Object.assign(new Error("بلغت الحدّ الأقصى من الخوادم المسجَّلة (50)."), { status: 409 });
+    const description = typeof body.description === "string" && body.description.trim() ? body.description.trim().slice(0, 300) : "External Model Context Protocol Server";
+    const authType = typeof body.authType === "string" ? body.authType.trim().slice(0, 40) : "";
+    newServer = { name, endpointUrl: endpoint, transport: transport as McpServerInfo["transport"], description, authType };
     const server: McpServerInfo = {
-      id: newServer.id || `ext-mcp-${Date.now()}`,
-      name: newServer.name || "External MCP Server",
-      description: newServer.description || "External Model Context Protocol Server",
-      transport: newServer.transport || "sse",
-      endpointUrl: newServer.endpointUrl || "",
+      id: `ext-mcp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: newServer.name!,
+      description: newServer.description!,
+      transport: newServer.transport!,
+      endpointUrl: newServer.endpointUrl!,
       mode: "declared",
       status: "disconnected",
       protocolVersion: "2024-11-05",

@@ -1,6 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 import { db, DemoSandbox } from "./db.ts";
-import { accountCount, AuthenticatedRequest, requireAuth, requireOwner, requireRole } from "./auth.ts";
+import { seatCount, AuthenticatedRequest, requireAuth, requireOwner, requireRole } from "./auth.ts";
 import {
   amendSubscription, archivePlan, billingSnapshot, cancelSubscription, changePlan, DEFAULT_CURRENCY,
   evaluateSubscription, extendSubscription, formatMoney, getSubscription, issueInvoice, listBillingEvents,
@@ -30,7 +30,7 @@ const DEMO_SNAPSHOT_NOTE = "أرقام الاشتراك هنا اصطناعية 
 /** يقيس الاستهلاك الفعلي من الذاكرة التشغيلية. القياس مشتقّ لا مُدخَل. */
 function currentUsage(): UsageSnapshot {
   return {
-    seats: DemoSandbox.isDemoRequest() ? db.users.length : accountCount(),
+    seats: DemoSandbox.isDemoRequest() ? db.users.length : seatCount(),
     skills: db.skills.length,
     workItemsThisPeriod: DemoSandbox.isDemoRequest() ? db.workItems.length : readUsage("workItems"),
     connectors: db.connectors.length,
