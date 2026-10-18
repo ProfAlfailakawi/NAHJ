@@ -31,6 +31,7 @@ import { normalizeManualOptions, renderManualHtml, signManual, verifyManual } fr
 import { SECTOR_COMPLIANCE_PRESETS } from "./engine/policyEngine.ts";
 import { flushNotifications, listNotifications, notifyEmergencyPause, notifyStatus } from "./notify.ts";
 import { incrementUsage, maxAutonomyLevel } from "./billing.ts";
+import { blockIfOverLimit, countMonthly, evaluate, noteUsage, recordBlock } from "./entitlements.ts";
 import {
   AuthenticatedRequest,
   adminCreateAccount,
@@ -701,6 +702,16 @@ apiRouter.get("/teach/sample", (_req: Request, res: Response) => {
   res.json(teachSample());
 });
 
+/*
+ * جلسات التعليم لكل موظف: لا يرى موظفٌ جلسة غيره ولا يُكمل عليها (كان بلا معرّف يعني «أحدث جلسة في المؤسسة»
+ * فتختلط خطوات موظفين). الجلسات القديمة بلا صاحب تبقى متاحة للجميع كما كانت.
+ */
+function mySession(req: Request, sessionId: unknown) {
+  const me = (req as AuthenticatedRequest).account?.id;
+  const visible = db.learningSessions.filter((candidate) => !candidate.ownerId || candidate.ownerId === me);
+  return sessionId ? visible.find((candidate) => candidate.id === sessionId) : visible[0];
+}
+
 apiRouter.post("/teach/start", (req: Request, res: Response) => {
   const { title } = req.body;
   const session: LearningSession = {
@@ -710,6 +721,7 @@ apiRouter.post("/teach/start", (req: Request, res: Response) => {
     startedAt: "الآن",
     status: "recording",
     teacherName: db.getCurrentUser().name,
+    ownerId: (req as AuthenticatedRequest).account?.id,
     events: [],
     discoveredSteps: [],
     discoveredRules: [],
@@ -734,7 +746,7 @@ apiRouter.post("/teach/start", (req: Request, res: Response) => {
 apiRouter.post("/teach/record-event", (req: Request, res: Response) => {
   const { sessionId, action, system, inputValue, voiceNote, screenshotLabel, eventKey } = req.body || {};
   /* معرّفٌ مجهول يُرفض — كان يُعاد إلى أول جلسة فيُركَّب من عملٍ غير المقصود. */
-  const session = sessionId ? db.learningSessions.find((s) => s.id === sessionId) : db.learningSessions[0];
+  const session = mySession(req, sessionId);
   if (!session) {
     return res.status(404).json({ success: false, message: "جلسة التعلم غير متوفرة" });
   }
@@ -796,7 +808,7 @@ apiRouter.post("/teach/record-event", (req: Request, res: Response) => {
 apiRouter.post("/teach/synthesize", async (req: Request, res: Response) => {
   const { sessionId } = req.body;
   /* معرّفٌ مجهول يُرفض — كان يُعاد إلى أول جلسة فيُركَّب من عملٍ غير المقصود. */
-  const session = sessionId ? db.learningSessions.find((s) => s.id === sessionId) : db.learningSessions[0];
+  const session = mySession(req, sessionId);
 
   if (!session) {
     return void res.status(404).json({ success: false, message: "جلسة التعلم غير متوفرة." });
@@ -849,7 +861,7 @@ apiRouter.post("/teach/synthesize", async (req: Request, res: Response) => {
 apiRouter.post("/teach/codify", (req: Request, res: Response) => {
   const { sessionId, title, answers } = req.body || {};
   /* معرّفٌ مجهول يُرفض — كان يُعاد إلى أول جلسة فيُركَّب من عملٍ غير المقصود. */
-  const session = sessionId ? db.learningSessions.find((s) => s.id === sessionId) : db.learningSessions[0];
+  const session = mySession(req, sessionId);
   if (!session || session.discoveredSteps.length === 0) {
     return res.status(400).json({ success: false, message: "لا توجد جلسة تعليم مكتملة يمكن اعتمادها" });
   }
@@ -858,6 +870,8 @@ apiRouter.post("/teach/codify", (req: Request, res: Response) => {
     return res.status(409).json({ success: false, message: "اعتُمدت مهارة هذه الجلسة من قبل." });
   }
   const skillTitle = typeof title === "string" ? title.trim().slice(0, 160) : "";
+  /* حدّ المهارات: المنع على المهارة الجديدة وحدها — جلسة التعليم تبقى محفوظة ويُعاد اعتمادها بعد رفع الحدّ. */
+  if (blockIfOverLimit(req, res, "skills")) return;
 
   const id = `sk_taught_${Date.now()}_${randomUUID().slice(0, 6)}`;
   const now = new Date().toISOString().slice(0, 10);
@@ -907,6 +921,7 @@ apiRouter.post("/teach/codify", (req: Request, res: Response) => {
 
   session.status = "approved";
   db.skills.unshift(skill);
+  noteUsage("skills");
   db.organization.verifiedSkillsCount = db.skills.filter((s) => s.status === "active" || s.status === "approved").length;
   db.logAudit({
     actorType: "human",
@@ -1340,11 +1355,13 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
       });
     }
     const chat = getSectorPack(apprSector)?.demo?.chat;
-    if (chat && db.simulatorState.approvalId === appr.id) {
-      db.simulatorState.approvalStatus = approved ? "approved" : "rejected";
-      db.simulatorState.requiresManagerApproval = false;
-      db.simulatorState.stage = approved ? chat.stages.length - 1 : db.simulatorState.stage;
-      db.simulatorState.messages.push({
+    /* المحادثة التي فتحت الطلب هي التي تُحدَّث — لا محادثة المعتمِد. */
+    const origin = (db.simulatorOf(appr.requestedBy) ? [db.simulatorOf(appr.requestedBy)!] : db.allSimulators()).find((state) => state.approvalId === appr.id);
+    if (chat && origin) {
+      origin.approvalStatus = approved ? "approved" : "rejected";
+      origin.requiresManagerApproval = false;
+      origin.stage = approved ? chat.stages.length - 1 : origin.stage;
+      origin.messages.push({
         id: `msg_${Date.now()}`,
         sender: "system",
         text: approved ? chat.approvedReply : chat.rejectedReply,
@@ -1386,21 +1403,22 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
     }
 
     /* المحادثة تُحدَّث حين تكون هي من فتحت الطلب — لا مع كل اعتمادٍ في المؤسسة. */
-    if (db.simulatorState.step === "approval_triggered" && db.simulatorState.approvalStatus === "pending") {
-    db.simulatorState.step = "completed";
-    db.simulatorState.approvalStatus = "approved";
-    db.simulatorState.messages.push({
-      id: `msg_${Date.now()}`,
-      sender: "system",
-      text: `تم اعتماد الطلب رسميًا من مديرة القبول (${currentUser.name})! تم إصدار رقم الملف ومزامنة بيانات القبول في نظام SIS.`,
-      timestamp: "الآن",
-      cardType: "booking_confirmation",
-      metadata: {
-        applicationCode: executionResult.data.applicationCode,
-        paymentUrl: executionResult.data.paymentUrl,
-        tourDate: "الخميس القادم 04:30 م",
-      },
-    });
+    for (const chatState of db.allSimulators()) {
+      if (chatState.step !== "approval_triggered" || chatState.approvalStatus !== "pending") continue;
+      chatState.step = "completed";
+      chatState.approvalStatus = "approved";
+      chatState.messages.push({
+        id: `msg_${Date.now()}`,
+        sender: "system",
+        text: `تم اعتماد الطلب رسميًا من مديرة القبول (${currentUser.name})! تم إصدار رقم الملف ومزامنة بيانات القبول في نظام SIS.`,
+        timestamp: "الآن",
+        cardType: "booking_confirmation",
+        metadata: {
+          applicationCode: executionResult.data.applicationCode,
+          paymentUrl: executionResult.data.paymentUrl,
+          tourDate: "الخميس القادم 04:30 م",
+        },
+      });
     }
   }
 
@@ -1493,7 +1511,16 @@ apiRouter.post("/simulator/message", requireRole("admin", "manager", "operator")
       ...(turn.approval ? { cardType: "approval_pending" as const } : {}),
     });
 
-    if (turn.approval) {
+    /*
+     * حدّ حالات العمل الشهري: لا تُفتح حالةٌ جديدة، لكن المحادثة تستمر ويُقال للموظف السبب في
+     * المحادثة نفسها (لا صمت ولا فقد). مالك المنصة يتجاوز.
+     */
+    const caseLimit = turn.approval && (req as AuthenticatedRequest).account?.role !== "owner" ? evaluate("workItemsPerMonth") : null;
+    if (caseLimit && !caseLimit.allowed) {
+      recordBlock("workItemsPerMonth", caseLimit);
+      db.simulatorState.messages.push({ id: `msg_limit_${Date.now()}`, sender: "system", text: caseLimit.message, timestamp: "الآن" });
+    } else if (turn.approval) {
+      countMonthly("workItemsPerMonth");
       const skill = db.skills.find(candidate => candidate.slug === chat.skill);
       const stamp = Date.now();
       const workItem = {
@@ -1528,6 +1555,7 @@ apiRouter.post("/simulator/message", requireRole("admin", "manager", "operator")
         reasonDescription: turn.approval.reason,
         riskLevel: "high",
         requiredRole: turn.approval.requiredRole,
+        requestedBy: (req as AuthenticatedRequest).account?.id,
         requestedAt: "الآن",
         status: "pending",
       });
@@ -1896,6 +1924,7 @@ apiRouter.get("/mcp/servers", (req: Request, res: Response) => {
  * عنوانٍ باسمها. وسجلُّ التدقيق يكتب اسمه — لكن بعد وقوع الفعل.
  */
 apiRouter.post("/mcp/servers", requireAuth, requireRole("admin"), (req: AuthenticatedRequest, res: Response) => {
+  if (blockIfOverLimit(req, res, "mcpServers")) return;
   try {
     const server = McpEngine.registerServer(req.body);
     res.json({ success: true, server });

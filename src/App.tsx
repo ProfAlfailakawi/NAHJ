@@ -17,6 +17,7 @@ import { AccountsView } from "./components/views/AccountsView";
 import { BillingView } from "./components/views/BillingView";
 import { OwnerView } from "./components/views/OwnerView";
 import { SubscriptionBanner } from "./components/SubscriptionBanner";
+import { LimitsBanner } from "./components/LimitsBanner";
 import { SectorsView } from "./components/views/SectorsView";
 import { PartnersAdminView } from "./components/views/PartnersAdminView";
 import { PartnerPortalView } from "./components/views/PartnerPortalView";
@@ -387,7 +388,7 @@ export default function App(){
     await Promise.all([refreshAutopilot(),refreshSkills(),refreshAudit()]);
   });
   const switchDemoSector=async(sector:string)=>{ if(sector&&sector!==demoSector) await enterDemo(sector); };
-  const codified=guarded(async()=>{await refreshSkills();const context=await apiOrNull<ContextResponse>("/context");if(context)setOrganization(context.organization);setSection("skills")});
+  const codified=guarded(async()=>{void refreshBilling();await refreshSkills();const context=await apiOrNull<ContextResponse>("/context");if(context)setOrganization(context.organization);setSection("skills")});
 
   const approvalByWork=useMemo(()=>Object.fromEntries(approvals.filter(a=>a.status==="pending").map(a=>[a.workItemId,a.id])),[approvals]);
   const activeApprovalObj=approvals.find(a=>a.id===activeApproval&&a.status==="pending")||null;
@@ -397,8 +398,7 @@ export default function App(){
 
   if(authState==="checking")return <div className="boot-gate" role="status" aria-busy="true" aria-label={lang==="ar"?"جارٍ التحقق":"Checking session"}><NahjMark size={56}/></div>;
   if(authState==="anonymous"||authState==="setup")
-    return <><LoginScreen lang={lang} needsSetup={authState==="setup"} onAuthenticated={()=>void checkAuth()}
-      demoEnabled={demoEnabled} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()}/><ToastRegion toast={toast}/></>;
+    return <><LoginScreen lang={lang} needsSetup={authState==="setup"} onAuthenticated={()=>void checkAuth()}/><ToastRegion toast={toast}/></>;
 
   /*
    * حساب المسوّق سطحٌ واحد.
@@ -471,7 +471,7 @@ export default function App(){
   }
 
   return <>
-    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut} onHelp={()=>setHelpOpen(true)} onSearch={()=>setPaletteOpen(true)} isOwner={isOwner} licenceBanner={<SubscriptionBanner snapshot={billing} lang={lang} onOpen={()=>setSection("billing")}/>}>{demoActive&&<DemoBanner lang={lang} sector={demoSector} sectors={demoSectors} busy={demoBusy} onSwitch={s=>void switchDemoSector(s)} onReset={()=>void resetDemo()} onExit={()=>void exitDemo()}/>}{paused&&<div className="pause-banner" role="status"><TriangleAlert aria-hidden="true"/><span>{lang==="ar"?`التنفيذ الآلي متوقف${autopilot.pause?.by?` — أوقفه ${autopilot.pause.by}`:""}${autopilot.pause?.reason?`: ${autopilot.pause.reason}`:""}. التعلم والمراجعة يعملان.`:"Autonomous execution is paused. Learning and review remain active."}</span></div>}{view}</Shell>
+    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut} onHelp={()=>setHelpOpen(true)} onSearch={()=>setPaletteOpen(true)} isOwner={isOwner} licenceBanner={<><SubscriptionBanner snapshot={billing} lang={lang} onOpen={()=>setSection("billing")}/><LimitsBanner snapshot={billing} lang={lang} canAct={account?.role==="admin"||account?.role==="manager"} onOpen={()=>setSection("billing")}/></>}>{demoActive&&<DemoBanner lang={lang} sector={demoSector} sectors={demoSectors} busy={demoBusy} onSwitch={s=>void switchDemoSector(s)} onReset={()=>void resetDemo()} onExit={()=>void exitDemo()}/>}{paused&&<div className="pause-banner" role="status"><TriangleAlert aria-hidden="true"/><span>{lang==="ar"?`التنفيذ الآلي متوقف${autopilot.pause?.by?` — أوقفه ${autopilot.pause.by}`:""}${autopilot.pause?.reason?`: ${autopilot.pause.reason}`:""}. التعلم والمراجعة يعملان.`:"Autonomous execution is paused. Learning and review remain active."}</span></div>}{view}</Shell>
     {(autopilot.autopilotSkills.length>0||paused)&&canManageAutopilot&&<EmergencyFab lang={lang} paused={paused} onOpen={()=>setPauseOpen(true)}/>}
     <EmergencyPauseDialog lang={lang} open={pauseOpen} paused={paused} busy={pauseBusy} autopilotCount={autopilot.autopilotSkills.length} onClose={()=>setPauseOpen(false)} onConfirm={r=>void emergency(r)}/>
     <ApprovalModal lang={lang} approval={activeApprovalObj} busy={approvalBusy} onClose={()=>setActiveApproval(null)} onApprove={(id,r)=>void decideApproval(id,"approved",r)} onReject={(id,r)=>void decideApproval(id,"rejected",r)} onTakeOver={id=>void takeOver(id)}/>

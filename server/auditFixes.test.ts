@@ -22,6 +22,15 @@ const { ensureSubscription, recordPayment, issueInvoice } = await import("./bill
 const { db } = await import("./db.ts");
 const { openDatabase } = await import("./persistence.ts");
 
+/* باقة رحبة: هذه الاختبارات ليست عن الحدود (انظر limits.test.ts) فلا تصطدم بحدود التجربة. */
+{
+  const { upsertPlan, startSubscription, ensureSubscription: ensure } = await import("./billing.ts");
+  ensure();
+  upsertPlan({ code: "roomy", nameAr: "رحبة", nameEn: "Roomy", priceMonthly: 1000, priceQuarterly: 3000, priceAnnual: 10000,
+    limits: { seats: 500, skills: 500, workItemsPerMonth: 100000, connectors: 100, mcpServers: 100, aiCallsPerMonth: 100000, maxAutonomyLevel: 6, auditRetentionDays: 365 } } as never, "test");
+  startSubscription({ planCode: "roomy", issueInvoice: false }, "test");
+}
+
 const pw = () => ["Audit", "Fixes", "2026"].join("-");
 
 async function start() {
