@@ -76,3 +76,26 @@ test("جلسات التعليم لكل موظف، والقديمة بلا صاح
     assert.equal(db.learningSessions.find(s => s.id === started.session.id)!.events.length, 1, "اختلطت أحداث الجلستين");
   } finally { server.close(); }
 });
+
+test("اعتماد طلب موظف لا يُكمل محادثة موظفٍ آخر", async () => {
+  const base0 = { workItemId: "w", workTitle: "ط", actionName: "createApplicationRecord", payload: { tuitionFee: 1500 }, reasonCode: "POL-FIN-02", reasonDescription: "x", riskLevel: "low" as const, requiredRole: "manager" as const, requestedAt: "الآن", status: "pending" as const };
+  db.approvalRequests.unshift({ ...base0, id: "appr_e1" } as never, { ...base0, id: "appr_e2" } as never);
+  await createAccount({ email: "m@p.test", name: "مديرة", password: pw(), role: "manager" });
+  const { server, base } = await start();
+  try {
+    const a = await signIn(base, "a@p.test");
+    const b = await signIn(base, "b@p.test");
+    await a("POST", "/simulator/reset"); await b("POST", "/simulator/reset");
+    await a("POST", "/simulator/upload-doc");
+    await b("POST", "/simulator/upload-doc");
+    const owners = db.approvalRequests.filter(r => r.id === "appr_e1" || r.id === "appr_e2").map(r => r.requestedBy);
+    assert.equal(new Set(owners).size, 2, "نُسب الطلبان لصاحبٍ واحد");
+    const manager = await signIn(base, "m@p.test");
+    const mine = db.approvalRequests.find(r => r.id === "appr_e1")!;
+    const res = await manager("POST", `/approvals/${mine.id}/decide`, { decision: "approved" });
+    assert.equal(res.status, 200);
+    const states = Object.entries(db.simulatorByUser).map(([id, state]) => ({ id, step: state.step }));
+    assert.equal(states.filter(s => s.step === "completed").length, 1, "اكتملت أكثر من محادثة");
+    assert.equal(db.simulatorOf(mine.requestedBy)!.step, "completed");
+  } finally { server.close(); }
+});

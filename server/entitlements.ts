@@ -43,6 +43,7 @@ const USAGE_KEY: Partial<Record<LimitMetric, string>> = { workItemsPerMonth: "wo
 
 /** يسجّل تحذير 80% مرة في الدورة. يُنادى بعد أي زيادة في الاستهلاك. */
 export function noteUsage(metric: LimitMetric): void {
+  if (db.isDemo) return;
   try {
     const check = checkLimit(metric as keyof PlanLimits, usageNow(metric), 0);
     if (check.limit === null || check.limit <= 0) return;
@@ -64,6 +65,8 @@ export function friendlyBlockMessage(metric: LimitMetric, used: number, limit: n
 
 /** هل تسمح الباقة بإضافة `adding` إلى هذا الحدّ؟ (لا يكتب شيئاً.) */
 export function evaluate(metric: LimitMetric, adding = 1): LimitDecision {
+  /* صندوق العرض لا يُحتسب ولا يُمنع: نشاط زوار /try لا يمسّ حصّة المؤسسة الحقيقية. */
+  if (db.isDemo) return { allowed: true, message: "", limit: null, used: 0 };
   const used = usageNow(metric);
   const check = checkLimit(metric as keyof PlanLimits, used, adding);
   if (check.allowed) return { allowed: true, message: "", limit: check.limit, used };
@@ -82,6 +85,7 @@ export function blockIfOverLimit(req: Request, res: Response, metric: LimitMetri
 }
 
 export function recordBlock(metric: LimitMetric, decision: LimitDecision): void {
+  if (db.isDemo) return;
   try {
     const count = incrementUsage(`blocked:${metric}`, 1);
     if (count > 3 && count % 20 !== 0) return;
@@ -95,6 +99,7 @@ export function recordBlock(metric: LimitMetric, decision: LimitDecision): void 
 
 /** يُنادى بعد نجاح إضافةٍ تُحتسب شهرياً. */
 export function countMonthly(metric: "workItemsPerMonth" | "aiCallsPerMonth"): void {
+  if (db.isDemo) return;
   incrementUsage(USAGE_KEY[metric]!, 1);
   noteUsage(metric);
 }

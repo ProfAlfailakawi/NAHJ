@@ -1403,8 +1403,14 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
     }
 
     /* المحادثة تُحدَّث حين تكون هي من فتحت الطلب — لا مع كل اعتمادٍ في المؤسسة. */
-    for (const chatState of db.allSimulators()) {
-      if (chatState.step !== "approval_triggered" || chatState.approvalStatus !== "pending") continue;
+    /*
+     * المحادثة التي فتحت الطلب وحدها تُكمَل. الطلبات القديمة بلا صاحب تُكمل محادثةً واحدة فقط
+     * إن كانت هي الوحيدة المنتظرة — لا كل محادثةٍ منتظرة.
+     */
+    const waiting = db.allSimulators().filter((state) => state.step === "approval_triggered" && state.approvalStatus === "pending");
+    const owned = db.simulatorOf(appr.requestedBy);
+    const targets = appr.requestedBy ? (owned && waiting.includes(owned) ? [owned] : []) : (waiting.length === 1 ? waiting : []);
+    for (const chatState of targets) {
       chatState.step = "completed";
       chatState.approvalStatus = "approved";
       chatState.messages.push({
@@ -1685,6 +1691,10 @@ apiRouter.post("/simulator/upload-doc", requireRole("admin", "manager", "operato
     "employee"
   );
 
+  /* الطلب المنتظر يُنسب إلى من رفع المستند، فيُكمَل محادثته هو حين يُحسم. */
+  const claimed = new Set(db.allSimulators().map((state) => state.approvalId).filter(Boolean));
+  const unowned = db.approvalRequests.find((a) => a.status === "pending" && !a.requestedBy && !claimed.has(a.id));
+  if (unowned) { unowned.requestedBy = (req as AuthenticatedRequest).account?.id; db.simulatorState.approvalId = unowned.id; }
   db.simulatorState.step = "approval_triggered";
   db.simulatorState.civilIdVerified = true;
   db.simulatorState.requiresManagerApproval = true;
@@ -1927,6 +1937,7 @@ apiRouter.post("/mcp/servers", requireAuth, requireRole("admin"), (req: Authenti
   if (blockIfOverLimit(req, res, "mcpServers")) return;
   try {
     const server = McpEngine.registerServer(req.body);
+    noteUsage("mcpServers");
     res.json({ success: true, server });
   } catch (error) {
     const status = Number((error as { status?: number })?.status) || 400;

@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { checkLimit, incrementUsage, readUsage } from "./billing.ts";
 import { LIMIT_LABEL_AR, noteUsage, recordBlock } from "./entitlements.ts";
-import { DemoSandbox } from "./db.ts";
+import { DemoSandbox, requestAccount } from "./db.ts";
 
 let geminiClient: GoogleGenAI | null = null;
 
@@ -41,7 +41,7 @@ export async function generateAiResponse(prompt: string, systemInstruction?: str
    * بلغت المؤسسة حدّ نداءات الذكاء الشهري: لا نداءٌ خارجي بعدها، ويعمل المنطق الحتمي كما يعمل
    * بلا مفتاح — فلا تنقطع المحادثة ولا يضيع شيء، وتُسجَّل الحادثة في التدقيق وتظهر في الاشتراك.
    */
-  if (client && !DemoSandbox.isDemoRequest()) {
+  if (client && !DemoSandbox.isDemoRequest() && requestAccount.getStore()?.role !== "owner") {
     const used = readUsage("aiCalls");
     const check = checkLimit("aiCallsPerMonth", used, 1);
     if (!check.allowed) {

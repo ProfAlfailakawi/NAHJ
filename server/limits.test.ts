@@ -75,6 +75,7 @@ test("خوادم MCP: الحدّ يمنع التسجيل الزائد", async ()
     await createAccount({ email: "adm@l.test", name: "مشرف", password: pw(), role: "admin" });
     const admin = await signIn(base, "adm@l.test");
     assert.equal((await admin("POST", "/mcp/servers", { name: "خادم 1", endpointUrl: "https://a.example.com/sse" })).status, 200);
+    assert.ok(db.auditEvents.some(e => e.action === "PLAN_LIMIT_WARNING" && /MCP/.test(e.details)), "لا تحذير 80% بعد التسجيل");
     const second = await admin("POST", "/mcp/servers", { name: "خادم 2", endpointUrl: "https://b.example.com/sse" });
     assert.equal(second.status, 402);
     assert.equal(((await second.json()) as { code: string }).code, "PLAN_LIMIT");
