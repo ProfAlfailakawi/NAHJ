@@ -137,6 +137,8 @@ export function accountCount() {
  * وكان عدّهم يستهلك مقاعدها المدفوعة ويمنع إنشاء حساب موظف حقيقي بـ«حدّ الباقة».
  * والحسابات المعلّقة لا تُعدّ كذلك: حساب علّقه المشرف لا يشغل مقعداً.
  */
+const countsAsSeat = (role: string, status: string) => role !== 'owner' && role !== 'partner' && status === 'ACTIVE';
+
 export function seatCount() {
   const row = openDatabase().prepare("SELECT COUNT(*) AS count FROM accounts WHERE role NOT IN ('owner','partner') AND status = 'ACTIVE'").get() as { count: number };
   return Number(row?.count ?? 0);
@@ -480,7 +482,8 @@ export async function adminCreateAccount(input: CreateAccountInput): Promise<Acc
    * لا معنى لباقةٍ تقول "عشرة مقاعد" ثم يُنشئ النظام الحادي عشر بلا اعتراض. والرفض
    * هنا لا في الواجهة: الواجهة تُخبر، والخادم يمنع.
    */
-  const seats = checkLimit('seats', seatCount());
+  /* المسوّق لا يشغل مقعداً (ولا المالك): فلا يُرفض إنشاؤه بحدّ المقاعد. */
+  const seats = countsAsSeat(String(input.role || 'viewer'), 'ACTIVE') ? checkLimit('seats', seatCount()) : { allowed: true, reason: '' };
   if (!seats.allowed) throw Object.assign(new Error(seats.reason), { status: 402, code: 'PLAN_LIMIT' });
   try {
     return await createAccount(input);
@@ -518,6 +521,12 @@ export function updateAccount(accountId: string, changes: { role?: AccountRole; 
   if (!['ACTIVE', 'SUSPENDED'].includes(status)) throw Object.assign(new Error('حالة الحساب غير صالحة.'), { status: 400 });
 
   assertNotLastAdmin(accountId, role, status);
+
+  /* الانتقال من حالةٍ لا تشغل مقعداً (مسوّق/معلّق) إلى حالةٍ تشغله يخضع لحدّ الباقة كالإنشاء تماماً. */
+  if (!countsAsSeat(current.role, current.status) && countsAsSeat(role, status)) {
+    const seats = checkLimit('seats', seatCount());
+    if (!seats.allowed) throw Object.assign(new Error(seats.reason), { status: 402, code: 'PLAN_LIMIT' });
+  }
 
   db.prepare('UPDATE accounts SET role = ?, status = ?, updated_at = ? WHERE id = ?').run(role, status, now(), accountId);
   // تعطيل الحساب أو خفض دوره يطرد جلساته فوراً؛ وإلّا بقي الدور القديم سارياً حتى تنتهي.

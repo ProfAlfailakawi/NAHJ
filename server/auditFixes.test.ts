@@ -215,3 +215,18 @@ test("تسجيل خادم MCP يتحقّق من مدخله ولا يحذف ال�
     assert.equal((await admin.call("DELETE", `/mcp/servers/${body.server.id}`)).status, 200);
   } finally { server.close(); }
 });
+
+test("حدّ المقاعد: المسوّق لا يُرفض به، ولا يُلتفّ عليه بالتعليق أو تغيير الدور", async () => {
+  const { adminCreateAccount } = await import("./auth.ts");
+  const { upsertPlan, startSubscription } = await import("./billing.ts");
+  upsertPlan({ code: "tiny", nameAr: "صغيرة", nameEn: "Tiny", priceMonthly: 1000, priceQuarterly: 3000, priceAnnual: 10000, limits: { seats: 0 } } as never, "test");
+  startSubscription({ planCode: "tiny", issueInvoice: false }, "test");
+  /* لا مقاعد: موظف يُرفض، ومسوّق يُقبل */
+  await assert.rejects(adminCreateAccount({ email: "seatx@a.test", name: "موظف", password: pw(), role: "operator" }), (e: { status?: number }) => e.status === 402);
+  const partner = await adminCreateAccount({ email: "seatp@a.test", name: "مسوّق", password: pw(), role: "partner" });
+  /* ترقية المسوّق إلى دور موظف تستهلك مقعداً فتُرفض */
+  assert.throws(() => updateAccount(partner.id, { role: "operator" }), (e: { status?: number }) => e.status === 402);
+  /* وإعادة تفعيل حسابٍ معلّق (لا يشغل مقعداً) تخضع للحدّ نفسه */
+  updateAccount(partner.id, { status: "SUSPENDED" });
+  assert.throws(() => updateAccount(partner.id, { status: "ACTIVE", role: "viewer" }), (e: { status?: number }) => e.status === 402);
+});
