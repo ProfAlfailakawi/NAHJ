@@ -51,7 +51,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
   },[]);
 
   /* سبب الفشل كما قاله الخادم إن قاله، وإلا جملةٌ عامة. */
-  const reason=(error:unknown,fallback:string)=>error instanceof ApiError&&error.message?error.message:fallback;
+  const reason=(error:unknown,fallback:string)=>error instanceof Error&&error.message&&error.name!=="TypeError"?error.message:fallback;
 
   const ensureSession=async()=>{
     if(sessionId)return sessionId;

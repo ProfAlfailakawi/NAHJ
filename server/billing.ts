@@ -1541,8 +1541,20 @@ export function maxAutonomyLevel(): number {
 
 /* --------------------------------------------------------- عدّاد الدورة */
 
-const periodKey = (subscription: Subscription | undefined) =>
-  subscription ? `${subscription.currentPeriodStart.slice(0, 10)}_${subscription.currentPeriodEnd.slice(0, 10)}` : "unbound";
+/*
+ * نافذة العدّاد شهرٌ اشتراكي لا دورة الفوترة.
+ *
+ * حدود «حالات/شهر» و«نداءات/شهر» شهرية بنصّها؛ وكان المفتاح مبنياً على دورة الفوترة كلها،
+ * فمشتركٌ بدورة سنوية يحصل على حدّ الشهر لسنةٍ كاملة. المفتاح الآن يتبدّل كل شهرٍ من تاريخ
+ * بدء الدورة (وبتجديد الدورة أيضاً).
+ */
+export function usageWindowKey(subscription: Subscription | undefined, at: string = nowIso()): string {
+  if (!subscription) return "unbound";
+  let index = 0;
+  while (index < 120 && addMonths(subscription.currentPeriodStart, index + 1) <= at) index++;
+  return `${subscription.currentPeriodStart.slice(0, 10)}_${subscription.currentPeriodEnd.slice(0, 10)}_m${index}`;
+}
+const periodKey = (subscription: Subscription | undefined) => usageWindowKey(subscription);
 
 /** يزيد عدّاد استهلاك للدورة الجارية. العدّاد يُصفّر تلقائياً بتغيّر مفتاح الدورة. */
 export function incrementUsage(metric: string, by = 1): number {

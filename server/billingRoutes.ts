@@ -1,5 +1,7 @@
 import { Router, Response, NextFunction } from "express";
 import { db, DemoSandbox } from "./db.ts";
+import { storageStatus } from "./persistence.ts";
+import { McpEngine } from "./engine/mcpEngine.ts";
 import { seatCount, AuthenticatedRequest, requireAuth, requireOwner, requireRole } from "./auth.ts";
 import {
   amendSubscription, archivePlan, billingSnapshot, cancelSubscription, changePlan, DEFAULT_CURRENCY,
@@ -34,7 +36,7 @@ function currentUsage(): UsageSnapshot {
     skills: db.skills.length,
     workItemsThisPeriod: DemoSandbox.isDemoRequest() ? db.workItems.length : readUsage("workItems"),
     connectors: db.connectors.length,
-    mcpServers: 0,
+    mcpServers: McpEngine.getServers().filter(server => server.mode === "declared").length,
     aiCallsThisPeriod: DemoSandbox.isDemoRequest() ? 0 : readUsage("aiCalls"),
   };
 }
@@ -160,6 +162,7 @@ billingRouter.get("/owner/overview", ...ownerGuard, (_req: AuthenticatedRequest,
     revenue: revenueSummary(),
     plans: listPlans(true),
     events: listBillingEvents(120),
+    storage: storageStatus(),
   });
 });
 

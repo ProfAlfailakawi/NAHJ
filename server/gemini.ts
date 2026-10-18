@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
-import { incrementUsage } from "./billing.ts";
+import { checkLimit, incrementUsage, readUsage } from "./billing.ts";
+import { LIMIT_LABEL_AR, noteUsage, recordBlock } from "./entitlements.ts";
 import { DemoSandbox } from "./db.ts";
 
 let geminiClient: GoogleGenAI | null = null;
@@ -36,6 +37,18 @@ export function getGemini(): GoogleGenAI | null {
 
 export async function generateAiResponse(prompt: string, systemInstruction?: string): Promise<string> {
   const client = getGemini();
+  /*
+   * بلغت المؤسسة حدّ نداءات الذكاء الشهري: لا نداءٌ خارجي بعدها، ويعمل المنطق الحتمي كما يعمل
+   * بلا مفتاح — فلا تنقطع المحادثة ولا يضيع شيء، وتُسجَّل الحادثة في التدقيق وتظهر في الاشتراك.
+   */
+  if (client && !DemoSandbox.isDemoRequest()) {
+    const used = readUsage("aiCalls");
+    const check = checkLimit("aiCallsPerMonth", used, 1);
+    if (!check.allowed) {
+      recordBlock("aiCallsPerMonth", { allowed: false, message: LIMIT_LABEL_AR.aiCallsPerMonth, limit: check.limit, used });
+      return "";
+    }
+  }
   if (client) {
     try {
       /*
@@ -56,7 +69,7 @@ export async function generateAiResponse(prompt: string, systemInstruction?: str
        * على استدعاء لم يحدث.
        */
       if (!DemoSandbox.isDemoRequest()) {
-        try { incrementUsage("aiCalls"); } catch { /* القياس لا يُسقط الاستجابة */ }
+        try { incrementUsage("aiCalls"); noteUsage("aiCallsPerMonth"); } catch { /* القياس لا يُسقط الاستجابة */ }
       }
       if (response.text) {
         return response.text.trim();
