@@ -1565,3 +1565,21 @@ main p, main h1, main h2, main h3, main h4, main strong, main small, main li, ma
 .lead-filter{display:flex;flex-wrap:wrap;gap:6px}
 .lead-filter .btn-secondary{height:36px;padding:0 12px;font-size:var(--fs-sm)}
 .lead-filter .btn-secondary[aria-pressed="true"]{background:var(--ink);color:var(--white);border-color:var(--ink)}
+
+/* NAHJ operational pulse: distinguish live attention and working memory without adding data. */
+.hero-grid .brain-hero-wrap > details > summary {
+  border: 1px solid color-mix(in srgb, var(--moss) 13%, var(--line));
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--white) 88%, var(--mint));
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--white) 90%, transparent);
+}
+.hero-grid .brain-hero .brain-core {
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--moss) 5%, transparent), 0 16px 36px color-mix(in srgb, var(--moss) 18%, transparent);
+}
+.hero-grid .brain-hero .visual-node {
+  border-color: color-mix(in srgb, var(--moss) 17%, var(--line));
+  box-shadow: var(--shadow-1), inset 0 1px 0 color-mix(in srgb, var(--white) 85%, transparent);
+}
+@media (max-width: 620px) {
+  .hero-grid .brain-hero-wrap > details > summary { min-height: 44px; }
+}
