@@ -214,3 +214,16 @@
   background: color-mix(in srgb, var(--ink) 3%, transparent);
 }
 .skills-lanes:empty { min-height: 260px; }
+
+/* ── Calm pass: quieter secondary text, icon-led plan limits ──────────── */
+/* Sub-headline under each page title: one calm line, not a paragraph. */
+.page-heading p { font-size: var(--fs-sm); max-width: 560px; font-weight: 600; }
+/* Billing footnotes are reference text, not content: smaller and lighter. */
+.sub-footnote { font-size: var(--fs-xs); line-height: 1.7; font-weight: 600; color: var(--muted-2); }
+/* Plan card limits read as icon + label ... value. */
+.plan-limits li { align-items: center; }
+.plan-limits .pl-label { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.plan-limits .pl-label svg { width: 14px; height: 14px; flex: none; color: var(--moss-text); opacity: .85; }
+.plan-tagline { font-size: var(--fs-xs); line-height: 1.7; }
+/* Simulator side note: quiet caption under the stage ladder. */
+.sim-note { font-size: var(--fs-xs); line-height: 1.7; text-align: center; }
