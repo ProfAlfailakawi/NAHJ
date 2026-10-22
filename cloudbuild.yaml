@@ -1,0 +1,31 @@
+# Cloud Build deploy for NAHJ (same pattern as Admin-New-2026 / Order-New-2026).
+# Builds the Dockerfile and replaces ONLY the image of Cloud Run service "nahj"
+# (europe-west2). Env vars, secrets (NAHJ_NEON_URL ...), scaling (min 0 / max 1)
+# and traffic settings on the service are preserved by Cloud Run.
+# Firebase Hosting site nahj-os only proxies "**" to this service, so no hosting
+# deploy is needed.
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/nahj:$COMMIT_SHA', '.']
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/nahj:$COMMIT_SHA']
+
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'nahj'
+      - '--image=gcr.io/$PROJECT_ID/nahj:$COMMIT_SHA'
+      - '--region=europe-west2'
+      - '--platform=managed'
+      - '--quiet'
+
+images:
+  - 'gcr.io/$PROJECT_ID/nahj:$COMMIT_SHA'
+
+timeout: '1200s'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
