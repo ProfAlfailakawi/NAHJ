@@ -23,14 +23,14 @@ export function SimulatorView({lang,state,busy,onSend,onReset,onUpload,onOpenApp
           <div className="phone-compose"><input value={text} onChange={e=>setText(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")send()}} placeholder={ar?"اكتب رسالة...":"Message..."} aria-label={ar?"نص الرسالة":"Message text"} maxLength={2000} disabled={Boolean(busy)}/><button onClick={send} aria-label={ar?"إرسال":"Send"} disabled={Boolean(busy)||!text.trim()}><Send/></button></div>
         </div>
       </section>
-      <aside className="sim-trace surface-strong">
+      <div className="sim-trace surface-strong">
         <div className="trace-orb"><NahjGlyph/></div>
         <strong>{ladder[Math.min(current,ladder.length-1)]}</strong><span>{ar?"مرحلة المحادثة":"conversation stage"}</span>
         <div className="trace-ladder">{ladder.map((s,i)=><div key={s} className={i<=current?"done":""}><i>{i<current?<Check aria-hidden="true"/>:i===current?<Circle aria-hidden="true" fill="currentColor"/>:null}</i><small>{s}</small></div>)}</div>
         {state.approvalStatus==="rejected"&&<p className="sim-note">{ar?"رُفض الطلب وأُعيد إلى الموظف المختص.":"Rejected and returned to staff."}</p>}
         <p className="sim-note">{ar?"اكتب كعميلك. عند القرار الحسّاس يتوقّف نهج ويطلب موافقتك.":"Write as your customer would. At a sensitive decision NAHJ stops and asks for your approval."}</p>
         {state.requiresManagerApproval&&state.approvalStatus==="pending"&&<button className="approval-cta mt-auto" onClick={onOpenApproval}><ShieldCheck/>{ar?"افتح بوابة القرار":"Open approval gate"}</button>}
-      </aside>
+      </div>
     </div>
   </div>
 }

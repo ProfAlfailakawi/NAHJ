@@ -86,17 +86,17 @@ export function AppHub(p: Props) {
           );
         })}
       </DnaDraw>
-      <aside className="apphub-focus" aria-live="polite" {...flash}>
+      <div className="apphub-focus" aria-live="polite" {...flash}>
         <div className="apphub-focus-text">
           <em>{ar ? "القسم المحدد" : "SELECTED"}</em>
-          <h3>{cur.label}</h3>
+          <h3 aria-level={2}>{cur.label}</h3>
           <strong className="apphub-big">{cur.value}</strong>
           {cur.hint && <p>{cur.hint}</p>}
         </div>
         <button type="button" className="apphub-open" onClick={() => onNavigate(cur.id)} aria-label={`${ar ? "فتح" : "Open"} ${cur.label}`}>
           <span>{ar ? "فتح" : "Open"}</span><ArrowUpLeft/>
         </button>
-      </aside>
+      </div>
     </section>
   );
 }

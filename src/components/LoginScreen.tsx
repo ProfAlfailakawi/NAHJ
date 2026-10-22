@@ -47,12 +47,12 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated }: Props) {
   };
 
   return (
-    <div className="login-shell" dir={ar ? "rtl" : "ltr"}>
+    <main className="login-shell" dir={ar ? "rtl" : "ltr"}>
       <form className="login-card surface-strong" onSubmit={submit}>
         <div className="login-brand">
           <span className="login-mark" aria-hidden="true"><NahjMark size={40} /></span>
           <div>
-            <strong>{ar ? "نهج" : "NAHJ"}</strong>
+            <strong role="heading" aria-level={1}>{ar ? "نهج" : "NAHJ"}</strong>
             <small>{ar ? "نظام التعلّم التشغيلي" : "Operational Learning OS"}</small>
           </div>
         </div>
@@ -136,6 +136,6 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated }: Props) {
           </div>
         )}
       </form>
-    </div>
+    </main>
   );
 }

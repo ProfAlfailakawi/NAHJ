@@ -27,7 +27,7 @@ export function LearnView({lang,proposals,onResolve}:Props){
   return <div className="page-enter">
     <PageHeader eyebrow={ar?"التعلّم / الإشارات":"LEARN / SIGNALS"} title={ar?"نهج لاحظ شيئًا.":"NAHJ noticed something."} hint={ar?"المشاهدة ليست حقيقة. أنت من يحوّلها إلى معرفة معتمدة.":"Observation becomes truth only after review."}/>
     <div className="learn-layout">
-      <aside className="learn-radar surface">
+      <div className="learn-radar surface">
         {/*
           * كانت هذه الأرقام الأربعة مكتوبة: 76% و168 و7 و4 — ومعها حلقة الرادار
           * نفسها عند 76 ثابتة. تُشتق الآن من الإشارات المعروضة على الشاشة، فما
@@ -44,7 +44,7 @@ export function LearnView({lang,proposals,onResolve}:Props){
           <Mini value={conflicts} label={ar?"تعارض":"CONFLICT"}/>
           <Mini value={improvements} label={ar?"تحسين":"BETTER"}/>
         </div>
-      </aside>
+      </div>
       <section className="learning-feed surface-strong">
         <SectionTitle title={ar?"إشارات اليوم":"Signals"} meta={`${open.length}`}/>
         {open.length===0&&<DnaEmpty icon={<Radar/>} title={ar?"لا إشارات بانتظارك":"No signals waiting"} hint={ar?"حين يلاحظ نهج نمطاً أو تعارضاً جديداً يظهر هنا.":"When NAHJ notices a new pattern or conflict, it appears here."}/>}

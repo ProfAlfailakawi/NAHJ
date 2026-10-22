@@ -64,7 +64,7 @@ export function OrgSetupView({ lang, canSetup, onDone, onSignOut, onOpenOwner }:
   };
 
   return (
-    <div className="org-setup" dir={ar ? "rtl" : "ltr"}>
+    <main className="org-setup" dir={ar ? "rtl" : "ltr"}>
       <header className="org-setup-top">
         <BrandLockup compact />
         <button type="button" className="top-icon" onClick={onSignOut} title={ar ? "تسجيل الخروج" : "Sign out"} aria-label={ar ? "تسجيل الخروج" : "Sign out"}><LogOut /></button>
@@ -131,6 +131,6 @@ export function OrgSetupView({ lang, canSetup, onDone, onSignOut, onOpenOwner }:
           )}
         </form>
       )}
-    </div>
+    </main>
   );
 }

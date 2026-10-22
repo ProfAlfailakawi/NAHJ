@@ -405,7 +405,7 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
               return (
                 <article key={item.code} className={`plan-card ${current ? "is-current" : ""}`}>
                   {current && <span className="plan-current-flag">{ar ? "باقتك الحالية" : "Your plan"}</span>}
-                  <h4>{ar ? item.nameAr : item.nameEn}</h4>
+                  <h4 aria-level={3}>{ar ? item.nameAr : item.nameEn}</h4>
                   <p className="plan-tagline">{ar ? item.taglineAr : item.taglineEn}</p>
                   <div className="plan-price">
                     <strong>{item.priceMonthly > 0 ? money(item.priceMonthly, item.currency, ar) : (ar ? "بالتفاوض" : "On request")}</strong>
