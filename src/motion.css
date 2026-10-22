@@ -1,0 +1,86 @@
+/* ==========================================================================
+   NAHJ motion system (round 2). Presentation only, loaded last.
+   One token set; transform and opacity only (plus the existing stroke/width
+   draw-ins owned by the DNA kit). 120-300ms, one-shot, never looping.
+   Entrances use fill-mode "backwards": before the delay the element is in its
+   "from" pose, and once it ends nothing remains applied, so the end state is
+   exactly the static design. No JS is needed, so content always shows.
+   Everything below is inside no-preference; reduced motion gets the plain page.
+   ========================================================================== */
+:root {
+  --m-ease: cubic-bezier(.2, .7, .2, 1);
+  --m-fast: 120ms;
+  --m-base: 180ms;
+  --m-slow: 260ms;
+  --m-step: 40ms;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes mRise { from { opacity: 0; transform: translateY(8px); } }
+  @keyframes mFade { from { opacity: 0; } }
+  @keyframes mSheet { from { opacity: 0; transform: translateY(10px) scale(.985); } }
+  @keyframes mMark { from { opacity: 0; transform: scaleY(.35); } }
+  @keyframes mPop { from { opacity: 0; transform: scale(.6); } }
+
+  /* ---- staggered first appearance: first 8 siblings, 40ms apart, never tables/ledgers/text ---- */
+  :where(.page-enter) > :where(.stat-grid, .partner-rows, .sector-grid, .plan-grid, .owner-block-grid) > :where(*:not(.stat-tile[data-rise])):nth-child(-n+8),
+  :where(.page-enter) > :where(.surface-strong, .owner-block, .sub-block):nth-child(-n+8),
+  :where(.partner-stage) > :where(.partner-hero, .stat-grid, .surface-strong, .partner-terms):nth-child(-n+8),
+  :where(.partner-rows) > .partner-client:nth-child(-n+8),
+  :where(.org-setup-sectors) > label:nth-child(-n+8) {
+    animation: mRise var(--m-slow) var(--m-ease) backwards;
+    animation-delay: calc(var(--n, 0) * var(--m-step));
+  }
+  :where(.page-enter, .partner-stage, .partner-rows, .org-setup-sectors) > :nth-child(1) { --n: 0; }
+  :where(.page-enter, .partner-stage, .partner-rows, .org-setup-sectors) > :nth-child(2) { --n: 1; }
+  :where(.page-enter, .partner-stage, .partner-rows, .org-setup-sectors) > :nth-child(3) { --n: 2; }
+  :where(.page-enter, .partner-stage, .partner-rows, .org-setup-sectors) > :nth-child(4) { --n: 3; }
+  :where(.page-enter, .partner-stage, .partner-rows, .org-setup-sectors) > :nth-child(5) { --n: 4; }
+  :where(.page-enter, .partner-stage, .partner-rows, .org-setup-sectors) > :nth-child(6) { --n: 5; }
+  :where(.page-enter, .partner-stage, .partner-rows, .org-setup-sectors) > :nth-child(7) { --n: 6; }
+  :where(.page-enter, .partner-stage, .partner-rows, .org-setup-sectors) > :nth-child(8) { --n: 7; }
+  /* grid children inherit the index from their own position */
+  :where(.stat-grid, .plan-grid, .sector-grid) > :nth-child(1) { --n: 0; }
+  :where(.stat-grid, .plan-grid, .sector-grid) > :nth-child(2) { --n: 1; }
+  :where(.stat-grid, .plan-grid, .sector-grid) > :nth-child(3) { --n: 2; }
+  :where(.stat-grid, .plan-grid, .sector-grid) > :nth-child(4) { --n: 3; }
+  :where(.stat-grid, .plan-grid, .sector-grid) > :nth-child(5) { --n: 4; }
+  :where(.stat-grid, .plan-grid, .sector-grid) > :nth-child(6) { --n: 5; }
+  :where(.stat-grid, .plan-grid, .sector-grid) > :nth-child(7) { --n: 6; }
+  :where(.stat-grid, .plan-grid, .sector-grid) > :nth-child(8) { --n: 7; }
+
+  /* ---- overlays: backdrop fades, sheets rise (opacity + transform only) ---- */
+  .modal-backdrop, .palette-backdrop { animation: mFade var(--m-base) var(--m-ease) backwards; }
+  .mobile-sheet, .palette { animation: mSheet var(--m-slow) var(--m-ease) backwards; }
+
+  /* ---- disclosure: content eases in when a <details> opens ---- */
+  details[open] > :not(summary) { animation: mRise var(--m-base) var(--m-ease) backwards; }
+  [role="tabpanel"] { animation: mRise var(--m-base) var(--m-ease) backwards; }
+
+  /* ---- active-nav marker grows in when a section becomes current ---- */
+  .desktop-rail .nav-icon.active::before { transform-origin: center; animation: mMark var(--m-slow) var(--m-ease) backwards; }
+  .nav-signal, .nav-icon .tick { animation: mPop var(--m-base) var(--m-ease) backwards; }
+
+  /* ---- micro-interactions ---- */
+  .btn-primary, .btn-secondary, .btn-danger, .icon-button, .top-icon, .nav-icon,
+  .login-card button[type="submit"], .mobile-dock button {
+    transition: transform var(--m-fast) var(--m-ease), background-color var(--m-base) var(--m-ease), box-shadow var(--m-base) var(--m-ease), opacity var(--m-base) var(--m-ease);
+  }
+  .btn-primary:active:not(:disabled), .btn-secondary:active:not(:disabled), .btn-danger:active:not(:disabled),
+  .icon-button:active:not(:disabled), .top-icon:active:not(:disabled),
+  .login-card button[type="submit"]:active:not(:disabled), .mobile-dock button:active { transform: scale(.98); }
+  .btn-primary svg, .btn-secondary svg { transition: transform var(--m-base) var(--m-ease); }
+  .btn-primary:hover:not(:disabled) svg, .btn-secondary:hover:not(:disabled) svg { transform: translateX(-1px); }
+  [dir="ltr"] .btn-primary:hover:not(:disabled) svg, [dir="ltr"] .btn-secondary:hover:not(:disabled) svg { transform: translateX(1px); }
+
+  /* hover lift on read-only cards; inputs inside never move */
+  .stat-tile, .partner-client, .org-setup-sectors label, .plan-card, .sector-card {
+    transition: transform var(--m-base) var(--m-ease), box-shadow var(--m-base) var(--m-ease), border-color var(--m-base) var(--m-ease), background-color var(--m-base) var(--m-ease);
+  }
+  @media (hover: hover) {
+    .stat-tile:hover, .partner-client:hover, .org-setup-sectors label:hover, .plan-card:hover, .sector-card:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px -14px color-mix(in srgb, var(--ink) 38%, transparent);
+    }
+  }
+}
