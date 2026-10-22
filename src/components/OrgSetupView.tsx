@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Building2, CheckCircle2, Crown, LogOut, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Building2, CheckCircle2, Crown, LayoutGrid, LogOut, Play, ShieldCheck, TriangleAlert } from "lucide-react";
 import { api, ApiError } from "../lib/api";
 import { BrandLockup } from "./Brand";
 import { SectorIcon } from "./SectorIcon";
@@ -80,6 +80,12 @@ export function OrgSetupView({ lang, canSetup, onDone, onSignOut, onOpenOwner }:
       ) : (
         <form className="org-setup-card surface-strong" onSubmit={submit}>
           <span className="org-setup-step">{ar ? "خطوة واحدة قبل البدء" : "One step before you start"}</span>
+          {/* مسار الإعداد من حالته الفعلية: الاسم ثم القطاع ثم البدء. زخرفة فقط. */}
+          <ol className="org-steps" aria-hidden="true">
+            <li className={name.trim().length >= 2 ? "done" : "current"}><Building2 /></li>
+            <li className={sector ? "done" : name.trim().length >= 2 ? "current" : ""}><LayoutGrid /></li>
+            <li className={name.trim().length >= 2 && sector ? "current" : ""}><Play /></li>
+          </ol>
           <h1>{ar ? "أعِدّ مؤسستك" : "Set up your organization"}</h1>
           <p>{ar
             ? "اكتب اسم مؤسستك واختر قطاعها. يبدأ نهج نظيفاً: قوالب مهارات القطاع وسياساته تصلك مسوّداتٍ تراجعها وتعدّلها — ولا حالات ولا بيانات نموذجية."
