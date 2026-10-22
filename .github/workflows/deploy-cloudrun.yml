@@ -1,0 +1,67 @@
+name: Deploy NAHJ to Cloud Run
+
+# Deploys the image only (no env/secret/scaling flags) to Cloud Run service
+# "nahj" behind https://nahj-os.web.app. Firebase Hosting just proxies to it.
+# Independent of deploy.yml (VM). Does nothing until the repo variable
+# NAHJ_CLOUDRUN_DEPLOY_ENABLED is set to "true" and the variables below exist.
+#
+# Repo variables: NAHJ_CLOUDRUN_DEPLOY_ENABLED, NAHJ_CR_WIF_PROVIDER,
+#                 NAHJ_CR_SERVICE_ACCOUNT
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: nahj-cloudrun-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT: nahj-a27a4
+  REGION: europe-west2
+  SERVICE: nahj
+  REPO: cloud-run-source-deploy
+
+jobs:
+  checks:
+    if: github.repository == 'ProfAlfailakawi/NAHJ' && vars.NAHJ_CLOUDRUN_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  deploy:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.NAHJ_CR_WIF_PROVIDER }}
+          service_account: ${{ vars.NAHJ_CR_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build and push image
+        run: |
+          IMAGE="$REGION-docker.pkg.dev/$PROJECT/$REPO/$SERVICE:${GITHUB_SHA}"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          gcloud builds submit --project="$PROJECT" --region="$REGION" --tag="$IMAGE" .
+      - name: Deploy image only
+        run: |
+          gcloud run deploy "$SERVICE" --project="$PROJECT" --region="$REGION" --image="$IMAGE" --quiet
+      - name: Verify serving revision uses this image
+        run: |
+          got=$(gcloud run services describe "$SERVICE" --project="$PROJECT" --region="$REGION" --format='value(spec.template.spec.containers[0].image)')
+          echo "serving: $got"; test "$got" = "$IMAGE"
