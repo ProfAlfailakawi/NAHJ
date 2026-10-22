@@ -5,5 +5,18 @@
       "database": "ai-studio-nahj-e90f35fb-7117-4f9a-abe6-290a5889fc88",
       "rules": "firestore.rules"
     }
-  ]
+  ],
+  "hosting": {
+    "site": "nahj-os",
+    "public": "public-empty",
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "nahj",
+          "region": "europe-west2"
+        }
+      }
+    ]
+  }
 }
