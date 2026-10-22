@@ -97,10 +97,7 @@ function legalName(): string {
 
 export const BASE_STYLE = `${FONT_FACE_CSS}
   :root { --ink:#10251f; --muted:#5d716b; --line:#e2e8e4; --moss:#2f7d65; --moss-soft:#e7f1ec; --amber:#b9852f; --amber-soft:#f6ecd6; --sky:#4a63cf; --sky-soft:#e8ecfb; --coral:#c2553f; --violet:#7357c4; --err:#b3392b; --bg:#f4f1e8; --card:#fffdf7; --r:20px; --shadow:0 18px 40px -26px rgba(16,37,31,.45); }
-  @media (prefers-color-scheme: dark) {
-    :root { --ink:#eef3f0; --muted:#a4b3ad; --line:#2a3833; --moss:#6fc3a3; --moss-soft:#17302a; --amber:#e0b36a; --amber-soft:#2e2815; --sky:#8ea2f0; --sky-soft:#1b2342; --coral:#ef8f78; --violet:#b3a0ee; --err:#ff9b8c; --bg:#0f1714; --card:#16211d; --shadow:0 18px 40px -26px rgba(0,0,0,.8); }
-  }
-  * { box-sizing:border-box; }
+    * { box-sizing:border-box; }
   html { scroll-behavior:smooth; }
   body { margin:0; background:var(--bg); color:var(--ink); font-family:"Cairo",system-ui,"Segoe UI",Tahoma,sans-serif; line-height:1.85; font-size:17px; }
   a { color:inherit; }
