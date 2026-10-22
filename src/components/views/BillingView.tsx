@@ -2,7 +2,7 @@ import { demoSnapshotNote, ledgerLabel, levelLabel, dataText, currencyLabel, for
 import React, { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle, ArrowUpRight, BadgeCheck, CalendarClock, CheckCircle2, CircleSlash, CreditCard,
-  Download, FileText, Gauge, HardDriveDownload, Layers, Receipt, RefreshCw, ShieldCheck, Sparkles, Timer, Wallet,
+  Download, FileText, Gauge, HardDriveDownload, Layers, Receipt, RefreshCw, ShieldCheck, Sparkles, Timer, Users, Wallet, Workflow,
 } from "lucide-react";
 import { PageHeader, SectionTitle, Stat } from "../Primitives";
 import { DnaDraw } from "../dna";
@@ -418,10 +418,10 @@ export function BillingView({ lang, snapshot, plans, loading, canRequest, canPay
                     <div className="plan-setup">{ar ? "رسوم تأسيس مرة واحدة" : "One-time setup"}: {money(item.setupFee, item.currency, ar)}</div>
                   )}
                   <ul className="plan-limits">
-                    <li>{ar ? "مقاعد" : "Seats"}: <b>{item.limits.seats ?? "∞"}</b></li>
-                    <li>{ar ? "مهارات" : "Skills"}: <b>{item.limits.skills ?? "∞"}</b></li>
-                    <li>{ar ? "حالات شهرياً" : "Work items / mo"}: <b>{item.limits.workItemsPerMonth?.toLocaleString("en-US") ?? "∞"}</b></li>
-                    <li>{ar ? "سقف الاستقلالية" : "Autonomy ceiling"}: <b>{levelLabel(item.limits.maxAutonomyLevel, ar)}</b></li>
+                    <li><span className="pl-label"><Users aria-hidden="true" />{ar ? "مقاعد" : "Seats"}</span> <b>{item.limits.seats ?? "∞"}</b></li>
+                    <li><span className="pl-label"><Sparkles aria-hidden="true" />{ar ? "مهارات" : "Skills"}</span> <b>{item.limits.skills ?? "∞"}</b></li>
+                    <li><span className="pl-label"><Workflow aria-hidden="true" />{ar ? "حالات شهرياً" : "Work items / mo"}</span> <b>{item.limits.workItemsPerMonth?.toLocaleString("en-US") ?? "∞"}</b></li>
+                    <li><span className="pl-label"><Gauge aria-hidden="true" />{ar ? "سقف الاستقلالية" : "Autonomy ceiling"}</span> <b>{levelLabel(item.limits.maxAutonomyLevel, ar)}</b></li>
                   </ul>
                 </article>
               );
