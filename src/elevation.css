@@ -17,13 +17,6 @@
   --grid: color-mix(in srgb, var(--ink) 5%, transparent);
   --grid-major: color-mix(in srgb, var(--ink) 9%, transparent);
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --chart-ink: #0a1411;
-    --chart-ink-2: #12211c;
-    --chart-line: rgba(255, 255, 255, .08);
-  }
-}
 
 /* ---- Arabic typography: connected script must never be tightened ---- */
 :root[dir="rtl"] :is(h1, h2, h3, h4, strong, .rail-brand-name, .page-heading h1),

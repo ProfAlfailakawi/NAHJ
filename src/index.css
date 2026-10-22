@@ -1525,27 +1525,7 @@
 @media(max-width:560px){.partner-stage .stat-tile strong{font-size:clamp(15px,4.4vw,20px);white-space:nowrap}}
 
 /* ===== الوضع الداكن: كل الأسطح تقرأ رموز :root، فيكفي قلب الرموز. ===== */
-:root{color-scheme:light dark;--moss-text:#276b56;--rose-badge:#c4493a;--on-ink:#fffdf7;--on-accent:#fff;--ink-bg:#10251f;--hilite:#fff;--rose-ink:#8c2f26;--amber-ink:#8a5d16;--sky-ink:#2f43a8;--violet-ink:#5b45a0}
-@media (prefers-color-scheme:dark){
-  :root{
-    --paper:#0e1613;--paper-2:#16211d;--paper-3:#22312b;--white:#14201c;
-    --ink:#eaf1ee;--ink-2:#c9d9d1;--muted:#a3b3ac;--muted-2:#9aaba4;
-    --line:rgba(255,255,255,.09);--line-strong:rgba(255,255,255,.18);
-    --moss:#58b896;--moss-dark:#86d4b8;--mint:#173129;
-    --sky:#8ea2f0;--sky-soft:#1b2342;--amber:#e3ad5c;--amber-soft:#33291a;
-    --rose:#ef8f78;--rose-soft:#3a201c;--violet:#b3a0ee;--violet-soft:#2a2249;
-    --shadow-1:0 1px 0 rgba(255,255,255,.04) inset,0 10px 30px rgba(0,0,0,.35),0 1px 2px rgba(0,0,0,.3);
-    --shadow-2:0 1px 0 rgba(255,255,255,.05) inset,0 26px 70px rgba(0,0,0,.5),0 2px 8px rgba(0,0,0,.35);
-    --on-accent:#08130f;--rose-badge:var(--rose);--moss-text:var(--moss);--on-ink:#f2f7f4;--dna-on-accent:#08130f;--ink-bg:#2a6f59;--hilite:#1c2a24;
-    --rose-ink:#ffb4a6;--amber-ink:#f0c47d;--sky-ink:#b4c1ff;--violet-ink:#cdbff7;
-    --cream-tile:#1f2d28;--cream-edge:rgba(255,255,255,.08);
-    --dna-warn:#f0c47d;--dna-warn-soft:#33291a;--dna-danger:#ffb4a6;--dna-danger-soft:#3a201c;--dna-info:#9fc4e0;--dna-info-soft:#16283a;
-  }
-  ::selection{background:rgba(88,184,150,.3)}
-  ::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--white) 18%,transparent)}
-  .ambient-canvas{opacity:.55}
-  .phone-shell{border-color:#2b3a34}
-}
+:root{color-scheme:light;--moss-text:#276b56;--rose-badge:#c4493a;--on-ink:#fffdf7;--on-accent:#fff;--ink-bg:#10251f;--hilite:#fff;--rose-ink:#8c2f26;--amber-ink:#8a5d16;--sky-ink:#2f43a8;--violet-ink:#5b45a0}
 ::placeholder{color:var(--muted-2);opacity:1}
 @media(max-width:560px){.partner-stage .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.partner-stage .stat-tile{min-height:88px;padding:12px}}
 .user-chip small{max-width:190px}
