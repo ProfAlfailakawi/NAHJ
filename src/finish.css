@@ -17,7 +17,9 @@
 .mobile-dock button:focus-visible { outline: 2px solid var(--brass, var(--moss)); outline-offset: -3px; }
 
 /* ---- Contrast: dimmed supporting text keeps its hierarchy by size and weight, not by fading under 4.5:1 ---- */
-.org-setup-sectors small { opacity: 1; color: var(--muted); }
+.org-setup-sectors small, .org-setup-card label small { opacity: 1; color: var(--muted); }
+.accounts-identity small, .accounts-identity .accounts-meta, .metric-basis small, .login-brand small { opacity: 1; color: var(--muted); }
+.unmeasured { opacity: .85; }
 .autonomy-badge i { opacity: 1; }
 .eval-row > b { opacity: 1; color: var(--muted); }
 .owner-hint { color: var(--muted); opacity: 1; }
@@ -34,3 +36,11 @@
   .transcript-mic { min-width: 44px; min-height: 44px; }
   .autonomy-chooser button { min-height: 44px; }
 }
+
+/* ---- Small fixes found by the scorecard ---- */
+@media (max-width: 400px) {
+  /* a column header whose longest word was 3px wider than its 62px floor got clipped */
+  .people-matrix th[scope="col"] span { min-width: 72px; }
+}
+/* owner console: a date-time in a tile wraps instead of scrolling sideways inside it */
+.owner-block .stat-tile > strong { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
