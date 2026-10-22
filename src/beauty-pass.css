@@ -41,6 +41,11 @@
     min-width: 52px;
   }
 }
+/* 621–900px (tablet portrait): the slot is 52px wide, so the text label was clipped ("إيقاف" cut off). Icon-only like on phones; the label stays for screen readers. */
+@media (max-width: 900px) and (min-width: 621px) {
+  .emergency-fab { padding: 0; justify-content: center; }
+  .emergency-fab span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
 @media (max-width: 379px) {
   .emergency-fab { inset-inline-end: 8px; width: 40px; height: 40px; min-width: 40px; border-radius:var(--r-md); }
   .apphub-stage { margin-inline: 14px; }

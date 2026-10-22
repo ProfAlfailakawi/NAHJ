@@ -799,6 +799,9 @@
  * وبين الهاتف والشاشة العريضة يعود الشريط أيقوناتٍ مع التلميح، فلا تضيق الصفحة. */
 .rail-brand-name{display:none}
 .nav-label{display:none}
+/* الشريط المضغوط (٩٠١–١١٩٩px): سبعة عشر مدخلاً تتجاوز ارتفاع الشاشة القصيرة (١٠٢٤×٧٦٨)
+ * فتخرج «النشاط» والمالك والمسوّقون ودليل البدء عن الشاشة بلا تمرير. */
+@media(min-width:901px) and (max-height:1020px){.rail-nav{min-height:0;overflow-y:auto;scrollbar-width:none}.rail-nav::-webkit-scrollbar{display:none}}
 /* على الأجهزة اللمسية لا مرور فأرة يُظهر التلميح — فالأسماء ظاهرة دائماً. */
 @media(min-width:1200px),(hover:none) and (min-width:901px){
   .desktop-rail{width:208px;align-items:stretch;padding:14px 12px 12px}
@@ -1048,7 +1051,8 @@
   .accounts-rows article>*{flex:0 0 auto}
   .accounts-password-row input{flex:1 1 100%}
   .accounts-password-row button{flex:1 1 0}
-  .autonomy-chooser{gap:3px}
+  /* سبعة أزرار بعرض ٤٤px لا تتسع في ٢٦٠px (٣٢٠px): كان الأخير يخرج عن الشاشة. تلتفّ الآن بدل أن تُقصّ. */
+  .autonomy-chooser{gap:3px;grid-template-columns:repeat(auto-fit,minmax(44px,1fr))}
   .accounts-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .accounts-controls select{grid-column:1/-1;width:100%}
   .people-layout>section,.people-list{padding:16px}
