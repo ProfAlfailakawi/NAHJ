@@ -19,7 +19,8 @@
 /* ---- Contrast: dimmed supporting text keeps its hierarchy by size and weight, not by fading under 4.5:1 ---- */
 .org-setup-sectors small, .org-setup-card label small { opacity: 1; color: var(--muted); }
 .accounts-identity small, .accounts-identity .accounts-meta, .metric-basis small, .login-brand small { opacity: 1; color: var(--muted); }
-.unmeasured { opacity: .85; }
+.shadow-pairs > .unmeasured { opacity: .9; }
+.unmeasured small { color: var(--muted); }
 .autonomy-badge i { opacity: 1; }
 .eval-row > b { opacity: 1; color: var(--muted); }
 .owner-hint { color: var(--muted); opacity: 1; }
