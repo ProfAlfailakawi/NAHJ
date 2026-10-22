@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { LogIn, TriangleAlert } from "lucide-react";
+import { FlaskConical, LogIn, TriangleAlert } from "lucide-react";
 import { NahjMark } from "./Brand";
 import { ApiError, authApi } from "../lib/api";
 
@@ -8,14 +8,17 @@ interface Props {
   /** true عند أول تشغيل: لا يوجد أي حساب بعد، فنُنشئ حسابك بدل طلب الدخول. */
   needsSetup: boolean;
   onAuthenticated: () => void;
+  demoEnabled: boolean;
+  demoBusy: boolean;
+  onEnterDemo: () => void;
 }
 
 /**
  * بوابة الدخول. لا يُعرض أي سطح تشغيلي قبلها — المنصة تدير مفاتيح إيقاف وموافقات
  * ومستويات استقلالية، ولا معنى لأي منها على سطح مفتوح.
  */
-/* زرّ «جرّب بدون حساب» أُزيل من البطاقة: أيقونة القارورة في الشريط العلوي تؤدي الغرض نفسه فلا يتكرّر. */
-export function LoginScreen({ lang, needsSetup, onAuthenticated }: Props) {
+/* مدخل التجربة أيقونة القارورة في رأس البطاقة فقط؛ لا زرّ ثانٍ تحت النموذج. */
+export function LoginScreen({ lang, needsSetup, onAuthenticated, demoEnabled, demoBusy, onEnterDemo }: Props) {
   const ar = lang === "ar";
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -55,6 +58,18 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated }: Props) {
             <strong>{ar ? "نهج" : "NAHJ"}</strong>
             <small>{ar ? "نظام التعلّم التشغيلي" : "Operational Learning OS"}</small>
           </div>
+          {demoEnabled && (
+            <button
+              type="button"
+              className="demo-enter demo-enter--icon login-demo-icon"
+              onClick={onEnterDemo}
+              disabled={demoBusy}
+              title={demoBusy ? (ar ? "جارٍ تجهيز التجربة..." : "Preparing demo...") : (ar ? "جرّب نهج بدون تسجيل — بيئة تجريبية معزولة" : "Try NAHJ without signing in — isolated sandbox")}
+              aria-label={ar ? "جرّب نهج بدون تسجيل" : "Try NAHJ without signing in"}
+            >
+              <FlaskConical aria-hidden="true" />
+            </button>
+          )}
         </div>
 
         <p className="login-hint">

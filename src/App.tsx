@@ -398,7 +398,7 @@ export default function App(){
 
   if(authState==="checking")return <div className="boot-gate" role="status" aria-busy="true" aria-label={lang==="ar"?"جارٍ التحقق":"Checking session"}><NahjMark size={56}/></div>;
   if(authState==="anonymous"||authState==="setup")
-    return <><LoginScreen lang={lang} needsSetup={authState==="setup"} onAuthenticated={()=>void checkAuth()}/><ToastRegion toast={toast}/></>;
+    return <><LoginScreen lang={lang} needsSetup={authState==="setup"} onAuthenticated={()=>void checkAuth()} demoEnabled={demoEnabled} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()}/><ToastRegion toast={toast}/></>;
 
   /*
    * حساب المسوّق سطحٌ واحد.
