@@ -123,7 +123,7 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
 
       {/* تغيير كلمة المرور متاح لكل حساب، لا للمشرف وحده. */}
       <section className="surface-strong accounts-self">
-        <h3><KeyRound /> {ar ? "كلمة مروري" : "My password"}</h3>
+        <h3 aria-level={2}><KeyRound /> {ar ? "كلمة مروري" : "My password"}</h3>
         <form onSubmit={changeOwn}>
           <div className="field">
             <label htmlFor="own-current">{ar ? "كلمة المرور الحالية" : "Current password"}</label>

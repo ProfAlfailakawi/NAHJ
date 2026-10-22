@@ -129,6 +129,7 @@ export function ConnectionsView({ lang, connectors, testingId, onTest, isDemo = 
       {/* بطاقة المرآة السحابية — كل سطرٍ فيها يُقرأ من /firebase/status. */}
       <DnaStatusHeader
         className="cloud-card dna-surface"
+        headingLevel={2}
         icon={<Cloud />}
         tone={cloud?.connected ? "accent" : "slate"}
         title={<>

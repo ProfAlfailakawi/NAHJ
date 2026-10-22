@@ -339,7 +339,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
 
             {/* التمديد بلا فاتورة — لتعويض انقطاع أو تسوية تجارية، بأثرٍ يشرح لماذا. */}
             <div className="owner-subform">
-              <h4><CalendarPlus /> تمديد بلا فاتورة</h4>
+              <h4 aria-level={3}><CalendarPlus /> تمديد بلا فاتورة</h4>
               <div className="owner-form">
                 <label>أيام<input type="number" min={0} value={extend.days} onChange={event => setExtend(v => ({ ...v, days: event.target.value }))} /></label>
                 <label>شهور<input type="number" min={0} value={extend.months} onChange={event => setExtend(v => ({ ...v, months: event.target.value }))} /></label>
@@ -353,7 +353,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
 
             {/* نقل الباقة — فوراً بتناسب زمني، أو مجدولاً عند نهاية الدورة. */}
             <div className="owner-subform">
-              <h4><Layers /> نقل إلى باقة أخرى</h4>
+              <h4 aria-level={3}><Layers /> نقل إلى باقة أخرى</h4>
               <div className="owner-form">
                 <label>الباقة
                   <select value={move.planCode} onChange={event => setMove(v => ({ ...v, planCode: event.target.value }))}>
@@ -385,7 +385,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
 
             {/* الإنهاء يُجمّد كتابة المؤسسة فوراً، فيُطلب كتابته لا ضغطه. */}
             <div className="owner-subform danger">
-              <h4><AlertTriangle /> إنهاء الترخيص</h4>
+              <h4 aria-level={3}><AlertTriangle /> إنهاء الترخيص</h4>
               <p className="owner-hint">
                 يوقف الكتابة على المؤسسة فوراً. القراءة والتصدير يبقيان — بياناتها لها. اكتب <code>TERMINATE</code> للتأكيد.
               </p>
@@ -541,7 +541,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
 
         {gateway && gateway.needsAttention.length > 0 && (
           <div className="owner-attention">
-            <h4><AlertTriangle /> عمليات تحتاج تدخّلك ({gateway.needsAttention.length})</h4>
+            <h4 aria-level={3}><AlertTriangle /> عمليات تحتاج تدخّلك ({gateway.needsAttention.length})</h4>
             {gateway.needsAttention.map((intent: PaymentIntentView) => (
               <div key={intent.id} className="owner-attention-row">
                 <span className="mono">{intent.invoiceNumber}</span>
@@ -705,7 +705,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
 
         {draft && (
           <div className="owner-plan-editor">
-            <h4>{plans.some(plan => plan.code === draft.code) ? `تحرير «${draft.nameAr || draft.code}»` : "باقة جديدة"}</h4>
+            <h4 aria-level={3}>{plans.some(plan => plan.code === draft.code) ? `تحرير «${draft.nameAr || draft.code}»` : "باقة جديدة"}</h4>
             <div className="owner-form">
               <label>الرمز (لاتيني)<input value={draft.code} disabled={plans.some(plan => plan.code === draft.code)}
                 onChange={event => setDraft(v => v && ({ ...v, code: event.target.value.toLowerCase() }))} /></label>
@@ -780,7 +780,7 @@ export function OwnerView({ lang, notify, onChanged }: Props) {
       {/* ------------------------------------------------ السجلّ */}
       <section className="surface-strong owner-block">
         <SectionTitle title="سجلّ الترخيص" icon={<History />} meta={`${data?.events.length ?? 0}`} />
-        <div className="owner-events">
+        <div className="owner-events" tabIndex={0} role="region" aria-label="سجلّ الترخيص">
           {(data?.events || []).map(event => (
             <div key={event.id} className={`owner-event ${event.type.startsWith("request.") ? "is-request" : ""}`}>
               <span className="mono owner-event-type">{event.type}</span>

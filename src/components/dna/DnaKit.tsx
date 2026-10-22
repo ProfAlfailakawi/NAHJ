@@ -321,6 +321,7 @@ export function DnaTimeline({
       ref={ref}
       className={cx('dna', 'dna-tline', className)}
       aria-label={ariaLabel}
+      tabIndex={maxHeight != null ? 0 : undefined}
       data-wrap={wrapMeta ? 'true' : undefined}
       data-draw={reveal && phase !== 'final' ? phase : undefined}
       style={{ ...(maxHeight != null ? { maxHeight, overflowY: 'auto' } : null), ['--tstep' as string]: `${step}ms` } as React.CSSProperties}

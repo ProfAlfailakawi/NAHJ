@@ -171,7 +171,7 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
           return <>{skills.slice(0,5).map(lane)}{skills.length>5&&<details className="skills-more"><summary>{ar?`عرض الكل (${skills.length})`:`Show all (${skills.length})`}</summary><div className="skills-lanes">{skills.slice(5).map(lane)}</div></details>}</>})()}
         </div>
       </section>
-      {skill&&<aside className="skill-inspector surface-strong">
+      {skill&&<div className="skill-inspector surface-strong">
         <div className="inspector-hero"><span className={`skill-glyph large risk-${skill.riskLevel}`}><BrainCircuit/></span><div><em>{ar?(SKILL_STATUS_PLAIN[skill.status]||skill.status):skill.status.toUpperCase()}</em><strong>{ar?<Dt t={skill.name} ar={ar}/>:skill.nameEn}</strong><small>v{skill.activeVersion} · {skill.ownerName}</small></div></div>
         <DnaStepper className="skill-lifecycle" size="xs" reveal stepMs={220} playKey="life:skills" onRevealDone={()=>setLifeDoneFor(skill.id)} ariaLabel={ar?"دورة حياة المهارة":"Skill lifecycle"} stateText={ar?undefined:EN_STATE}
           steps={LIFECYCLE.map((st,i)=>({key:st,label:ar?(SKILL_STATUS_PLAIN[st]||st):st,state:lifecycleState(skill.status,i)}))}/>
@@ -199,7 +199,7 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
           items={[...(skill.versions||[])].sort((a,b)=>b.version-a.version).map(v=>({key:String(v.version),icon:<GitCommitVertical/>,tone:v.version===skill.activeVersion?"accent":"neutral",
             title:<><b>v{v.version}</b> · <Dt t={v.changeSummary} ar={ar}/></>,date:v.createdAt?.slice(0,10),meta:v.approvedBy}))}/></React.Fragment>}
         <ManualPanel lang={lang} skill={skill} onSkillUpdated={onSkillUpdated} notify={notify}/>
-      </aside>}
+      </div>}
     </div>
     {skill&&promoteTo!==null&&<PromotionDialog lang={lang} skill={skill} target={promoteTo} onClose={()=>setPromoteTo(null)} onConfirm={o=>{onPromote(skill.id,promoteTo as AutonomyLevel,o);setPromoteTo(null)}}/>}
   </div>
