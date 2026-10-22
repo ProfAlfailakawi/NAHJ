@@ -69,6 +69,7 @@ test("CSP has no unsafe-inline script and tags inline scripts with the nonce", (
   assert.match(csp, /script-src 'self' 'nonce-abc'/);
   assert.doesNotMatch(csp, /script-src[^;]*unsafe-inline/);
   assert.doesNotMatch(csp, /frame-ancestors/, "embedding in the applet host would break");
+  assert.match(csp, /connect-src 'self' https:\/\/orbitq8\.web\.app(;|$)/, "the ORBIT sensor may report browser errors, to that one origin only");
   assert.equal(nonceScripts('<script>a</script><script nonce="x">b</script>', "n"), '<script nonce="n">a</script><script nonce="x">b</script>');
 });
 

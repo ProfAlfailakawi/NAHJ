@@ -18,7 +18,8 @@ export function buildCsp(nonce: string): string {
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self' data:",
     "img-src 'self' data: blob: https:",
-    "connect-src 'self'",
+    // orbitq8.web.app: وجهة حساس أوربت الوحيدة (إرسال أخطاء المتصفح المجهولة). لا يُقرأ منها شيء.
+    "connect-src 'self' https://orbitq8.web.app",
     "media-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
