@@ -714,6 +714,16 @@ function currentStore(): Store {
   return demoContext.getStore()?.store || baseStore;
 }
 
+/*
+ * مفتاح المخزن الذي يخدم الطلب الحالي: صندوق الزائر أو مخزن المؤسسة.
+ *
+ * لحالةٍ تعيش خارج `Store` ويجب أن تُعزل معه (سجلّ خوادم MCP وتنفيذاته): تُربط
+ * بهذا المفتاح في WeakMap، فتُمحى مع الصندوق حين يُمحى ولا تعبر إلى غيره.
+ */
+export function currentStoreKey(): object {
+  return currentStore();
+}
+
 export const db: Store = new Proxy(baseStore, {
   get(_target, prop, receiver) {
     const store = currentStore();

@@ -1,4 +1,4 @@
-import { db } from "../db.ts";
+import { currentStoreKey, db } from "../db.ts";
 import { ConnectorLayer } from "./connectors.ts";
 import { PolicyEngine } from "./policyEngine.ts";
 import {
@@ -8,6 +8,16 @@ import {
   McpPromptDefinition,
   McpToolExecutionRecord,
 } from "../../src/types/index.ts";
+
+interface McpRegistry {
+  servers: McpServerInfo[];
+  tools: McpToolDefinition[];
+  resources: McpResourceDefinition[];
+  recentExecutions: McpToolExecutionRecord[];
+}
+
+/* مفتاحه مخزن الطلب (انظر currentStoreKey): صندوقٌ يُمحى فيُمحى سجلّه معه. */
+const registries = new WeakMap<object, McpRegistry>();
 
 export class McpEngine {
   private static protocolVersion = "2024-11-05";
@@ -24,7 +34,7 @@ export class McpEngine {
    *
    * فصارت تُعلن نفسها محاكاةً، وعناوينها لا تدّعي مساراً لا يستقبل شيئاً.
    */
-  private static servers: McpServerInfo[] = [
+  private static readonly seedServers: McpServerInfo[] = [
     {
       id: "sis-mcp-server",
       name: "Future SIS Core MCP Server",
@@ -137,7 +147,7 @@ export class McpEngine {
     },
   ];
 
-  private static tools: McpToolDefinition[] = [
+  private static readonly seedTools: McpToolDefinition[] = [
     {
       name: "sis_check_seats",
       serverId: "sis-mcp-server",
@@ -302,7 +312,7 @@ export class McpEngine {
     },
   ];
 
-  private static resources: McpResourceDefinition[] = [
+  private static readonly seedResources: McpResourceDefinition[] = [
     {
       uri: "nahj://sis/capacity/kg2",
       name: "سعة مقاعد مرحلة الروضة الثانية KG2 (حي)",
@@ -399,7 +409,7 @@ export class McpEngine {
     },
   ];
 
-  private static recentExecutions: McpToolExecutionRecord[] = [
+  private static readonly seedExecutions: McpToolExecutionRecord[] = [
     {
       id: "exec_mcp_1",
       timestamp: "10:15 AM",
@@ -436,6 +446,37 @@ export class McpEngine {
       requiresApproval: true,
     },
   ];
+
+  /*
+   * السجلّ الحيّ لكل مخزن — لا حالةٌ ساكنة واحدة للعملية كلها.
+   *
+   * كانت الخوادم والأدوات والتنفيذات حقولاً ساكنة في الصنف، فيتشاركها كل صندوق
+   * عرضٍ (/try بلا حساب، وهويّته فيه «مشرف») مع المؤسسة الحقيقية: يرى الزائر
+   * تنفيذاتها بمعاملاتها (رقمٌ مدني واسم)، ويحذف خوادمها المسجّلة، ويسجّل خوادم
+   * تظهر في شاشتها وتُحتسب من حصّة باقتها. وصار لكل مخزنٍ سجلّه، يُبذر من
+   * التعريفات أعلاه عند أول قراءة ويُمحى مع صندوقه.
+   */
+  private static registry(): McpRegistry {
+    const key = currentStoreKey();
+    let registry = registries.get(key);
+    if (!registry) {
+      registry = {
+        servers: structuredClone(this.seedServers),
+        tools: structuredClone(this.seedTools),
+        resources: structuredClone(this.seedResources),
+        recentExecutions: structuredClone(this.seedExecutions),
+      };
+      registries.set(key, registry);
+    }
+    return registry;
+  }
+
+  private static get servers(): McpServerInfo[] { return this.registry().servers; }
+  private static get tools(): McpToolDefinition[] { return this.registry().tools; }
+  private static set tools(value: McpToolDefinition[]) { this.registry().tools = value; }
+  private static get resources(): McpResourceDefinition[] { return this.registry().resources; }
+  private static set resources(value: McpResourceDefinition[]) { this.registry().resources = value; }
+  private static get recentExecutions(): McpToolExecutionRecord[] { return this.registry().recentExecutions; }
 
   // Public Getters
   public static getServers(): McpServerInfo[] {
