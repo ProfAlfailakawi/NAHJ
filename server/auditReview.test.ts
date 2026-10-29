@@ -159,3 +159,22 @@ test("while the emergency pause is active no skill can be promoted into executio
     server.close();
   }
 });
+
+test("the learn feed's observed-cases count is derived from the proposals, not the old 168 constant", async () => {
+  const { server, base } = await start();
+  try {
+    const admin = await signIn(base, "admin@review.test");
+    const saved = db.learningProposals.splice(0, db.learningProposals.length);
+    try {
+      const empty = await (await admin("GET", "/learn")).json() as { metrics: { totalObservedCases: number } };
+      assert.equal(empty.metrics.totalObservedCases, 0, "nothing observed yet must read 0, not a fixed number");
+      db.learningProposals.push({ ...saved[0], id: "lp_count_a", observedCasesCount: 7 }, { ...saved[0], id: "lp_count_b", observedCasesCount: 5 });
+      const two = await (await admin("GET", "/learn")).json() as { metrics: { totalObservedCases: number } };
+      assert.equal(two.metrics.totalObservedCases, 12);
+    } finally {
+      db.learningProposals.splice(0, db.learningProposals.length, ...saved);
+    }
+  } finally {
+    server.close();
+  }
+});

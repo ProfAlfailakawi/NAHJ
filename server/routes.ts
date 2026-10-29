@@ -625,7 +625,12 @@ apiRouter.get("/learn", (req: Request, res: Response) => {
   res.json({
     proposals: db.learningProposals,
     metrics: {
-      totalObservedCases: 168,
+      /*
+       * كان 168 مكتوباً — الرقم نفسه الذي يذكره METRICS.md بين الثوابت المخترعة، بقي في
+       * الردّ بعد أن رُفع من الشاشة. صار مجموع ما رُصد فعلاً في مقترحات التعلّم.
+       */
+      totalObservedCases: db.learningProposals.reduce((sum, p) => sum + (Number(p.observedCasesCount) || 0), 0),
+      totalObservedCasesBasis: "مجموع الحالات المرصودة في مقترحات التعلّم المسجَّلة",
       conflictsPending: db.learningProposals.filter((p) => p.type === "conflict" && p.status === "pending").length,
       processDrifts: db.learningProposals.filter((p) => p.type === "process_drift" && p.status === "pending").length,
       improvementsFound: db.learningProposals.filter((p) => p.type === "improvement").length,
