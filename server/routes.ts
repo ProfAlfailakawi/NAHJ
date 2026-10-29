@@ -427,7 +427,11 @@ apiRouter.get("/export/full.json", ...exportGuard, (req: AuthenticatedRequest, r
 /** دفترٌ واحد بصيغة CSV — يُفتح في أي جدول بلا وسيط. */
 apiRouter.get("/export/:ledger.csv", ...exportGuard, (req: AuthenticatedRequest, res: Response) => {
   const ledger = String(req.params.ledger) as LedgerName;
-  if (!(ledger in LEDGER_LABELS)) return res.status(404).json({ error: "لا دفتر بهذا الاسم." });
+  /*
+   * مفتاحٌ مملوك لا موروث: `in` كان يقبل «constructor» و«toString» من نموذج الكائن، فيُردّ
+   * ملفٌ فارغ بحالة 200 ويُكتب في سجلّ التدقيق «تصدير دفتر function Object()…».
+   */
+  if (!Object.hasOwn(LEDGER_LABELS, ledger)) return res.status(404).json({ error: "لا دفتر بهذا الاسم." });
   if (OWNER_ONLY.includes(ledger) && req.account?.role !== "owner") {
     return res.status(403).json({ error: "هذا الدفتر لمالك المنصة وحده.", code: "OWNER_ONLY" });
   }

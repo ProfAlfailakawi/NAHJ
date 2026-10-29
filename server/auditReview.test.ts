@@ -87,3 +87,22 @@ test("approval decisions: the mandatory reason must be text, and an education re
     server.close();
   }
 });
+
+test("ledger export: an inherited object key is not a ledger (no empty 200, no junk audit row)", async () => {
+  const { server, base } = await start();
+  try {
+    const admin = await signIn(base, "admin@review.test");
+    const before = db.auditEvents.length;
+    for (const name of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+      const res = await admin("GET", `/export/${name}.csv`);
+      assert.equal(res.status, 404, `${name}.csv must be unknown`);
+    }
+    assert.equal(db.auditEvents.length, before, "no audit row for a ledger that does not exist");
+    /* والدفاتر الحقيقية تبقى كما هي. */
+    const skills = await admin("GET", "/export/skills.csv");
+    assert.equal(skills.status, 200);
+    assert.match(skills.headers.get("content-type") || "", /text\/csv/);
+  } finally {
+    server.close();
+  }
+});
