@@ -118,13 +118,14 @@ async function startServer() {
     next();
   });
 
-  // Conservative security response headers. No X-Frame-Options / frame-ancestors
-  // so embedding in the AI Studio applet host keeps working.
+  // Conservative security response headers. Frame protection (CSP frame-ancestors
+  // 'self' + X-Frame-Options: SAMEORIGIN) is production-only, set with the CSP, so
+  // the dev server stays embeddable (AI Studio applet preview, Vite HMR).
   /*
    * سياسة أمان المحتوى (CSP).
    *
    * كانت غائبة عمداً خشية كسر التضمين وإعادة التحميل الحيّ. والحلّ ليس غيابها بل
-   * ضبطها: لا `frame-ancestors` (التضمين يبقى)، وتُرسل في الإنتاج وحده (خادم
+   * ضبطها: تُرسل في الإنتاج وحده ومعها منع العرض في إطار من أصل آخر (خادم
    * Vite للتطوير يحقن سكربتات مضمَّنة للتحميل الحيّ). السكربتات المضمَّنة في
    * الصفحات العامة تُعلَّم بـnonce لكل طلب، فلا حاجة إلى 'unsafe-inline' للسكربت.
    */

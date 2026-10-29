@@ -9,7 +9,7 @@ process.env.NAHJ_DATABASE_PATH = path.join(directory, "test.sqlite");
 
 const { PolicyEngine, applySectorCompliance, redactPatientData, checkConflict, RETAIL_CASH_LIMIT_KWD } = await import("./engine/policyEngine.ts");
 const { signManual, verifyManual, renderManualHtml, toDigits, formatManualDate } = await import("./manual.ts");
-const { buildCsp, nonceScripts } = await import("./securityHeaders.ts");
+const { buildCsp, nonceScripts, cspMiddleware } = await import("./securityHeaders.ts");
 const { reviewPromotion } = await import("./engine/promotionReview.ts");
 const { coverageReport, recordCoverageSnapshot } = await import("./engine/coverage.ts");
 
@@ -68,9 +68,39 @@ test("CSP has no unsafe-inline script and tags inline scripts with the nonce", (
   const csp = buildCsp("abc");
   assert.match(csp, /script-src 'self' 'nonce-abc'/);
   assert.doesNotMatch(csp, /script-src[^;]*unsafe-inline/);
-  assert.doesNotMatch(csp, /frame-ancestors/, "embedding in the applet host would break");
+  assert.match(csp, /(^|; )frame-ancestors 'self'(;|$)/, "only a page of the same origin may show NAHJ in a frame");
   assert.match(csp, /connect-src 'self' https:\/\/orbitq8\.web\.app(;|$)/, "the ORBIT sensor may report browser errors, to that one origin only");
   assert.equal(nonceScripts('<script>a</script><script nonce="x">b</script>', "n"), '<script nonce="n">a</script><script nonce="x">b</script>');
+});
+
+test("production sends frame protection with the CSP; the dev server sends neither", () => {
+  const saved = { NODE_ENV: process.env.NODE_ENV, NAHJ_FORCE_CSP: process.env.NAHJ_FORCE_CSP };
+  const setEnv = (key: "NODE_ENV" | "NAHJ_FORCE_CSP", value: string | undefined) => {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  };
+  const headersFor = (nodeEnv: string) => {
+    setEnv("NODE_ENV", nodeEnv);
+    setEnv("NAHJ_FORCE_CSP", undefined);
+    const headers: Record<string, string> = {};
+    const res: any = { locals: {}, setHeader: (name: string, value: string) => { headers[name.toLowerCase()] = value; }, send: () => res };
+    let passed = false;
+    cspMiddleware()({} as any, res, () => { passed = true; });
+    assert.equal(passed, true);
+    return headers;
+  };
+  try {
+    const prod = headersFor("production");
+    assert.equal(prod["x-frame-options"], "SAMEORIGIN");
+    assert.match(prod["content-security-policy"], /(^|; )frame-ancestors 'self'(;|$)/);
+    assert.match(prod["content-security-policy"], /script-src 'self' 'nonce-[A-Za-z0-9+/]+={0,2}'/, "the per-request nonce is still there");
+    const dev = headersFor("development");
+    assert.equal(dev["x-frame-options"], undefined, "the dev server stays embeddable (AI Studio preview)");
+    assert.equal(dev["content-security-policy"], undefined);
+  } finally {
+    setEnv("NODE_ENV", saved.NODE_ENV);
+    setEnv("NAHJ_FORCE_CSP", saved.NAHJ_FORCE_CSP);
+  }
 });
 
 test("promotion review requires practice for L2, shadow for L3, and signs off", () => {
