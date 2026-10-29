@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from "react";
+import React,{useEffect,useRef,useState} from "react";
 import { AudioLines, Check, CircleStop, FileCheck2, GraduationCap, Mic, Mic2, MicOff, Plus, Sparkles, WandSparkles } from "lucide-react";
 import { useDictation } from "../../lib/dictation";
 import type { SkillStep } from "../../types";
@@ -70,7 +70,16 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
   };
 
   /* الحدث يُرسَل بمفتاحه: إعادة إرساله (مع شرحه الصوتي) تحدّثه عند الخادم ولا تُكرّره. */
-  const sendEvent=(id:string,ev:EventRow)=>apiStrict("/teach/record-event",{method:"POST",body:JSON.stringify({sessionId:id,eventKey:ev.id,action:ev.action,system:ev.system,voiceNote:ev.note})});
+  /*
+   * ما وصل إلى الخادم من الخطوات. كانت كل خطوةٍ جديدة تُعيد إرسال الخطوات كلها واحدةً
+   * بعد أخرى — الخطوة العشرون عشرون طلباً متتالياً قبل أن تهدأ الشاشة. الإضافة تُرسل ما
+   * لم يصل وحده (بالترتيب نفسه)، والاستخلاص يُرسل الكل بشروحها المعدّلة كما كان.
+   */
+  const sentRef=useRef<Set<string>>(new Set());
+  const sendEvent=async(id:string,ev:EventRow)=>{
+    await apiStrict("/teach/record-event",{method:"POST",body:JSON.stringify({sessionId:id,eventKey:ev.id,action:ev.action,system:ev.system,voiceNote:ev.note})});
+    sentRef.current.add(ev.id);
+  };
 
   const addEvent=async()=>{
     const action=newAction.trim();
@@ -78,7 +87,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
     const ev:EventRow={id:`ev_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,time:new Date().toLocaleTimeString("ar-KW-u-nu-latn",{hour:"2-digit",minute:"2-digit"}),action,system:ar?"يدوي":"Manual"};
     setEvents(v=>[...v,ev]); setNewAction("");
     /* بترتيب الشاشة: ما قبلها من خطوات (كالمثال الجاهز) يصل أولاً، وإلا اختلف ترتيب المهارة عمّا يراه المعلِّم. */
-    try{ const id=await ensureSession(); for(const earlier of [...events,ev]) await sendEvent(id,earlier); }
+    try{ const id=await ensureSession(); for(const earlier of [...events,ev]) if(!sentRef.current.has(earlier.id)) await sendEvent(id,earlier); }
     /* الخطوة تبقى في القائمة وتُرسَل ثانيةً عند الاستخلاص — لا تضيع بسبب انقطاعٍ عابر. */
     catch(error){ onNotify(reason(error,ar?"تعذّر حفظ الخطوة الآن — ستُرسَل عند الاستخلاص":"Could not save the step now — it will be sent on synthesis"),true); }
   };
