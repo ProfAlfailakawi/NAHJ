@@ -178,3 +178,20 @@ test("the learn feed's observed-cases count is derived from the proposals, not t
     server.close();
   }
 });
+
+test("testing a simulated connector is reported as simulated, by the server and by the toast", async () => {
+  const { server, base } = await start();
+  try {
+    const admin = await signIn(base, "admin@review.test");
+    const connector = db.connectors.find(c => c.id !== "conn_firebase")!;
+    const res = await admin("POST", `/connections/${connector.id}/test`, {});
+    assert.equal(res.status, 200);
+    assert.equal((await res.json() as { simulated: boolean }).simulated, true);
+    /* والواجهة تقرأ العَلَم: كانت تقول «الاتصال سليم» لفحصٍ لم يطرق شيئاً. */
+    const app = fs.readFileSync(new URL("../src/App.tsx", import.meta.url), "utf8");
+    const handler = app.slice(app.indexOf("const testConnector="), app.indexOf("const simSend="));
+    assert.match(handler, /d\?\.simulated\?/, "the toast ignores the server's simulated flag");
+  } finally {
+    server.close();
+  }
+});
