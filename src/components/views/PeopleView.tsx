@@ -42,7 +42,7 @@ function BackupForm({ skillId, ar, onAssigned, notify }: { skillId: string; ar: 
   return (
     <form className="backup-form" onSubmit={submit}>
       <label htmlFor={inputId}>{ar ? "زميل بديل" : "Backup colleague"}</label>
-      <input id={inputId} value={name} onChange={event => setName(event.target.value)} placeholder={ar ? "اسم الزميل" : "Colleague name"} />
+      <input id={inputId} value={name} maxLength={80} autoComplete="off" onChange={event => setName(event.target.value)} placeholder={ar ? "اسم الزميل" : "Colleague name"} />
       <button type="submit" disabled={busy || !name.trim()}><UserPlus aria-hidden="true" />{ar ? "أسند" : "Assign"}</button>
     </form>
   );

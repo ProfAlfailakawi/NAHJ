@@ -65,7 +65,7 @@ export function EmergencyPauseDialog({ lang, open, paused, busy, autopilotCount,
       </fieldset>
       <div className="decision-reason">
         <label htmlFor={inputId}>{ar ? "أو اكتب السبب" : "Or type the reason"} <b aria-hidden="true">*</b></label>
-        <textarea id={inputId} rows={2} value={reason} required aria-required onChange={event => setReason(event.target.value)} />
+        <textarea id={inputId} rows={2} maxLength={500} value={reason} required aria-required onChange={event => setReason(event.target.value)} />
       </div>
       <div className="approval-actions single">
         <button type="button" className={paused ? "approve" : "danger"} disabled={busy || !valid} onClick={() => onConfirm(reason.trim())}>
