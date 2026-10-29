@@ -281,7 +281,7 @@ export class McpEngine {
           studentName: { type: "string", description: "Student full name" },
           amountKwd: { type: "number", description: "Total amount in Kuwaiti Dinars", default: 1500 },
           feeType: { type: "string", description: "Tuition installment or seat deposit", default: "tuition_deposit" },
-          approvalToken: { type: "string", description: "Manager approval token if amount > 50 KWD" },
+          approvalToken: { type: "string", description: "ID of an APPROVED approval request for this exact amount and student (required if amount > 50 KWD; single use, valid 24h after the decision)" },
         },
         required: ["studentName", "amountKwd"],
       },
@@ -289,7 +289,6 @@ export class McpEngine {
         studentName: "يوسف أحمد",
         amountKwd: 1500,
         feeType: "tuition_deposit",
-        approvalToken: "APPR-MGR-NOURA-VALIDATED",
       },
     },
     {
@@ -786,6 +785,44 @@ export class McpEngine {
     }
   }
 
+  /** مدة صلاحية الموافقة لإصدار الفاتورة بعد قرار المعتمِد. */
+  public static readonly INVOICE_APPROVAL_TTL_MS = 24 * 60 * 60 * 1000;
+
+  /**
+   * يحجز موافقةً معتمدة لإصدار فاتورة K-Net ويستهلكها.
+   *
+   * لا يُقبل إلا طلب موافقةٍ في مخزن الطلب الحالي (صندوق العرض لا يرى موافقات
+   * المؤسسة ولا العكس)، حالته «معتمَد»، إجراؤه إصدار فاتورة، مبلغه هو المبلغ
+   * المطلوب، وطالبه هو الطالب إن ذُكر، لم يُستهلك، وقراره في آخر 24 ساعة.
+   */
+  private static claimInvoiceApproval(
+    args: Record<string, any>,
+    amount: number,
+  ): { ok: boolean; reason?: string; approvalId?: string; release: () => void } {
+    const noop = () => undefined;
+    const token = typeof args.approvalToken === "string" ? args.approvalToken.trim() : "";
+    if (!token) return { ok: false, release: noop };
+    const refuse = (reason: string) => ({ ok: false, reason, release: noop });
+    const appr = db.approvalRequests.find((candidate) => candidate.id === token);
+    if (!appr) return refuse("رمز الموافقة لا يطابق طلب موافقة في هذه المؤسسة.");
+    if (appr.status !== "approved") return refuse("طلب الموافقة لم يُعتمد.");
+    if (!String(appr.actionName || "").includes("issuePaymentInvoice")) return refuse("طلب الموافقة لا يخصّ إصدار فاتورة.");
+    if (appr.consumedAt) return refuse("استُعملت هذه الموافقة من قبل.");
+    const payload = (appr.payload || {}) as Record<string, unknown>;
+    const approvedAmount = Number(payload.amountKwd ?? payload.tuitionFee ?? payload.totalTuitionKwd);
+    if (!Number.isFinite(approvedAmount) || approvedAmount !== amount) return refuse("المبلغ لا يطابق المبلغ المعتمَد.");
+    const approvedPayee = typeof payload.studentName === "string" ? payload.studentName.trim() : "";
+    if (approvedPayee && approvedPayee !== String(args.studentName ?? "").trim()) return refuse("اسم الطالب لا يطابق الموافقة.");
+    const decidedAt = Date.parse(String((appr.decisionRecord as Record<string, unknown> | undefined)?.decidedAtIso || ""));
+    if (!Number.isFinite(decidedAt) || Date.now() - decidedAt > this.INVOICE_APPROVAL_TTL_MS) return refuse("انتهت صلاحية الموافقة.");
+    appr.consumedAt = new Date().toISOString();
+    return {
+      ok: true,
+      approvalId: appr.id,
+      release: () => { delete appr.consumedAt; },
+    };
+  }
+
   // Execute MCP Tool directly
   public static async executeTool(
     toolName: string,
@@ -835,7 +872,16 @@ export class McpEngine {
           "employee"
         );
 
-        if (policyCheck.requiresApproval && !args.approvalToken) {
+        /*
+         * رمز الموافقة يُتحقَّق منه، لا يُكتفى بوجوده.
+         *
+         * كان أي نصٍّ غير فارغ في `approvalToken` يتجاوز POL-FIN-02 — بل كان
+         * مثال الأداة نفسه يحمل رمزاً جاهزاً. صار الرمز معرّفَ طلب موافقةٍ في
+         * مخزن هذا الطلب: معتمَد، للمبلغ نفسه (وللطالب نفسه إن ذُكر)، لم
+         * يُستعمل، ولم تمضِ على قراره 24 ساعة. ويُستهلك مرة واحدة.
+         */
+        const approval = policyCheck.requiresApproval ? this.claimInvoiceApproval(args, amount) : null;
+        if (policyCheck.requiresApproval && !approval?.ok) {
           requiresApproval = true;
           policyCode = policyCheck.reasonCode;
           result = {
@@ -843,10 +889,18 @@ export class McpEngine {
             reason: `المبلغ (${amount} د.ك) يتجاوز حد العمل الذاتي (50 د.ك). يتطلب موافقة المدير المالي قبل استخراج رابط K-Net.`,
             policyApplied: policyCheck.reasonCode,
             requiredApprover: policyCheck.requiredRole,
+            ...(approval?.reason ? { approvalTokenRejected: approval.reason } : {}),
           };
         } else {
-          const connRes = await ConnectorLayer.createApplicationRecord(args, idempotencyKey);
-          result = connRes.data;
+          try {
+            const connRes = await ConnectorLayer.createApplicationRecord(args, idempotencyKey);
+            result = connRes.data;
+          } catch (error) {
+            /* لم يصدر شيء: الموافقة تعود صالحة لمحاولةٍ ثانية. */
+            approval?.release();
+            throw error;
+          }
+          if (approval?.approvalId) result = { ...result, approvalId: approval.approvalId };
         }
       } else if (toolName === "brain_query_policies") {
         const code = args.policyCodeOrTopic || "POL-FIN-02";
