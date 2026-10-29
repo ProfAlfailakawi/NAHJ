@@ -195,3 +195,13 @@ test("testing a simulated connector is reported as simulated, by the server and 
     server.close();
   }
 });
+
+test("audit event ids stay unique when many events land in the same millisecond", () => {
+  const before = db.auditEvents.length;
+  const ids = new Set<string>();
+  for (let i = 0; i < 300; i++) {
+    ids.add(db.logAudit({ actorType: "system", actorName: "اختبار", action: "UNIQUE_ID_PROBE", provenance: "test", risk: "low", latencyMs: 0, details: "—", status: "success" }).id);
+  }
+  assert.equal(ids.size, 300, "two audit events shared an id");
+  db.auditEvents.splice(0, db.auditEvents.length - before);
+});
