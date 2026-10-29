@@ -219,6 +219,8 @@ export interface ApprovalRequest {
   decisionReason?: string;
   /** سجلّ القرار كما رآه المعتمِد لحظة قراره: الإصدار والدليل والقاعدة والمعاينة. */
   decisionRecord?: Record<string, any>;
+  /** متى استُهلكت الموافقة لإصدار فاتورة (رمز موافقة يُستعمل مرة واحدة). */
+  consumedAt?: string;
 }
 
 export interface AuditEvent {

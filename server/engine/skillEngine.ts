@@ -57,12 +57,54 @@ export class SkillEngine {
       return { success: false, message: "المهارة غير موجودة" };
     }
 
-    const targetVerObj = skill.versions.find((v) => v.version === targetVersion);
+    const versions = Array.isArray(skill.versions) ? skill.versions : (skill.versions = []);
+    const targetVerObj = versions.find((v) => v.version === targetVersion);
     if (!targetVerObj && targetVersion !== 1) {
       return { success: false, message: "الإصدار المطلوب غير متوفر في سجل الإصدارات" };
     }
+    if (targetVersion === skill.activeVersion) {
+      return { success: true, message: `المهارة على الإصدار v${targetVersion} أصلاً.`, skill };
+    }
 
+    /*
+     * الاسترجاع يُعيد خطوات الإصدار لا رقمه وحده.
+     *
+     * كان ينقل المؤشّر فقط: تبقى خطوات الإصدار الأحدث تعمل، ويُطبع دليل «v1»
+     * الموقّع بخطوات v2 (manual.ts يقرأ الخطوات الحيّة للإصدار النشط حين لا
+     * يحفظ الإصدار خطواته). فصار: إصدارٌ لم تُحفظ خطواته لا يُسترجع — لا محتوى
+     * نعود إليه — وما حُفظت خطواته تُعاد هي نفسها إلى التشغيل.
+     */
+    if (!targetVerObj?.steps?.length) {
+      return {
+        success: false,
+        message: `خطوات الإصدار v${targetVersion} غير محفوظة في سجل الإصدارات، فلا يمكن استرجاعه دون أن يعمل ويُطبع دليله بخطوات إصدارٍ آخر.`,
+      };
+    }
+
+    /*
+     * الخطوات الحيّة تُحفظ في إصدارها الخارج قبل استبدالها — ليبقى التقدّم إليه
+     * ممكناً ودليله صحيحاً. تُملأ الخطوات وحدها وإن كانت فارغة: القواعد
+     * والاستثناءات المحفوظة لا تُمسّ، فلا يتغيّر توقيع دليلٍ صدر من قبل.
+     */
     const oldVersion = skill.activeVersion;
+    const outgoing = versions.find((v) => v.version === oldVersion);
+    const liveSteps = JSON.parse(JSON.stringify(skill.steps || []));
+    if (outgoing) {
+      if (!outgoing.steps?.length) outgoing.steps = liveSteps;
+    } else {
+      versions.push({
+        version: oldVersion,
+        createdAt: "",
+        approvedBy: skill.ownerName,
+        changeSummary: "",
+        steps: liveSteps,
+        /* كما يحسبها manual.ts لإصدارٍ نشطٍ بلا سجلّ — فلا يتغيّر توقيع دليله. */
+        rules: (skill.decisions || []).map((decision) => `${decision.condition} ← ${decision.outcome}`),
+        exceptions: JSON.parse(JSON.stringify(skill.exceptions || [])),
+      });
+    }
+
+    skill.steps = JSON.parse(JSON.stringify(targetVerObj.steps));
     skill.activeVersion = targetVersion;
 
     db.logAudit({
