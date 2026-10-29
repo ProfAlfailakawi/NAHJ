@@ -15,7 +15,7 @@ import fs from "fs";
 import { apiRouter, authRouter } from "./server/routes.ts";
 import { paymentPublicRouter } from "./server/paymentRoutes.ts";
 import { publicRouter } from "./server/publicPages.ts";
-import { bootstrapFirstAccount, ensureOwnerAccount, purgeExpiredSessions } from "./server/auth.ts";
+import { bootstrapFirstAccount, ensureOwnerAccount, purgeExpiredSessions, readCookie } from "./server/auth.ts";
 import { ensureSubscription, startBillingWorker, stopBillingWorker } from "./server/billing.ts";
 import { normalizeLang } from "./server/demoLocale.ts";
 import { db, DemoSandbox, DEMO_SESSION_TTL_MS, normalizeDemoSector, persistence } from "./server/db.ts";
@@ -56,13 +56,9 @@ const DEMO_COOKIE = "nahj_demo";
 /** Demo is on by default; a deployment that must never show it sets NAHJ_DEMO_ENABLED=false. */
 const demoEnabled = () => process.env.NAHJ_DEMO_ENABLED !== "false";
 
+/* قارئ الكعكات المشترك: ترميزٌ مكسور يُعامَل كغياب، لا كخطأ 500 على كل طلب /api (وفيها الدخول). */
 function readDemoCookie(req: express.Request): string {
-  const raw = req.headers.cookie || "";
-  for (const part of raw.split(";")) {
-    const [name, ...rest] = part.trim().split("=");
-    if (name === DEMO_COOKIE) return decodeURIComponent(rest.join("="));
-  }
-  return "";
+  return readCookie(req, DEMO_COOKIE) || "";
 }
 
 function setDemoCookie(res: express.Response, sessionId: string): void {

@@ -44,6 +44,7 @@ import {
   login,
   logout,
   needsFirstRunSetup,
+  readCookie,
   requireAuth,
   requireOwner,
   requireRole,
@@ -141,9 +142,7 @@ authRouter.post("/login", async (req: Request, res: Response) => {
 });
 
 authRouter.post("/logout", (req: Request, res: Response) => {
-  const cookies = req.headers.cookie || "";
-  const match = cookies.split(";").map((part) => part.trim().split("=")).find(([key]) => key === authCookieNames.session);
-  logout(match ? decodeURIComponent(match.slice(1).join("=")) : undefined);
+  logout(readCookie(req, authCookieNames.session));
   clearSessionCookies(req, res);
   res.status(204).end();
 });
@@ -155,8 +154,7 @@ authRouter.get("/me", requireAuth, (req: AuthenticatedRequest, res: Response) =>
 /* تغيير المستخدم كلمة مروره بنفسه — متاح لكل حساب مسجَّل، لا للمشرف وحده. */
 authRouter.post("/change-password", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const sessionMatch = String(req.headers.cookie || "").split(";").map(part => part.trim().split("=")).find(([key]) => key === authCookieNames.session);
-    await changeOwnPassword(req.account!.id, req.body?.currentPassword, req.body?.newPassword, sessionMatch ? decodeURIComponent(sessionMatch.slice(1).join("=")) : undefined);
+    await changeOwnPassword(req.account!.id, req.body?.currentPassword, req.body?.newPassword, readCookie(req, authCookieNames.session));
     res.json({ ok: true });
   } catch (error) {
     const status = Number((error as { status?: number })?.status) || 400;

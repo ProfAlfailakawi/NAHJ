@@ -297,12 +297,18 @@ export function purgeExpiredSessions() {
   openDatabase().prepare("DELETE FROM sessions WHERE expires_at <= ?").run(now());
 }
 
-function readCookie(req: Request, name: string) {
+/*
+ * قيمة كعكةٍ بترميزٍ مكسور (`%E0` مثلاً) كانت تُلقي URIError، فيُردّ كل طلبٍ يحملها
+ * بـ500 — حتى الخروج الذي كان سيمحوها، فلا مخرج للمستخدم إلا مسح كعكات المتصفح.
+ * تُعامَل كأنها غائبة: لا جلسة تطابقها أصلاً.
+ */
+export function readCookie(req: Request, name: string): string | undefined {
   const header = req.headers.cookie;
   if (!header) return undefined;
   for (const part of header.split(";")) {
     const [key, ...rest] = part.trim().split("=");
-    if (key === name) return decodeURIComponent(rest.join("="));
+    if (key !== name) continue;
+    try { return decodeURIComponent(rest.join("=")); } catch { return undefined; }
   }
   return undefined;
 }

@@ -106,3 +106,18 @@ test("ledger export: an inherited object key is not a ledger (no empty 200, no j
     server.close();
   }
 });
+
+test("a cookie with broken percent-encoding is treated as absent, not as a 500", async () => {
+  const { server, base } = await start();
+  try {
+    const broken = { cookie: "nahj_session=%E0%A4%A; nahj_csrf=%" };
+    const me = await fetch(`${base}/auth/me`, { headers: broken });
+    assert.equal(me.status, 401, "an unreadable session cookie is no session");
+    /* والخروج يمحوها — كان يُردّ 500 فلا يبقى للمستخدم مخرج. */
+    const out = await fetch(`${base}/auth/logout`, { method: "POST", headers: broken });
+    assert.equal(out.status, 204);
+    assert.ok((out.headers.getSetCookie?.() || []).some(c => c.startsWith("nahj_session=") && /Max-Age=0|Expires=Thu, 01 Jan 1970/i.test(c)), "logout clears the cookie");
+  } finally {
+    server.close();
+  }
+});
