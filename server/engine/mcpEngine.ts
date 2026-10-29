@@ -459,8 +459,15 @@ export class McpEngine {
     const key = currentStoreKey();
     let registry = registries.get(key);
     if (!registry) {
+      /*
+       * الخوادم المسجّلة تُقرأ من مخزن الطلب نفسه (محفوظةً للمؤسسة، فارغةً
+       * لصندوق العرض) بالمراجع نفسها — فما يُسجَّل أو يُحذف هنا يُحفظ هناك.
+       */
+      const registered = Array.isArray(db.mcpRegisteredServers)
+        ? db.mcpRegisteredServers.filter((server) => server && typeof server.id === "string" && server.mode === "declared")
+        : [];
       registry = {
-        servers: structuredClone(this.seedServers),
+        servers: [...structuredClone(this.seedServers), ...registered],
         tools: structuredClone(this.seedTools),
         resources: structuredClone(this.seedResources),
         recentExecutions: structuredClone(this.seedExecutions),
@@ -554,6 +561,7 @@ export class McpEngine {
     };
 
     this.servers.push(server);
+    db.mcpRegisteredServers.push(server);
 
     db.logAudit({
       actorType: "human",
@@ -576,6 +584,8 @@ export class McpEngine {
     if (idx !== -1) {
       const removed = this.servers[idx];
       this.servers.splice(idx, 1);
+      const saved = db.mcpRegisteredServers.findIndex((s) => s.id === serverId);
+      if (saved !== -1) db.mcpRegisteredServers.splice(saved, 1);
       this.tools = this.tools.filter((t) => t.serverId !== serverId);
       this.resources = this.resources.filter((r) => r.serverId !== serverId);
       return true;

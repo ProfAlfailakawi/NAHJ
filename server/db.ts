@@ -26,6 +26,7 @@ import {
   TestCase,
   ShadowComparison,
   LearningSession,
+  McpServerInfo,
 } from "../src/types/index.ts";
 import { syncDocToFirestore, getFirebaseStatus } from "./firebase.ts";
 import { AUDIT_RETENTION, readState, startPersistenceWorker } from "./persistence.ts";
@@ -165,6 +166,11 @@ export class Store {
   public emergencyPause: EmergencyPause | null;
   /** غطاء المعرفة يوماً بيوم — لقياس هل يقلّ الاعتماد على شخصٍ واحد. */
   public coverageHistory: CoverageSnapshot[];
+  /**
+   * خوادم MCP التي سجّلتها المؤسسة — تُحفظ فتبقى بعد إعادة التشغيل (كانت تضيع).
+   * والمدمجة لا تُحفظ: تُبذر من تعريفاتها في mcpEngine. صندوق العرض يبدأ فارغاً ولا يُحفظ.
+   */
+  public mcpRegisteredServers: McpServerInfo[];
 
   /** لغة زائر العرض — تُولَّد بها نصوص التاريخ. المؤسسة الحقيقية تبقى `ar` ولا تُقرأ منها. */
   public lang: DemoLang = "ar";
@@ -209,6 +215,7 @@ export class Store {
     this.channel = seed ? DEFAULT_CHANNEL : persisted("channel", { ...DEFAULT_CHANNEL });
     this.emergencyPause = seed ? null : persisted<EmergencyPause | null>("emergencyPause", null);
     this.coverageHistory = seed ? [] : persisted<CoverageSnapshot[]>("coverageHistory", []);
+    this.mcpRegisteredServers = seed ? [] : persisted<McpServerInfo[]>("mcpRegisteredServers", []);
 
     const freshSimulator: SimulatorState = {
       step: "initial",
@@ -834,6 +841,7 @@ export function snapshotState(): Record<string, unknown> {
     organizationConfigured: baseStore.organizationConfigured,
     emergencyPause: baseStore.emergencyPause,
     coverageHistory: baseStore.coverageHistory,
+    mcpRegisteredServers: baseStore.mcpRegisteredServers,
   };
 }
 
