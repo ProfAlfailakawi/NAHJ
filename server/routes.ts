@@ -977,6 +977,18 @@ apiRouter.post("/skills/:id/promote", requireRole("admin", "manager"), (req: Req
   const skill = db.skills.find((candidate) => candidate.id === req.params.id);
   if (!skill) return res.status(404).json({ success: false, message: "المهارة غير موجودة" });
   /*
+   * الإيقاف الطارئ يوقف «كل مهارات التنفيذ» (L5 فما فوق). وكانت الترقية إليها أثناءه
+   * تُضيف منفّذاً جديداً لا يشمله الإيقاف — فيعمل والشاشة تقول «التنفيذ الآلي متوقف».
+   * النزول يبقى متاحاً: تخفيض الاستقلالية إجراء سلامة لا يُؤخَّر.
+   */
+  if (db.emergencyPause?.active && level >= 5 && level > skill.autonomyLevel) {
+    return res.status(409).json({
+      success: false,
+      code: "EMERGENCY_PAUSE_ACTIVE",
+      message: "الإيقاف الطارئ مفعّل: لا ترقية إلى مستوى التنفيذ قبل استئناف التشغيل.",
+    });
+  }
+  /*
    * مراجعة الترقية: الصعود على السُلّم يحتاج دليلاً (تدرّب، ظل) وتوقيع المسؤول.
    * والنزول لا يحتاج شيئاً — تخفيض الاستقلالية إجراء سلامة لا يُؤخَّر.
    */

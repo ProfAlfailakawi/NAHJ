@@ -49,6 +49,13 @@ async function signIn(base: string, email: string) {
 await createAccount({ email: "admin@review.test", name: "مشرفة المراجعة", password: pw(), role: "admin" });
 await createAccount({ email: "manager@review.test", name: "مديرة القبول", password: pw(), role: "manager" });
 ensureSubscription();
+/* باقة رحبة: هذه الاختبارات ليست عن حدود الباقة (انظر limits.test.ts) فلا تصطدم بسقف التجربة. */
+{
+  const { upsertPlan, startSubscription } = await import("./billing.ts");
+  upsertPlan({ code: "roomy", nameAr: "رحبة", nameEn: "Roomy", priceMonthly: 1000, priceQuarterly: 3000, priceAnnual: 10000,
+    limits: { seats: 500, skills: 500, workItemsPerMonth: 100000, connectors: 100, mcpServers: 100, aiCallsPerMonth: 100000, maxAutonomyLevel: 6, auditRetentionDays: 365 } } as never, "test");
+  startSubscription({ planCode: "roomy", issueInvoice: false }, "test");
+}
 
 test("approval decisions: the mandatory reason must be text, and an education rejection lands on the case and the chat", async () => {
   const { server, base } = await start();
@@ -117,6 +124,37 @@ test("a cookie with broken percent-encoding is treated as absent, not as a 500",
     const out = await fetch(`${base}/auth/logout`, { method: "POST", headers: broken });
     assert.equal(out.status, 204);
     assert.ok((out.headers.getSetCookie?.() || []).some(c => c.startsWith("nahj_session=") && /Max-Age=0|Expires=Thu, 01 Jan 1970/i.test(c)), "logout clears the cookie");
+  } finally {
+    server.close();
+  }
+});
+
+test("while the emergency pause is active no skill can be promoted into execution (L5+); lowering stays open", async () => {
+  const { server, base } = await start();
+  try {
+    const admin = await signIn(base, "admin@review.test");
+    const [running, candidate] = [db.skills[0], db.skills[1]];
+    running.autonomyLevel = 6; running.killSwitchActive = false;
+    candidate.autonomyLevel = 4; candidate.killSwitchActive = false; candidate.reliabilityScore = 95;
+    /* دليلٌ كامل للمرشّحة: لولا الإيقاف لصعدت. */
+    db.testCases.push({ id: "tc_pause_1", name: "حالة", skillId: candidate.id, scenario: "", expectedAction: "", expectedStatus: "pass", resultStatus: "pass" } as never);
+    db.shadowComparisons.push({ id: "sh_pause_1", caseTitle: "", timestamp: "", humanAction: "x", humanReason: "", aiAction: "x", aiReason: "", matched: true, driftDetected: false, evaluated: true, skillId: candidate.id } as never);
+
+    assert.equal((await admin("POST", "/autopilot/emergency-pause", { reason: "مراجعة أمنية" })).status, 200);
+    assert.equal(running.killSwitchActive, true);
+
+    const blocked = await admin("POST", `/skills/${candidate.id}/promote`, { targetLevel: 5, signOff: true });
+    assert.equal(blocked.status, 409, "a new executor slipped past the emergency pause");
+    assert.equal((await blocked.json() as { code: string }).code, "EMERGENCY_PAUSE_ACTIVE");
+    assert.equal(candidate.autonomyLevel, 4);
+
+    /* النزول إجراء سلامة: لا يمنعه الإيقاف. */
+    assert.equal((await admin("POST", `/skills/${running.id}/promote`, { targetLevel: 2 })).status, 200);
+
+    /* بعد الاستئناف تعود الترقية بمراجعتها المعتادة. */
+    assert.equal((await admin("POST", "/autopilot/resume", { reason: "انتهت المراجعة" })).status, 200);
+    assert.equal((await admin("POST", `/skills/${candidate.id}/promote`, { targetLevel: 5, signOff: true })).status, 200);
+    assert.equal(candidate.autonomyLevel, 5);
   } finally {
     server.close();
   }
