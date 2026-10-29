@@ -136,7 +136,21 @@ export default function App(){
   const [governance,setGovernance]=useState<GovernanceData|null>(null);
   const [todayData,setTodayData]=useState<{metrics:any;institutionalMemoryCoverage:any}|null>(null);
 
-  const notify=useCallback((text:string,error=false)=>{setToast({text,error});window.setTimeout(()=>setToast(null),2800)},[]);
+  /*
+   * مؤقّتٌ واحد للإشعار.
+   *
+   * كان لكل إشعار مؤقّته المستقل، فمؤقّت إشعارٍ سابق يمحو اللاحق قبل أوانه: نجاحٌ ثم
+   * رفضٌ بعد ثانية فيختفي الرفض بعد أقل من ثانيتين، قبل أن تُقرأ جملته. والخطأ يبقى
+   * أطول من النجاح — سببه جملةٌ تُقرأ لا علامة تُلمح.
+   */
+  const toastTimer=useRef<number|undefined>(undefined);
+  const showToast=useCallback((text:string,error=false,ms=error?5200:2800)=>{
+    window.clearTimeout(toastTimer.current);
+    setToast({text,error});
+    toastTimer.current=window.setTimeout(()=>setToast(null),ms);
+  },[]);
+  useEffect(()=>()=>window.clearTimeout(toastTimer.current),[]);
+  const notify=useCallback((text:string,error=false)=>showToast(text,error),[showToast]);
   /*
    * غلافٌ واحد لكل كتابة.
    *
@@ -156,14 +170,13 @@ export default function App(){
        */
       setPracticeBusy(false); setShadowBusy(false); setSimBusy(false);
       setApprovalBusy(false); setTestingConnector(null);
-      if(error instanceof SubscriptionBlockedError){ setToast({text:error.message,error:true}); window.setTimeout(()=>setToast(null),5200); void refreshBilling(); return }
+      if(error instanceof SubscriptionBlockedError){ showToast(error.message,true,6200); void refreshBilling(); return }
       if(error instanceof UnauthorizedError){ setAuthState("anonymous"); return }
       /* رفض الخادم له سببٌ مكتوب بالعربية (صلاحية، حُسم من قبل، مدخل ناقص): يُقال كما هو. */
-      if(error instanceof ApiError){ setToast({text:error.message,error:true}); window.setTimeout(()=>setToast(null),4200); return }
-      setToast({text:lang==="ar"?"تعذّرت العملية. حاول مرة أخرى.":"Action failed. Try again.",error:true});
-      window.setTimeout(()=>setToast(null),3200);
+      if(error instanceof ApiError){ showToast(error.message,true); return }
+      showToast(lang==="ar"?"تعذّرت العملية. حاول مرة أخرى.":"Action failed. Try again.",true,4200);
     }
-  },[lang]);
+  },[lang,showToast]);
 
   const refreshAudit=useCallback(async()=>{const d=await apiOrNull<{auditEvents:AuditEvent[]}>("/audit");if(d?.auditEvents)setAudit(d.auditEvents)},[]);
   const refreshWork=useCallback(async()=>{const d=await apiOrNull<{workItems:WorkItem[]}>("/work");if(d?.workItems)setWork(d.workItems)},[]);
