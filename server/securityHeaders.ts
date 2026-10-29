@@ -5,9 +5,12 @@ import type { NextFunction, Request, Response } from "express";
  * سياسة أمان المحتوى (CSP).
  *
  * كانت غائبة عمداً خشية كسر التضمين في مضيف AI Studio وإعادة التحميل الحيّ.
- * والحلّ ليس غيابها بل ضبطها: لا `frame-ancestors` (التضمين يبقى كما هو)،
- * وتُرسل في الإنتاج وحده (خادم Vite للتطوير يحقن سكربتات مضمَّنة للتحميل
- * الحيّ). السكربتات المضمَّنة في الصفحات العامة تُعلَّم بـnonce لكل طلب، فلا
+ * والحلّ ليس غيابها بل ضبطها: تُرسل في الإنتاج وحده (خادم Vite للتطوير يحقن
+ * سكربتات مضمَّنة للتحميل الحيّ، وتضمين خادم التطوير يبقى كما هو).
+ * وفي الإنتاج لا تُعرض الصفحة داخل إطار إلا في صفحة من أصلها نفسه:
+ * `frame-ancestors 'self'`، ومعها `X-Frame-Options: SAMEORIGIN` للمتصفحات التي
+ * لا تعرف الأولى. لا موقع يعرض نهج في إطار، والواجهة لا تحتاج أن تكون داخل إطار.
+ * السكربتات المضمَّنة في الصفحات العامة تُعلَّم بـnonce لكل طلب، فلا
  * حاجة إلى 'unsafe-inline' للسكربت. والأنماط المضمَّنة مسموحة: الواجهة تضبط
  * متغيّرات CSS عبر `style=` في مواضع كثيرة.
  */
@@ -24,6 +27,7 @@ export function buildCsp(nonce: string): string {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self' https:",
+    "frame-ancestors 'self'",
   ].join("; ");
 }
 
@@ -40,6 +44,7 @@ export function cspMiddleware() {
     const nonce = randomBytes(16).toString("base64");
     res.locals.cspNonce = nonce;
     res.setHeader("Content-Security-Policy", buildCsp(nonce));
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
     const send = res.send.bind(res);
     res.send = ((body?: unknown) => {
       if (typeof body === "string" && /^\s*<(!doctype html|html)/i.test(body)) body = nonceScripts(body, nonce);
