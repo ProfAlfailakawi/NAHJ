@@ -7,7 +7,7 @@ type SimMessage={id:string;sender:"customer"|"ai"|"system";text:string;timestamp
 export type SimulatorState={step:string;messages:SimMessage[];requiresManagerApproval?:boolean;approvalStatus?:string;civilIdVerified?:boolean;stages?:string[];stage?:number;samplePrompts?:string[];orgName?:string;approvalId?:string};
 type Props={lang:"ar"|"en";state:SimulatorState;busy:boolean;onSend:(text:string)=>void;onReset:()=>void;onUpload:()=>void;onOpenApproval:()=>void};
 export function SimulatorView({lang,state,busy,onSend,onReset,onUpload,onOpenApproval}:Props){
-  const ar=lang==="ar"; const [text,setText]=useState(""); const end=useRef<HTMLDivElement|null>(null); useEffect(()=>end.current?.scrollIntoView({behavior:"smooth"}),[state.messages.length]);
+  const ar=lang==="ar"; const [text,setText]=useState(""); const end=useRef<HTMLDivElement|null>(null); /* جسمٌ بين قوسين لا تعبير: scrollIntoView صار يُعيد Promise في Chrome الحديث، والتأثير الذي يُعيد غير دالةٍ يستدعيه React عند المغادرة كأنه تنظيف فيسقط التطبيق كله (شاشة بيضاء عند ترك «المحادثة»). */useEffect(()=>{end.current?.scrollIntoView({behavior:"smooth"})},[state.messages.length]);
   const send=()=>{if(!text.trim()||busy)return;onSend(text.trim());setText("")};
   /* مراحل السير من حزمة القطاع؛ والتعليم على سيره المكتوب. */
   const ladder=state.stages?.length?state.stages:(ar?["النيّة","الصف","المقعد","المستند","الزيارة","الاعتماد","تم"]:["intent","grade","seat","document","visit","approval","done"]);
