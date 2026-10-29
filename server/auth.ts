@@ -327,7 +327,7 @@ export function readCookie(req: Request, name: string): string | undefined {
  * وبمجرد وضع TLS أمام الخادم — مباشرةً أو عبر وسيط يضيف X-Forwarded-Proto —
  * يعود `Secure` تلقائياً بلا تغيير إعدادات.
  */
-function isSecureRequest(req: Request): boolean {
+export function isSecureRequest(req: Request): boolean {
   if (req.secure) return true;
   const forwarded = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
   return forwarded.toLowerCase() === "https";

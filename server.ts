@@ -15,7 +15,7 @@ import fs from "fs";
 import { apiRouter, authRouter } from "./server/routes.ts";
 import { paymentPublicRouter } from "./server/paymentRoutes.ts";
 import { publicRouter } from "./server/publicPages.ts";
-import { bootstrapFirstAccount, ensureOwnerAccount, purgeExpiredSessions, readCookie } from "./server/auth.ts";
+import { bootstrapFirstAccount, ensureOwnerAccount, isSecureRequest, purgeExpiredSessions, readCookie } from "./server/auth.ts";
 import { ensureSubscription, startBillingWorker, stopBillingWorker } from "./server/billing.ts";
 import { normalizeLang } from "./server/demoLocale.ts";
 import { db, DemoSandbox, DEMO_SESSION_TTL_MS, normalizeDemoSector, persistence } from "./server/db.ts";
@@ -61,8 +61,13 @@ function readDemoCookie(req: express.Request): string {
   return readCookie(req, DEMO_COOKIE) || "";
 }
 
-function setDemoCookie(res: express.Response, sessionId: string): void {
-  const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
+/*
+ * `Secure` من بروتوكول الطلب الفعلي — كما في كعكات الجلسة (انظر isSecureRequest في auth.ts).
+ * كان من NODE_ENV: نشرٌ إنتاجي على http يُصدر كعكة عرضٍ `Secure` فيرميها المتصفح، فيقول
+ * «/try/clinic» إنه فتح العرض ثم يُحوَّل الزائر إلى شاشة الدخول.
+ */
+function setDemoCookie(req: express.Request, res: express.Response, sessionId: string): void {
+  const secure = isSecureRequest(req) ? "; Secure" : "";
   res.setHeader(
     "Set-Cookie",
     sessionId
@@ -184,7 +189,7 @@ async function startServer() {
     const lang = req.headers["x-nahj-lang"] ? normalizeLang(req.headers["x-nahj-lang"]) : null;
     if (!DemoSandbox.run(sessionId, DEMO_SESSION_TTL_MS, () => { if (lang) db.setLang(lang); next(); })) {
       // The sandbox aged out. Clear the cookie rather than silently serving real data.
-      setDemoCookie(res, "");
+      setDemoCookie(req, res, "");
       next();
     }
   });
@@ -205,7 +210,7 @@ async function startServer() {
     const sessionId = `demo_${randomBytes(32).toString("hex")}`;
     const sector = normalizeDemoSector(req.body?.sector);
     DemoSandbox.create(sessionId, DEMO_SESSION_TTL_MS, sector, normalizeLang(req.headers["x-nahj-lang"]));
-    setDemoCookie(res, sessionId);
+    setDemoCookie(req, res, sessionId);
     res.json({ ok: true, demo: true, sector, ttlMs: DEMO_SESSION_TTL_MS });
   });
 
@@ -219,7 +224,7 @@ async function startServer() {
     if (!demoEnabled()) { res.redirect(302, "/"); return; }
     const sessionId = `demo_${randomBytes(32).toString("hex")}`;
     DemoSandbox.create(sessionId, DEMO_SESSION_TTL_MS, normalizeDemoSector(req.params.sector));
-    setDemoCookie(res, sessionId);
+    setDemoCookie(req, res, sessionId);
     res.redirect(302, "/app");
   });
 
@@ -235,7 +240,7 @@ async function startServer() {
   app.post("/api/demo/exit", (req, res) => {
     const sessionId = readDemoCookie(req);
     if (sessionId) DemoSandbox.destroy(sessionId);
-    setDemoCookie(res, "");
+    setDemoCookie(req, res, "");
     res.json({ ok: true });
   });
 
