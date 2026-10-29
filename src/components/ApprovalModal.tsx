@@ -123,6 +123,7 @@ export function ApprovalModal({ lang, approval, busy = false, onClose, onApprove
           value={reason}
           onChange={event => setReason(event.target.value)}
           rows={2}
+          maxLength={1000}
           required={reasonRequired}
           aria-required={reasonRequired}
           aria-invalid={reasonMissing && reason.length > 0}

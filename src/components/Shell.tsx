@@ -94,6 +94,14 @@ export function Shell({
   }, [moreOpen]);
   return (
     <div className="app-shell" dir={ar ? "rtl" : "ltr"}>
+      {/*
+        تخطٍّ إلى المحتوى (WCAG 2.4.1): أول ما يبلغه زرّ Tab. بدونه يمرّ مستخدم لوحة المفاتيح
+        وقارئ الشاشة على قرابة عشرين زرّاً في الشريط والرأس قبل أي شاشة. يُركّز المحتوى ولا يغيّر
+        عنوان الصفحة (لا `#` يبقى في الرابط).
+      */}
+      <a href="#main-content" className="skip-link" onClick={event => { event.preventDefault(); document.getElementById("main-content")?.focus(); }}>
+        {ar ? "تخطَّ إلى المحتوى" : "Skip to content"}
+      </a>
       <div className="ambient-canvas" aria-hidden="true"/>
       <aside className="desktop-rail">
         <div className="rail-brand"><NahjMark size={48}/><span className="rail-brand-name">{ar ? "نهج" : "NAHJ"}</span></div>
@@ -215,7 +223,7 @@ export function Shell({
             ) : null}
           </div>
         </header>
-        <main className="content-stage">{licenceBanner}{children}</main>
+        <main id="main-content" tabIndex={-1} className="content-stage">{licenceBanner}{children}</main>
         <nav className="mobile-dock" aria-label={ar ? "التنقل في الجوال" : "Mobile navigation"}>
           {dockItems.map(({id, icon:Icon, ar:a, en})=><button type="button" key={id} className={section===id?"active":""} onClick={()=>go(id)} aria-current={section===id?"page":undefined}><Icon aria-hidden="true"/><small>{ar?a:en}</small></button>)}
           <button className={moreActive||moreOpen?"active":""} onClick={()=>setMoreOpen(v=>!v)} aria-expanded={moreOpen} aria-label={ar?"كل الأقسام":"All sections"}><LayoutGrid/><small>{ar?"المزيد":"More"}</small></button>

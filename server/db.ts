@@ -30,6 +30,7 @@ import {
 import { syncDocToFirestore, getFirebaseStatus } from "./firebase.ts";
 import { AUDIT_RETENTION, readState, startPersistenceWorker } from "./persistence.ts";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { randomUUID } from "node:crypto";
 import { createDemoSandboxSeed, type DemoSandboxSeed } from "./demoSandbox.ts";
 import { buildSector, EDUCATION_CODE, getSectorPack } from "./packs/index.ts";
 import { displayStampLang, localizeActor, localizeAuditDetails, normalizeLang, pick, type DemoLang } from "./demoLocale.ts";
@@ -307,7 +308,12 @@ export class Store {
     const en = this.isDemo && this.lang === "en";
     const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")} ${en ? (now.getHours() >= 12 ? "PM" : "AM") : (now.getHours() >= 12 ? "م" : "ص")}`;
     const newEvent: AuditEvent = {
-      id: `aud_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      /*
+       * معرّفٌ لا يتكرّر: لاحقةٌ من ألف قيمة كانت تتصادم بين حدثين في الملّي ثانية نفسها
+       * (18 تكراراً في 300 حدث متتالٍ) — فيكتب أحدهما فوق الآخر في مرآة Firestore
+       * ويتكرّر مفتاح الصف في شاشة التدقيق.
+       */
+      id: `aud_${Date.now()}_${randomUUID().slice(0, 12)}`,
       timestamp: en ? `Today, ${timeStr}` : `اليوم، ${timeStr}`,
       // الطابع الحقيقي إلى جانب نصّ العرض: القياس يحتاج الأول، والقارئ الثاني.
       at: now.toISOString(),
@@ -712,6 +718,16 @@ const demoSandboxes = new Map<string, DemoRecord>();
 
 function currentStore(): Store {
   return demoContext.getStore()?.store || baseStore;
+}
+
+/*
+ * مفتاح المخزن الذي يخدم الطلب الحالي: صندوق الزائر أو مخزن المؤسسة.
+ *
+ * لحالةٍ تعيش خارج `Store` ويجب أن تُعزل معه (سجلّ خوادم MCP وتنفيذاته): تُربط
+ * بهذا المفتاح في WeakMap، فتُمحى مع الصندوق حين يُمحى ولا تعبر إلى غيره.
+ */
+export function currentStoreKey(): object {
+  return currentStore();
 }
 
 export const db: Store = new Proxy(baseStore, {

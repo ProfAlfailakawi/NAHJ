@@ -45,3 +45,14 @@
 }
 /* owner console: a date-time in a tile wraps instead of scrolling sideways inside it */
 .owner-block .stat-tile > strong { white-space: normal; overflow: visible; overflow-wrap: anywhere; }
+
+/* ---- Skip link: hidden until focused, then the first thing a keyboard user meets (WCAG 2.4.1) ---- */
+.skip-link {
+  position: fixed; top: 10px; inset-inline-start: 10px; z-index: 10000;
+  padding: 10px 16px; border-radius: 999px;
+  background: var(--ink-bg, #10251f); color: #fff; font-weight: 700; text-decoration: none;
+  transform: translateY(-160%); transition: transform .16s ease;
+}
+.skip-link:focus, .skip-link:focus-visible { transform: none; outline: 2px solid var(--brass, var(--moss)); outline-offset: 2px; }
+#main-content:focus { outline: none; }
+@media (prefers-reduced-motion: reduce) { .skip-link { transition: none; } }

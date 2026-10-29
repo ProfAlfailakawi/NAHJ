@@ -83,7 +83,8 @@ export function useJourneyReveal<T extends HTMLElement = HTMLOListElement>({
   React.useLayoutEffect(() => {
     setLit(null);
     const node = ref.current;
-    const skip = () => doneRef.current?.();
+    /* لا يُعيد شيئاً: قيمةٌ تُعاد من التأثير يعدّها React دالة تنظيف ويستدعيها عند المغادرة. */
+    const skip = () => { doneRef.current?.(); };
     if (!enabled || !node || typeof IntersectionObserver === 'undefined') return skip();
     if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return skip();
     if (wasPlayed(playKey)) return skip();

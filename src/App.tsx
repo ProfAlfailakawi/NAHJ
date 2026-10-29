@@ -136,7 +136,21 @@ export default function App(){
   const [governance,setGovernance]=useState<GovernanceData|null>(null);
   const [todayData,setTodayData]=useState<{metrics:any;institutionalMemoryCoverage:any}|null>(null);
 
-  const notify=useCallback((text:string,error=false)=>{setToast({text,error});window.setTimeout(()=>setToast(null),2800)},[]);
+  /*
+   * مؤقّتٌ واحد للإشعار.
+   *
+   * كان لكل إشعار مؤقّته المستقل، فمؤقّت إشعارٍ سابق يمحو اللاحق قبل أوانه: نجاحٌ ثم
+   * رفضٌ بعد ثانية فيختفي الرفض بعد أقل من ثانيتين، قبل أن تُقرأ جملته. والخطأ يبقى
+   * أطول من النجاح — سببه جملةٌ تُقرأ لا علامة تُلمح.
+   */
+  const toastTimer=useRef<number|undefined>(undefined);
+  const showToast=useCallback((text:string,error=false,ms=error?5200:2800)=>{
+    window.clearTimeout(toastTimer.current);
+    setToast({text,error});
+    toastTimer.current=window.setTimeout(()=>setToast(null),ms);
+  },[]);
+  useEffect(()=>()=>window.clearTimeout(toastTimer.current),[]);
+  const notify=useCallback((text:string,error=false)=>showToast(text,error),[showToast]);
   /*
    * غلافٌ واحد لكل كتابة.
    *
@@ -156,14 +170,13 @@ export default function App(){
        */
       setPracticeBusy(false); setShadowBusy(false); setSimBusy(false);
       setApprovalBusy(false); setTestingConnector(null);
-      if(error instanceof SubscriptionBlockedError){ setToast({text:error.message,error:true}); window.setTimeout(()=>setToast(null),5200); void refreshBilling(); return }
+      if(error instanceof SubscriptionBlockedError){ showToast(error.message,true,6200); void refreshBilling(); return }
       if(error instanceof UnauthorizedError){ setAuthState("anonymous"); return }
       /* رفض الخادم له سببٌ مكتوب بالعربية (صلاحية، حُسم من قبل، مدخل ناقص): يُقال كما هو. */
-      if(error instanceof ApiError){ setToast({text:error.message,error:true}); window.setTimeout(()=>setToast(null),4200); return }
-      setToast({text:lang==="ar"?"تعذّرت العملية. حاول مرة أخرى.":"Action failed. Try again.",error:true});
-      window.setTimeout(()=>setToast(null),3200);
+      if(error instanceof ApiError){ showToast(error.message,true); return }
+      showToast(lang==="ar"?"تعذّرت العملية. حاول مرة أخرى.":"Action failed. Try again.",true,4200);
     }
-  },[lang]);
+  },[lang,showToast]);
 
   const refreshAudit=useCallback(async()=>{const d=await apiOrNull<{auditEvents:AuditEvent[]}>("/audit");if(d?.auditEvents)setAudit(d.auditEvents)},[]);
   const refreshWork=useCallback(async()=>{const d=await apiOrNull<{workItems:WorkItem[]}>("/work");if(d?.workItems)setWork(d.workItems)},[]);
@@ -370,7 +383,11 @@ export default function App(){
     /* رفض الخادم (صلاحية، أو حُسم من قبل) لا يُعرض نجاحاً ولا يُعلَّم محلياً معتمداً. */
     if(!d?.success){await refreshApprovals();notify(lang==="ar"?"لم يُنفَّذ القرار — تحقّق من صلاحيتك أو أن الطلب لم يُحسم من قبل":"Decision not applied — check your permission or whether it was already decided",true);return;}
     await Promise.all([refreshApprovals(),refreshWork(),refreshSimulator(),refreshAudit()]);setActiveApproval(null);notify(decision==="approved"?(lang==="ar"?"تم الاعتماد والتنفيذ":"Approved & executed"):(lang==="ar"?"تم الرفض":"Rejected"))});
-  const testConnector=guarded(async(id:string)=>{setTestingConnector(id);const d=await apiStrict<{connector:Connector}>(`/connections/${id}/test`,{method:"POST",body:"{}"});if(d?.connector)setConnectors(v=>v.map(c=>c.id===id?d.connector:c));setTestingConnector(null);notify(lang==="ar"?"الاتصال سليم":"Connection healthy");void refreshAudit()});
+  /*
+   * فحص الموصل المحاكى لا يطرق شيئاً، والخادم يقولها (`simulated`). وكان الإشعار يقول
+   * «الاتصال سليم» على كل حال — فيناقض الشارة «محاكاة» على الصف نفسه.
+   */
+  const testConnector=guarded(async(id:string)=>{setTestingConnector(id);const d=await apiStrict<{connector:Connector;simulated?:boolean}>(`/connections/${id}/test`,{method:"POST",body:"{}"});if(d?.connector)setConnectors(v=>v.map(c=>c.id===id?d.connector:c));setTestingConnector(null);notify(d?.simulated?(lang==="ar"?"فحصٌ محاكى — لم يُطرق أي نظام خارجي، فالوصلة غير مبنية بعد":"Simulated check — no external system was contacted"):(lang==="ar"?"الاتصال سليم":"Connection healthy"));void refreshAudit()});
   const simSend=guarded(async(text:string)=>{setSimBusy(true);const d=await apiStrict<{state:SimulatorState}>("/simulator/message",{method:"POST",body:JSON.stringify({text})});if(d?.state){setSim(d.state);/* طلب الموافقة الذي فتحته المحادثة يُحمَّل ليظهر في البوابة والتنبيهات. */if(d.state.approvalStatus==="pending")await loadAll();}else setSim(v=>({...v,messages:[...v.messages,{id:`c_${Date.now()}`,sender:"customer",text,timestamp:"الآن"},{id:`a_${Date.now()}`,sender:"ai",text:lang==="ar"?"وصلت رسالتك. أتابعها وفق الإجراء المعتمد.":"Got it. I’m following the verified process.",timestamp:"الآن"}]}));setSimBusy(false)});
   const simReset=guarded(async()=>{const d=await apiStrict<{state:SimulatorState}>("/simulator/reset",{method:"POST",body:"{}"});setSim(d?.state||fallbackSimulator)});
   const simUpload=guarded(async()=>{setSimBusy(true);const d=await apiStrict<{state:SimulatorState}>("/simulator/upload-doc",{method:"POST",body:"{}"});if(d?.state)setSim(d.state);await Promise.all([refreshApprovals(),refreshWork()]);setSimBusy(false);notify(lang==="ar"?"تم التحقق من المستند":"Document verified")});

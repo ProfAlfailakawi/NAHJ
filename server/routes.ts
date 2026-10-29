@@ -44,6 +44,7 @@ import {
   login,
   logout,
   needsFirstRunSetup,
+  readCookie,
   requireAuth,
   requireOwner,
   requireRole,
@@ -141,9 +142,7 @@ authRouter.post("/login", async (req: Request, res: Response) => {
 });
 
 authRouter.post("/logout", (req: Request, res: Response) => {
-  const cookies = req.headers.cookie || "";
-  const match = cookies.split(";").map((part) => part.trim().split("=")).find(([key]) => key === authCookieNames.session);
-  logout(match ? decodeURIComponent(match.slice(1).join("=")) : undefined);
+  logout(readCookie(req, authCookieNames.session));
   clearSessionCookies(req, res);
   res.status(204).end();
 });
@@ -155,8 +154,7 @@ authRouter.get("/me", requireAuth, (req: AuthenticatedRequest, res: Response) =>
 /* تغيير المستخدم كلمة مروره بنفسه — متاح لكل حساب مسجَّل، لا للمشرف وحده. */
 authRouter.post("/change-password", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const sessionMatch = String(req.headers.cookie || "").split(";").map(part => part.trim().split("=")).find(([key]) => key === authCookieNames.session);
-    await changeOwnPassword(req.account!.id, req.body?.currentPassword, req.body?.newPassword, sessionMatch ? decodeURIComponent(sessionMatch.slice(1).join("=")) : undefined);
+    await changeOwnPassword(req.account!.id, req.body?.currentPassword, req.body?.newPassword, readCookie(req, authCookieNames.session));
     res.json({ ok: true });
   } catch (error) {
     const status = Number((error as { status?: number })?.status) || 400;
@@ -427,7 +425,11 @@ apiRouter.get("/export/full.json", ...exportGuard, (req: AuthenticatedRequest, r
 /** دفترٌ واحد بصيغة CSV — يُفتح في أي جدول بلا وسيط. */
 apiRouter.get("/export/:ledger.csv", ...exportGuard, (req: AuthenticatedRequest, res: Response) => {
   const ledger = String(req.params.ledger) as LedgerName;
-  if (!(ledger in LEDGER_LABELS)) return res.status(404).json({ error: "لا دفتر بهذا الاسم." });
+  /*
+   * مفتاحٌ مملوك لا موروث: `in` كان يقبل «constructor» و«toString» من نموذج الكائن، فيُردّ
+   * ملفٌ فارغ بحالة 200 ويُكتب في سجلّ التدقيق «تصدير دفتر function Object()…».
+   */
+  if (!Object.hasOwn(LEDGER_LABELS, ledger)) return res.status(404).json({ error: "لا دفتر بهذا الاسم." });
   if (OWNER_ONLY.includes(ledger) && req.account?.role !== "owner") {
     return res.status(403).json({ error: "هذا الدفتر لمالك المنصة وحده.", code: "OWNER_ONLY" });
   }
@@ -623,7 +625,12 @@ apiRouter.get("/learn", (req: Request, res: Response) => {
   res.json({
     proposals: db.learningProposals,
     metrics: {
-      totalObservedCases: 168,
+      /*
+       * كان 168 مكتوباً — الرقم نفسه الذي يذكره METRICS.md بين الثوابت المخترعة، بقي في
+       * الردّ بعد أن رُفع من الشاشة. صار مجموع ما رُصد فعلاً في مقترحات التعلّم.
+       */
+      totalObservedCases: db.learningProposals.reduce((sum, p) => sum + (Number(p.observedCasesCount) || 0), 0),
+      totalObservedCasesBasis: "مجموع الحالات المرصودة في مقترحات التعلّم المسجَّلة",
       conflictsPending: db.learningProposals.filter((p) => p.type === "conflict" && p.status === "pending").length,
       processDrifts: db.learningProposals.filter((p) => p.type === "process_drift" && p.status === "pending").length,
       improvementsFound: db.learningProposals.filter((p) => p.type === "improvement").length,
@@ -975,6 +982,18 @@ apiRouter.post("/skills/:id/promote", requireRole("admin", "manager"), (req: Req
   const skill = db.skills.find((candidate) => candidate.id === req.params.id);
   if (!skill) return res.status(404).json({ success: false, message: "المهارة غير موجودة" });
   /*
+   * الإيقاف الطارئ يوقف «كل مهارات التنفيذ» (L5 فما فوق). وكانت الترقية إليها أثناءه
+   * تُضيف منفّذاً جديداً لا يشمله الإيقاف — فيعمل والشاشة تقول «التنفيذ الآلي متوقف».
+   * النزول يبقى متاحاً: تخفيض الاستقلالية إجراء سلامة لا يُؤخَّر.
+   */
+  if (db.emergencyPause?.active && level >= 5 && level > skill.autonomyLevel) {
+    return res.status(409).json({
+      success: false,
+      code: "EMERGENCY_PAUSE_ACTIVE",
+      message: "الإيقاف الطارئ مفعّل: لا ترقية إلى مستوى التنفيذ قبل استئناف التشغيل.",
+    });
+  }
+  /*
    * مراجعة الترقية: الصعود على السُلّم يحتاج دليلاً (تدرّب، ظل) وتوقيع المسؤول.
    * والنزول لا يحتاج شيئاً — تخفيض الاستقلالية إجراء سلامة لا يُؤخَّر.
    */
@@ -1312,7 +1331,11 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
    * السبب إلزاميٌّ للخطورة العالية والحرجة — اعتماداً كان أو رفضاً. قرارٌ مكلف
    * بلا سببٍ مكتوب لا يُراجَع بعد شهر: لا يُعرف لماذا مرّ.
    */
-  const reason = String(comments || "").trim().slice(0, 1000);
+  /*
+   * السبب نصٌّ وحده. كان `String(comments)` يقبل كائناً فيصير السببُ «[object Object]»
+   * ويجتاز شرط السبب الإلزامي، ثم يُخزَّن الكائن الخام (بلا حدّ طول) في خطّ الحالة الزمني.
+   */
+  const reason = typeof comments === "string" ? comments.trim().slice(0, 1000) : "";
   if (reasonRequiredFor(appr.riskLevel) && reason.length < 3) {
     return res.status(400).json({ success: false, code: "REASON_REQUIRED", message: "اكتب سبب قرارك — مطلوبٌ للطلبات عالية الخطورة." });
   }
@@ -1350,7 +1373,7 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
         time: "الآن",
         actor: "human",
         title: approved ? `اعتماد: ${currentUser.name}` : `رفض: ${currentUser.name}`,
-        details: comments || appr.reasonDescription,
+        details: reason || appr.reasonDescription,
         badge: approved ? "Approved" : "Rejected",
       });
     }
@@ -1383,6 +1406,15 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
     return res.json({ success: true, approval: appr, executionResult: null });
   }
 
+  /* المحادثة تُحدَّث حين تكون هي من فتحت الطلب — لا مع كل اعتمادٍ في المؤسسة. */
+  /*
+   * المحادثة التي فتحت الطلب وحدها تُكمَل. الطلبات القديمة بلا صاحب تُكمل محادثةً واحدة فقط
+   * إن كانت هي الوحيدة المنتظرة — لا كل محادثةٍ منتظرة.
+   */
+  const waiting = db.allSimulators().filter((state) => state.step === "approval_triggered" && state.approvalStatus === "pending");
+  const owned = db.simulatorOf(appr.requestedBy);
+  const targets = appr.requestedBy ? (owned && waiting.includes(owned) ? [owned] : []) : (waiting.length === 1 ? waiting : []);
+
   if (decision === "approved") {
     const idempotencyKey = `appr_${appr.id}_exec`;
     executionResult = await ConnectorLayer.createApplicationRecord(appr.payload, idempotencyKey);
@@ -1397,19 +1429,11 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
         time: "الآن",
         actor: "human",
         title: `اعتماد المدير: موافقة رسمية من ${currentUser.name}`,
-        details: comments || "تمت مراجعة بيانات الطفل والبطاقة المدنية والموافقة على فتح الملف.",
+        details: reason || "تمت مراجعة بيانات الطفل والبطاقة المدنية والموافقة على فتح الملف.",
         badge: "Approved & Executed",
       });
     }
 
-    /* المحادثة تُحدَّث حين تكون هي من فتحت الطلب — لا مع كل اعتمادٍ في المؤسسة. */
-    /*
-     * المحادثة التي فتحت الطلب وحدها تُكمَل. الطلبات القديمة بلا صاحب تُكمل محادثةً واحدة فقط
-     * إن كانت هي الوحيدة المنتظرة — لا كل محادثةٍ منتظرة.
-     */
-    const waiting = db.allSimulators().filter((state) => state.step === "approval_triggered" && state.approvalStatus === "pending");
-    const owned = db.simulatorOf(appr.requestedBy);
-    const targets = appr.requestedBy ? (owned && waiting.includes(owned) ? [owned] : []) : (waiting.length === 1 ? waiting : []);
     for (const chatState of targets) {
       chatState.step = "completed";
       chatState.approvalStatus = "approved";
@@ -1424,6 +1448,37 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
           paymentUrl: executionResult.data.paymentUrl,
           tourDate: "الخميس القادم 04:30 م",
         },
+      });
+    }
+  } else {
+    /*
+     * الرفض يُكتب على الحالة والمحادثة كما في بقية القطاعات.
+     *
+     * كان الرفض هنا يُسجَّل في التدقيق وحده: تبقى الحالة «بانتظار الموافقة» بيد الذكاء،
+     * وتبقى المحادثة تعرض «افتح بوابة القرار» لطلبٍ حُسم — فيضغطها الموظف فيُردّ 409.
+     */
+    const workItem = db.workItems.find((w) => w.id === appr.workItemId);
+    if (workItem) {
+      workItem.state = "escalated";
+      workItem.assignedMode = "human_takeover";
+      workItem.currentStepTitle = "رُفض — أُعيد إلى الموظف المختص";
+      workItem.updatedAt = "الآن";
+      workItem.timeline.unshift({
+        time: "الآن",
+        actor: "human",
+        title: `رفض: ${currentUser.name}`,
+        details: reason || appr.reasonDescription,
+        badge: "Rejected",
+      });
+    }
+    for (const chatState of targets) {
+      chatState.approvalStatus = "rejected";
+      chatState.requiresManagerApproval = false;
+      chatState.messages.push({
+        id: `msg_${Date.now()}`,
+        sender: "system",
+        text: "لم يُعتمد الطلب بصيغته الحالية بعد المراجعة. سيتواصل معكم موظف القبول مباشرةً لاستكمال ما يلزم.",
+        timestamp: "الآن",
       });
     }
   }
