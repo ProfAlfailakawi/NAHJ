@@ -116,7 +116,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
     <PageHeader eyebrow={ar?"علّم / مباشر":"TEACH / LIVE"} title={ar?"ورّني كيف تسوونها.":"Show me how you do it."} hint={ar?"جلسة واضحة ومصرّح بها. نهج يلتقط المنطق، لا النقرات فقط.":"An explicit session. NAHJ learns the logic, not just the clicks."}/>
     <section className="teach-layout">
       <article className="teach-stage surface">
-        <div className="teach-title-row"><input value={title} onChange={e=>setTitle(e.target.value)} placeholder={ar?"اسم العملية التي ستعلّمها":"Process name"} aria-label={ar?"اسم العملية":"Process name"}/><span><FileCheck2/>{events.length}</span></div>
+        <div className="teach-title-row"><input value={title} maxLength={160} onChange={e=>setTitle(e.target.value)} placeholder={ar?"اسم العملية التي ستعلّمها":"Process name"} aria-label={ar?"اسم العملية":"Process name"}/><span><FileCheck2/>{events.length}</span></div>
         {/* مراحل الجلسة من الحالة الفعلية وحدها؛ ثابتة بلا مقدّمة، والنبض الوحيد المسموح هو نبض التسجيل. */}
         <DnaStepper className={`teach-phases ${recording?"is-recording":""}`} size="sm" ariaLabel={ar?"مراحل جلسة التعليم":"Teaching session phases"}
           stateText={ar?undefined:{done:"done",current:"current",pending:"upcoming",returned:"returned",blocked:"blocked"}}
@@ -129,7 +129,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
         <p className={`record-caption ${recording?"on":""}`} role="status"><i aria-hidden="true"/>{recording?(ar?"جارٍ التسجيل — اضغط الزر لإيقافه":"Recording — press the button to stop"):(ar?"زر الميكروفون يبدأ التسجيل":"The mic button starts recording")}</p>
         <div className="teach-controls">
           <button className={`record-orb ${recording?"recording":""}`} onClick={toggleRecording} aria-pressed={recording} title={recording?(ar?"إيقاف التسجيل":"Stop recording"):(ar?"بدء التسجيل":"Start recording")} aria-label={recording?(ar?"إيقاف التسجيل":"Stop recording"):(ar?"بدء التسجيل":"Start recording")}>{recording?<CircleStop/>:<Mic2/>}</button>
-          <div className="teach-input"><input value={newAction} onChange={e=>setNewAction(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")void addEvent()}} placeholder={ar?"أضف خطوة قصيرة... أو أملِها بصوتك":"Add a step... or dictate it"} aria-label={ar?"خطوة جديدة":"New step"}/>
+          <div className="teach-input"><input value={newAction} maxLength={200} onChange={e=>setNewAction(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")void addEvent()}} placeholder={ar?"أضف خطوة قصيرة... أو أملِها بصوتك":"Add a step... or dictate it"} aria-label={ar?"خطوة جديدة":"New step"}/>
             {dictation.supported&&<button type="button" className={dictation.listening&&dictateTarget===null?"dictating":""} onClick={()=>toggleDictation(null)} aria-pressed={dictation.listening&&dictateTarget===null} aria-label={dictation.listening&&dictateTarget===null?(ar?"أوقف الإملاء":"Stop dictation"):(ar?"أملِ الخطوة بصوتك (عربي كويتي)":"Dictate the step (Kuwaiti Arabic)")}>{dictation.listening&&dictateTarget===null?<MicOff/>:<Mic/>}</button>}
             <button type="button" onClick={()=>void addEvent()} aria-label={ar?"إضافة":"Add"}><Plus/></button></div>
           <button className="synthesize-button" disabled={busy} onClick={()=>void synthesize()}><WandSparkles/>{busy?(ar?"يفهم...":"Learning..."):(ar?"استخلص المهارة":"Synthesize")}</button>
@@ -143,7 +143,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
           {dictation.error&&dictation.error!=="aborted"&&<p className="dictation-error" role="alert">{dictation.error==="not-allowed"?(ar?"لم يُسمح باستخدام الميكروفون.":"Microphone permission denied."):(ar?"تعذّر الإملاء الصوتي — اكتب الخطوة بدلاً منه.":"Dictation failed — type the step instead.")}</p>}
           <div className="capture-timeline">{events.map((e,i)=><div key={e.id}><i>{i+1}</i><span><strong><Dt t={e.action} ar={ar}/></strong><small>{e.system}</small>
             <label className="transcript-edit"><span className="sr-only">{ar?`شرح الخطوة ${i+1}`:`Step ${i+1} explanation`}</span>
-              <textarea rows={1} value={e.note||""} onChange={ev=>setNote(e.id,ev.target.value)} placeholder={ar?"اشرح لماذا — بالكتابة أو بالصوت":"Explain why — type or speak"}/></label>
+              <textarea rows={1} maxLength={1000} value={e.note||""} onChange={ev=>setNote(e.id,ev.target.value)} placeholder={ar?"اشرح لماذا — بالكتابة أو بالصوت":"Explain why — type or speak"}/></label>
             {dictation.supported&&<button type="button" className={`transcript-mic ${dictation.listening&&dictateTarget===e.id?"dictating":""}`} onClick={()=>toggleDictation(e.id)} aria-pressed={dictation.listening&&dictateTarget===e.id} aria-label={dictation.listening&&dictateTarget===e.id?(ar?"أوقف الإملاء":"Stop dictation"):(ar?`أملِ شرح الخطوة ${i+1}`:`Dictate step ${i+1} explanation`)}>{dictation.listening&&dictateTarget===e.id?<MicOff/>:<Mic/>}</button>}
           </span></div>)}</div>
         </>:<>
@@ -154,7 +154,7 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
           </div>
           <div className="rule-dots" aria-hidden="true">{result.rules.map((r,i)=><span key={i} title={r}/>)}</div>
           {result.rules.length>0&&<details className="rule-list"><summary>{ar?`القواعد المستخلصة (${result.rules.length})`:`Extracted rules (${result.rules.length})`}</summary><ul>{result.rules.map((r,i)=><li key={i}><Dt t={r} ar={ar}/></li>)}</ul></details>}
-          <div className="teach-questions">{result.questions.map(q=><label key={q.id}><span><Dt t={q.question} ar={ar}/></span><input value={answers[q.id]||""} onChange={e=>setAnswers(v=>({...v,[q.id]:e.target.value}))} placeholder={ar?"الإجابة المعتمدة":"Verified answer"}/></label>)}</div>
+          <div className="teach-questions">{result.questions.map(q=><label key={q.id}><span><Dt t={q.question} ar={ar}/></span><input value={answers[q.id]||""} maxLength={500} onChange={e=>setAnswers(v=>({...v,[q.id]:e.target.value}))} placeholder={ar?"الإجابة المعتمدة":"Verified answer"}/></label>)}</div>
           <button className="btn-primary w-full" disabled={busy||codified} onClick={()=>void codify()}>{codified?<Check/>:<GraduationCap/>}{codified?(ar?"دخلت عقل المؤسسة":"Added to Company Brain"):(ar?"اعتمد المهارة":"Approve & codify")}</button>
         </>}
       </article>
