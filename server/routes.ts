@@ -1312,7 +1312,11 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
    * السبب إلزاميٌّ للخطورة العالية والحرجة — اعتماداً كان أو رفضاً. قرارٌ مكلف
    * بلا سببٍ مكتوب لا يُراجَع بعد شهر: لا يُعرف لماذا مرّ.
    */
-  const reason = String(comments || "").trim().slice(0, 1000);
+  /*
+   * السبب نصٌّ وحده. كان `String(comments)` يقبل كائناً فيصير السببُ «[object Object]»
+   * ويجتاز شرط السبب الإلزامي، ثم يُخزَّن الكائن الخام (بلا حدّ طول) في خطّ الحالة الزمني.
+   */
+  const reason = typeof comments === "string" ? comments.trim().slice(0, 1000) : "";
   if (reasonRequiredFor(appr.riskLevel) && reason.length < 3) {
     return res.status(400).json({ success: false, code: "REASON_REQUIRED", message: "اكتب سبب قرارك — مطلوبٌ للطلبات عالية الخطورة." });
   }
@@ -1350,7 +1354,7 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
         time: "الآن",
         actor: "human",
         title: approved ? `اعتماد: ${currentUser.name}` : `رفض: ${currentUser.name}`,
-        details: comments || appr.reasonDescription,
+        details: reason || appr.reasonDescription,
         badge: approved ? "Approved" : "Rejected",
       });
     }
@@ -1383,6 +1387,15 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
     return res.json({ success: true, approval: appr, executionResult: null });
   }
 
+  /* المحادثة تُحدَّث حين تكون هي من فتحت الطلب — لا مع كل اعتمادٍ في المؤسسة. */
+  /*
+   * المحادثة التي فتحت الطلب وحدها تُكمَل. الطلبات القديمة بلا صاحب تُكمل محادثةً واحدة فقط
+   * إن كانت هي الوحيدة المنتظرة — لا كل محادثةٍ منتظرة.
+   */
+  const waiting = db.allSimulators().filter((state) => state.step === "approval_triggered" && state.approvalStatus === "pending");
+  const owned = db.simulatorOf(appr.requestedBy);
+  const targets = appr.requestedBy ? (owned && waiting.includes(owned) ? [owned] : []) : (waiting.length === 1 ? waiting : []);
+
   if (decision === "approved") {
     const idempotencyKey = `appr_${appr.id}_exec`;
     executionResult = await ConnectorLayer.createApplicationRecord(appr.payload, idempotencyKey);
@@ -1397,19 +1410,11 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
         time: "الآن",
         actor: "human",
         title: `اعتماد المدير: موافقة رسمية من ${currentUser.name}`,
-        details: comments || "تمت مراجعة بيانات الطفل والبطاقة المدنية والموافقة على فتح الملف.",
+        details: reason || "تمت مراجعة بيانات الطفل والبطاقة المدنية والموافقة على فتح الملف.",
         badge: "Approved & Executed",
       });
     }
 
-    /* المحادثة تُحدَّث حين تكون هي من فتحت الطلب — لا مع كل اعتمادٍ في المؤسسة. */
-    /*
-     * المحادثة التي فتحت الطلب وحدها تُكمَل. الطلبات القديمة بلا صاحب تُكمل محادثةً واحدة فقط
-     * إن كانت هي الوحيدة المنتظرة — لا كل محادثةٍ منتظرة.
-     */
-    const waiting = db.allSimulators().filter((state) => state.step === "approval_triggered" && state.approvalStatus === "pending");
-    const owned = db.simulatorOf(appr.requestedBy);
-    const targets = appr.requestedBy ? (owned && waiting.includes(owned) ? [owned] : []) : (waiting.length === 1 ? waiting : []);
     for (const chatState of targets) {
       chatState.step = "completed";
       chatState.approvalStatus = "approved";
@@ -1424,6 +1429,37 @@ apiRouter.post("/approvals/:id/decide", requireRole("admin", "manager"), async (
           paymentUrl: executionResult.data.paymentUrl,
           tourDate: "الخميس القادم 04:30 م",
         },
+      });
+    }
+  } else {
+    /*
+     * الرفض يُكتب على الحالة والمحادثة كما في بقية القطاعات.
+     *
+     * كان الرفض هنا يُسجَّل في التدقيق وحده: تبقى الحالة «بانتظار الموافقة» بيد الذكاء،
+     * وتبقى المحادثة تعرض «افتح بوابة القرار» لطلبٍ حُسم — فيضغطها الموظف فيُردّ 409.
+     */
+    const workItem = db.workItems.find((w) => w.id === appr.workItemId);
+    if (workItem) {
+      workItem.state = "escalated";
+      workItem.assignedMode = "human_takeover";
+      workItem.currentStepTitle = "رُفض — أُعيد إلى الموظف المختص";
+      workItem.updatedAt = "الآن";
+      workItem.timeline.unshift({
+        time: "الآن",
+        actor: "human",
+        title: `رفض: ${currentUser.name}`,
+        details: reason || appr.reasonDescription,
+        badge: "Rejected",
+      });
+    }
+    for (const chatState of targets) {
+      chatState.approvalStatus = "rejected";
+      chatState.requiresManagerApproval = false;
+      chatState.messages.push({
+        id: `msg_${Date.now()}`,
+        sender: "system",
+        text: "لم يُعتمد الطلب بصيغته الحالية بعد المراجعة. سيتواصل معكم موظف القبول مباشرةً لاستكمال ما يلزم.",
+        timestamp: "الآن",
       });
     }
   }
