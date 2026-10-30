@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-  صفحة «نُحدّث البرنامج».
+  صفحة «قيد التحديث».
 
   أثناء النشر تتوقّف حاوية نهج ثم تعود، فيجيب Caddy أمامها عن الطلبات بـ502 بلا
   نصّ، أو ينقطع الاتصال لحظةَ إعادة تشغيله. هذه الصفحة هي ما يُعرض حينها بدل صفحة
@@ -8,116 +8,174 @@
 
   نهج بلا عامل خدمة، فلا شيء يحفظها مسبقاً في المتصفح: تُقدَّم من الخادم نفسه
   (server/updatingPage.ts يضع nonce على سكربتها لتمرّ سياسة CSP) لمن يفتحها، وهي
-  جاهزةٌ لعاملٍ أو وكيلٍ يقدّمها لاحقاً بلا تعديل. والتطبيق المفتوح يعرض شريطاً
-  هادئاً بالمعنى نفسه (src/lib/updatingNotice.ts).
+  جاهزةٌ لعاملٍ أو وكيلٍ يقدّمها لاحقاً بلا تعديل. والتطبيق المفتوح يعرض إشعاراً
+  بالمعنى نفسه وبشكل إشعارات البرنامج (src/lib/updatingNotice.ts).
 
   مستقلّةٌ تماماً: لا طلبَ خارجياً، والخطُّ Cairo المستضاف ذاتياً إن وُجد وإلا خطُّ
   النظام. تسأل /api/health كل ثلاث ثوانٍ (وتتباطأ تدريجياً)، فإذا أجاب أعادت فتح
   الصفحة المطلوبة. وإن عادت الصفحةُ تتعثّر والخادمُ سليم ثلاثَ مرّاتٍ في دقيقتين،
   تباطأت إلى مرّةٍ كل نصف دقيقة ولا تدور في حلقة.
 
-  الهوية: علامة نهج كما في src/components/Brand.tsx — المسار يُرسم ويعود، والنقطتان
-  (الكهرماني والسماوي) تومضان حول الهالة. بلا رموز تعبيرية ولا نجوم (DESIGN_SYSTEM.md).
+  الهوية: «نهج» طريقة، فالصفحة تمهيدُ مسار. تخطيطٌ تحريري بصفّين: العنوان في أعلى
+  البداية، وتحته مسارٌ بخطّ العلامة نفسه يُرسم خطوةً خطوة وتضيء محطّاته تباعاً
+  (الإيقاف، التحديث، الفحص، العودة)، والإجراء في الأسفل. ورق نهج وشبكته الخفيفة،
+  نهاريّةٌ فقط كالبرنامج، بلا رموز تعبيرية ولا نجوم (DESIGN_SYSTEM.md).
 -->
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#f4f1e8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0b1814" media="(prefers-color-scheme: dark)">
-<title>نُحدّث البرنامج · نهج</title>
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f4f1e8">
+<title>قيد التحديث · نهج</title>
 <style>
 @font-face{font-family:"Cairo";font-style:normal;font-weight:200 1000;font-display:swap;src:url("/fonts/cairo-arabic.woff2") format("woff2");unicode-range:U+0600-06FF,U+0750-077F,U+0870-08FF,U+200C-200E,U+FB50-FDFF,U+FE70-FEFC}
 :root{
-  --bg:#f4f1e8;--ink:#10251f;--muted:#5e6862;--line:rgb(16 37 31 / .10);
-  --accent:#2f7d65;--glow:rgba(47,125,101,.13);--scan:#2f7d65;--amber:#e0a04b;--sky:#5e79e6;
-  --tile:#fffdf7;--tile-line:rgb(16 37 31 / .08);--mark-ink:#10251f;
-  --button:#fffdf7;--button-line:rgb(16 37 31 / .16);--shadow:rgba(16,37,31,.16);
+  --paper:#f4f1e8;--paper-2:#ebe6d8;--white:#fffdf7;
+  --ink:#10251f;--ink-2:#244037;--muted:#5e6862;
+  --line:rgba(16,37,31,.085);--line-strong:rgba(16,37,31,.16);
+  --moss:#2f7d65;--moss-text:#276b56;--sky:#5e79e6;--amber:#e0a04b;
+  --r-md:14px;--ease:cubic-bezier(.22,.78,.24,1);
+  --cycle:8s;
   color-scheme:light;
 }
-@media (prefers-color-scheme:dark){
-  :root{
-    --bg:#0b1814;--ink:#eef2ec;--muted:#a7b3ad;--line:rgb(255 255 255 / .09);
-    --accent:#6fbf9f;--glow:rgba(47,125,101,.24);--scan:#6fbf9f;
-    --tile:rgba(255,255,255,.07);--tile-line:rgba(255,255,255,.12);--mark-ink:#ffffff;
-    --button:#12221d;--button-line:rgb(255 255 255 / .14);--shadow:rgba(0,0,0,.6);
-    color-scheme:dark;
-  }
-}
 *{box-sizing:border-box}
-html,body{height:100%}
+html{background:var(--paper)}
+html,body{min-height:100%}
 body{
-  margin:0;min-height:100%;display:grid;place-items:center;
-  padding:max(24px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom));
-  background:radial-gradient(circle at 50% 40%,var(--glow),transparent 46%),var(--bg);
-  color:var(--ink);
+  margin:0;min-height:100vh;min-height:100dvh;
+  display:grid;grid-template-rows:auto 1fr auto;
+  padding:max(22px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(22px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));
+  color:var(--ink);text-align:start;overflow-x:hidden;
+  background:
+    radial-gradient(circle at 92% -6%,rgba(47,125,101,.10),transparent 22rem),
+    linear-gradient(180deg,var(--paper-2) 0%,var(--paper) 48%,var(--paper) 100%);
   font-family:"Cairo",-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans Arabic",Tahoma,sans-serif;
-  font-synthesis:none;-webkit-font-smoothing:antialiased;text-align:center;
+  font-synthesis:none;-webkit-font-smoothing:antialiased;
 }
-main{display:grid;justify-items:center;gap:0;max-width:420px;width:100%}
-.stage{position:relative;width:132px;height:132px;display:grid;place-items:center;margin-bottom:30px}
-.halo{position:absolute;inset:0;width:100%;height:100%;animation:turn 3.6s linear infinite}
-.halo circle{fill:none;stroke-width:2;stroke-linecap:round}
-.halo .track{stroke:var(--line)}
-.halo .arc{stroke:var(--accent);stroke-dasharray:96 400;opacity:.85}
-.mark{width:84px;height:84px;display:block;filter:drop-shadow(0 18px 30px var(--shadow))}
-.mark .tile{fill:var(--tile);stroke:var(--tile-line)}
-.mark .trunk{stroke:var(--mark-ink)}
-.mark .path{stroke-dasharray:1;animation:draw 2.4s cubic-bezier(.22,.78,.24,1) infinite}
-.mark .branch{animation-delay:.18s}
-.mark .node{transform-box:fill-box;transform-origin:50% 50%;animation:node 2.4s cubic-bezier(.16,1,.3,1) infinite}
-.dot{position:absolute;border-radius:50%;animation:twinkle 2.4s ease-in-out infinite}
-.dot.one{width:12px;height:12px;top:10px;inset-inline-start:14px;background:var(--amber)}
-.dot.two{width:8px;height:8px;bottom:16px;inset-inline-end:10px;background:var(--sky);animation-delay:1.2s}
-h1{margin:0;font-size:clamp(22px,5.6vw,27px);font-weight:700;line-height:1.5;letter-spacing:0}
-.lead{margin:6px 0 0;font-size:16px;line-height:1.7;color:var(--muted)}
-.pulse{width:132px;height:2px;margin:26px 0 28px;border-radius:99px;background:var(--line);overflow:hidden}
-.pulse i{display:block;width:36%;height:100%;border-radius:inherit;background:linear-gradient(90deg,transparent,var(--scan),transparent);animation:scan 1.5s ease-in-out infinite}
+/* شبكة البرنامج الخفيفة (ambient-canvas في src/index.css) تتلاشى نحو الأسفل. */
+body:before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(rgba(16,37,31,.024) 1px,transparent 1px),linear-gradient(90deg,rgba(16,37,31,.024) 1px,transparent 1px);
+  background-size:42px 42px;
+  -webkit-mask-image:linear-gradient(to bottom,#000,transparent 70%);mask-image:linear-gradient(to bottom,#000,transparent 70%);
+}
+.frame{width:100%;max-width:640px;margin-inline:auto}
+
+/* الصفّ الأول: العلامة والعنوان في أعلى البداية. */
+header{display:grid;gap:26px}
+.lockup{display:flex;align-items:center;gap:10px}
+.lockup svg{width:34px;height:34px;display:block}
+.lockup b{display:block;font-size:17px;font-weight:700;line-height:1}
+.lockup small{display:block;margin-top:5px;font-size:9px;font-weight:700;letter-spacing:.19em;color:var(--muted);line-height:1}
+.eyebrow{margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:.04em;color:var(--moss-text)}
+h1{margin:0;max-width:13ch;font-size:clamp(32px,9.4vw,46px);font-weight:800;line-height:1.25;letter-spacing:0;text-wrap:balance}
+.lead{margin:12px 0 0;max-width:34ch;font-size:16px;line-height:1.75;color:var(--ink-2)}
+
+/* الصفّ الثاني: المسار يُرسم ومحطّاته تضيء تباعاً. */
+.road{display:grid;align-items:center;padding-block:18px}
+.road svg{display:block;width:100%;height:auto;overflow:visible;direction:ltr}
+.track{stroke:var(--line-strong);stroke-width:2;stroke-dasharray:2 7;stroke-linecap:round}
+.paved{stroke:var(--ink);stroke-width:4.6;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 1;animation:pave var(--cycle) var(--ease) infinite}
+.stop circle{fill:var(--white);stroke:var(--line-strong);stroke-width:2;transform-box:fill-box;transform-origin:50% 50%}
+.stop text{font-size:13px;font-weight:700;fill:var(--muted);font-family:inherit}
+.stop.first circle{fill:var(--amber);stroke:var(--white);stroke-width:2.5}
+.stop.first text{fill:var(--ink)}
+.stop.s2 circle{animation:lit-moss var(--cycle) linear infinite}
+.stop.s3 circle{animation:lit-moss3 var(--cycle) linear infinite}
+.stop.s4 circle{animation:lit-sky var(--cycle) linear infinite}
+.stop.s2 text{animation:say2 var(--cycle) linear infinite}
+.stop.s3 text{animation:say3 var(--cycle) linear infinite}
+.stop.s4 text{animation:say4 var(--cycle) linear infinite}
+
+/* الصفّ الثالث: الإجراء. */
+footer{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px 20px;padding-top:18px;border-top:1px solid var(--line-strong)}
+.note{flex:1 1 200px;margin:0;min-height:24px;font-size:14px;line-height:1.7;color:var(--muted)}
 button{
-  min-height:44px;padding:0 22px;border-radius:14px;cursor:pointer;
-  border:1px solid var(--button-line);background:var(--button);color:var(--ink);
+  min-height:48px;padding:0 22px;border:0;border-radius:var(--r-md);cursor:pointer;
+  background:var(--ink);color:var(--white);
   font:inherit;font-size:14px;font-weight:700;
-  transition:border-color .2s ease,transform .2s ease;
+  box-shadow:0 12px 28px rgba(16,37,31,.16);
+  display:inline-flex;align-items:center;gap:9px;
+  transition:background-color .2s var(--ease),transform .2s var(--ease);
 }
-button:hover{border-color:var(--accent)}
+button svg{width:16px;height:16px;flex:none}
+button:hover{background:var(--ink-2)}
 button:active{transform:scale(.98)}
-button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.note{min-height:20px;margin:14px 0 0;font-size:13px;line-height:1.6;color:var(--muted)}
-@keyframes turn{to{transform:rotate(360deg)}}
-@keyframes draw{0%{stroke-dashoffset:1}55%,100%{stroke-dashoffset:0}}
-@keyframes node{0%,35%{transform:scale(.6);opacity:.4}60%,100%{transform:none;opacity:1}}
-@keyframes twinkle{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}
-@keyframes scan{0%{transform:translateX(130%)}100%{transform:translateX(-360%)}}
+button:focus-visible{outline:2px solid var(--moss);outline-offset:3px}
+
+/* طولُ المسار ١، والمحطّات على ٠٫٤٠٥ و٠٫٧٦٢ منه. */
+@keyframes pave{
+  0%,6%{stroke-dashoffset:1;opacity:1}
+  30%,40%{stroke-dashoffset:.595}
+  58%,66%{stroke-dashoffset:.238}
+  80%,92%{stroke-dashoffset:0;opacity:1}
+  98%{stroke-dashoffset:0;opacity:0}
+  100%{stroke-dashoffset:1;opacity:0}
+}
+@keyframes lit-moss{0%,29%{fill:var(--white);stroke:var(--line-strong);transform:scale(.8)}32%,93%{fill:var(--moss);stroke:var(--white);transform:none}97%,100%{fill:var(--white);stroke:var(--line-strong);transform:scale(.8)}}
+@keyframes lit-moss3{0%,57%{fill:var(--white);stroke:var(--line-strong);transform:scale(.8)}60%,93%{fill:var(--moss);stroke:var(--white);transform:none}97%,100%{fill:var(--white);stroke:var(--line-strong);transform:scale(.8)}}
+@keyframes lit-sky{0%,79%{fill:var(--white);stroke:var(--line-strong);transform:scale(.8)}82%,93%{fill:var(--sky);stroke:var(--white);transform:none}97%,100%{fill:var(--white);stroke:var(--line-strong);transform:scale(.8)}}
+@keyframes say2{0%,29%{fill:var(--muted)}32%,93%{fill:var(--ink)}97%,100%{fill:var(--muted)}}
+@keyframes say3{0%,57%{fill:var(--muted)}60%,93%{fill:var(--ink)}97%,100%{fill:var(--muted)}}
+@keyframes say4{0%,79%{fill:var(--muted)}82%,93%{fill:var(--ink)}97%,100%{fill:var(--muted)}}
+
+@media (min-width:720px){
+  body{padding-inline:40px}
+  header{gap:40px}
+  .road{padding-block:32px}
+}
+/* بلا حركة: المسار ممهَّدٌ حتى «التحديث»، وهي المحطّة الجارية. */
 @media (prefers-reduced-motion:reduce){
-  .halo,.mark .path,.mark .node,.dot,.pulse i{animation:none}
-  .mark .path{stroke-dashoffset:0}
-  .dot{opacity:.8}
+  .paved,.stop circle,.stop text{animation:none}
+  .paved{stroke-dashoffset:.595}
+  .stop.s2 circle{fill:var(--moss);stroke:var(--white)}
+  .stop.s2 text{fill:var(--ink)}
+  .stop.s3 circle,.stop.s4 circle{transform:scale(.8)}
+  button{transition:none}
 }
 </style>
 </head>
 <body>
-<main>
-  <div class="stage" aria-hidden="true">
-    <svg class="halo" viewBox="0 0 132 132" focusable="false"><circle class="track" cx="66" cy="66" r="63"/><circle class="arc" cx="66" cy="66" r="63"/></svg>
-    <svg class="mark" viewBox="0 0 72 72" fill="none" focusable="false">
-      <rect class="tile" x="2" y="2" width="68" height="68" rx="23"/>
-      <path class="path trunk" pathLength="1" d="M18 18v12c0 7.2 5.8 13 13 13h9c7.8 0 14 6.2 14 14v3" stroke-width="4.6" stroke-linecap="round"/>
-      <path class="path branch" pathLength="1" d="M18 18h10M44 16h10v10" stroke="#2f7d65" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+<header class="frame">
+  <div class="lockup" aria-hidden="true">
+    <svg viewBox="0 0 72 72" fill="none" focusable="false">
+      <rect x="2" y="2" width="68" height="68" rx="23" fill="#fffdf7" stroke="rgba(16,37,31,.08)"/>
+      <path d="M18 18v12c0 7.2 5.8 13 13 13h9c7.8 0 14 6.2 14 14v3" stroke="#10251f" stroke-width="4.6" stroke-linecap="round"/>
+      <path d="M18 18h10M44 16h10v10" stroke="#2f7d65" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M31 43c7.4-7.2 11.8-11 18.8-11" stroke="#5e79e6" stroke-width="3.2" stroke-linecap="round" stroke-dasharray="2.5 6"/>
       <circle cx="18" cy="18" r="5" fill="#e0a04b"/>
       <circle cx="54" cy="60" r="5" fill="#5e79e6"/>
-      <circle class="node" cx="38" cy="43" r="4.8" fill="#2f7d65" stroke="#fffdf7" stroke-width="2"/>
+      <circle cx="38" cy="43" r="4.8" fill="#2f7d65" stroke="#fffdf7" stroke-width="2"/>
     </svg>
-    <span class="dot one"></span>
-    <span class="dot two"></span>
+    <span><b>نَهْج</b><small>NAHJ</small></span>
   </div>
-  <h1 id="title">نُحدّث البرنامج الآن</h1>
-  <p class="lead" id="lead">لحظاتٍ ونعود</p>
-  <div class="pulse" aria-hidden="true"><i></i></div>
-  <button type="button" id="retry">أعد المحاولة الآن</button>
-  <p class="note" id="note" role="status" aria-live="polite">ستُفتح الصفحة التي طلبتها تلقائياً حين نعود.</p>
-</main>
+  <div>
+    <p class="eyebrow">تحديثٌ مجدول</p>
+    <h1 id="title">نمهّد الطريق لنسخةٍ أحدث</h1>
+    <p class="lead" id="lead">نهج قيد التحديث الآن، ويعود وحده إلى الصفحة التي طلبتها فور اكتماله.</p>
+  </div>
+</header>
+
+<section class="road frame" aria-hidden="true">
+  <svg viewBox="0 0 358 232" fill="none" focusable="false">
+    <path class="track" d="M326 24V64C326 86 308 100 286 100H150C122 100 104 118 104 146V160C104 182 86 196 64 196H32"/>
+    <path class="paved" pathLength="1" d="M326 24V64C326 86 308 100 286 100H150C122 100 104 118 104 146V160C104 182 86 196 64 196H32"/>
+    <g class="stop first"><circle cx="326" cy="24" r="8"/><text x="306" y="29" text-anchor="end">الإيقاف</text></g>
+    <g class="stop s2"><circle cx="218" cy="100" r="8"/><text x="218" y="132" text-anchor="middle">التحديث</text></g>
+    <g class="stop s3"><circle cx="104" cy="153" r="8"/><text x="124" y="158" text-anchor="start">الفحص</text></g>
+    <g class="stop s4"><circle cx="32" cy="196" r="8"/><text x="32" y="226" text-anchor="middle">العودة</text></g>
+  </svg>
+</section>
+
+<footer class="frame">
+  <p class="note" id="note" role="status" aria-live="polite">نتحقّق من الجاهزية كل بضع ثوانٍ، فلا حاجة لأي إجراء منك.</p>
+  <button type="button" id="retry">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 5v4.5A3.5 3.5 0 0 0 9.5 13h3a3.5 3.5 0 0 1 3.5 3.5V19"/><circle cx="6" cy="5" r="1.4" fill="currentColor"/><circle cx="16" cy="19" r="1.4" fill="currentColor"/></svg>
+    تحقّق الآن
+  </button>
+</footer>
 <script>
 (function () {
   var HEALTH = "/api/health";
@@ -150,17 +208,17 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
   function describe() {
     if (navigator.onLine === false) {
-      title.textContent = "لا اتصال بالإنترنت الآن";
-      lead.textContent = "سنعود تلقائياً حين يعود الاتصال";
-      note.textContent = "";
+      title.textContent = "جهازك غير متّصل بالشبكة";
+      lead.textContent = "نستأنف وحدنا متى عاد الاتصال، ونفتح لك الصفحة التي طلبتها.";
+      note.textContent = "لا حاجة لإعادة فتح الصفحة.";
     } else if (stuck()) {
-      title.textContent = "نُحدّث البرنامج الآن";
-      lead.textContent = "يستغرق ذلك وقتاً أطول من المعتاد";
-      note.textContent = "سنحاول مرّةً كل نصف دقيقة، ويمكنك المحاولة الآن.";
+      title.textContent = "نمهّد الطريق لنسخةٍ أحدث";
+      lead.textContent = "يأخذ التحديث هذه المرّة وقتاً أطول مما نعتاد، والصفحة ستعود وحدها حين يكتمل.";
+      note.textContent = "نتحقّق مرّةً كل نصف دقيقة، ولك أن تتحقّق الآن.";
     } else {
-      title.textContent = "نُحدّث البرنامج الآن";
-      lead.textContent = "لحظاتٍ ونعود";
-      note.textContent = "ستُفتح الصفحة التي طلبتها تلقائياً حين نعود.";
+      title.textContent = "نمهّد الطريق لنسخةٍ أحدث";
+      lead.textContent = "نهج قيد التحديث الآن، ويعود وحده إلى الصفحة التي طلبتها فور اكتماله.";
+      note.textContent = "نتحقّق من الجاهزية كل بضع ثوانٍ، فلا حاجة لأي إجراء منك.";
     }
   }
 
