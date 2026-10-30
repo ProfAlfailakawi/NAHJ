@@ -5,18 +5,20 @@
  * بلا JSON، أو ينقطع الاتصال لحظةَ إعادة تشغيله. خادمُنا نفسه يجيب /api بـJSON
  * دائماً (حتى أخطاؤه)، فجوابٌ 5xx بغير JSON ليس منه.
  *
- * هنا يُعرف ذلك، ويظهر شريطٌ هادئ واحد بدل «تعذّر إتمام الطلب (502)»، ويسأل
- * /api/health كل ثلاث ثوانٍ حتى يعود الخادم فيختفي ويُعلم من ينتظر.
+ * هنا يُعرف ذلك، ويظهر إشعارٌ واحد بشكل إشعارات البرنامج (.toast) بدل «تعذّر
+ * إتمام الطلب (502)»: لوحٌ بلون الحبر في طرف الشاشة، وفي بدايته مسارٌ قصير تمشي
+ * عليه نقطة (.nahj-updating-notice في src/index.css). ويسأل /api/health كل ثلاث
+ * ثوانٍ حتى يعود الخادم فيختفي ويُعلم من ينتظر.
  */
 
 const UPDATING_STATUSES = new Set([500, 502, 503, 504]);
 
 const english = () => typeof document !== "undefined" && document.documentElement?.lang === "en";
 
-export const UPDATING_MESSAGE = "نُحدّث البرنامج الآن، لحظاتٍ ونعود.";
-export const UPDATING_WRITE_MESSAGE = `${UPDATING_MESSAGE} إن كنت تحفظ تغييراً فتأكّد من حالته بعد عودتنا.`;
-const UPDATING_MESSAGE_EN = "NAHJ is updating — back in a moment.";
-const UPDATING_WRITE_MESSAGE_EN = `${UPDATING_MESSAGE_EN} If you were saving a change, check it once we are back.`;
+export const UPDATING_MESSAGE = "نهج قيد التحديث الآن، ويعود وحده بعد قليل.";
+export const UPDATING_WRITE_MESSAGE = `${UPDATING_MESSAGE} إن كنت تحفظ تغييراً فراجِعه حين يعود.`;
+const UPDATING_MESSAGE_EN = "NAHJ is being updated and will return on its own shortly.";
+const UPDATING_WRITE_MESSAGE_EN = `${UPDATING_MESSAGE_EN} If you were saving a change, review it once NAHJ returns.`;
 
 export const updatingMessage = (isWrite = false) =>
   english() ? (isWrite ? UPDATING_WRITE_MESSAGE_EN : UPDATING_MESSAGE_EN) : (isWrite ? UPDATING_WRITE_MESSAGE : UPDATING_MESSAGE);
@@ -53,12 +55,6 @@ export function showUpdatingNotice(probe: () => Promise<boolean> = serverAnswers
   bar.setAttribute("aria-live", "polite");
   bar.dir = english() ? "ltr" : "rtl";
   bar.textContent = updatingMessage();
-  bar.style.cssText = [
-    "position:fixed", "inset-inline:0", "bottom:max(18px,env(safe-area-inset-bottom))", "margin:0 auto", "width:max-content", "max-width:calc(100vw - 32px)",
-    "z-index:2147483000", "padding:11px 18px", "border-radius:var(--r-md,14px)", "font-family:inherit", "font-size:var(--fs-sm,14px)", "font-weight:700", "line-height:1.6",
-    "background:var(--white,#fffdf7)", "color:var(--ink,#10251f)", "border:1px solid var(--line-strong,rgba(16,37,31,.16))",
-    "box-shadow:0 14px 36px rgba(16,37,31,.16)", "text-align:center", "pointer-events:none",
-  ].join(";");
   document.body.appendChild(bar);
   notice = bar;
   let tries = 0;

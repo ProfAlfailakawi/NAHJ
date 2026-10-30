@@ -8,10 +8,10 @@ import type { AddressInfo } from "node:net";
 /*
  * «نُحدّث البرنامج» بدل صفحةٍ بيضاء أو «تعذّر إتمام الطلب (502)» أثناء النشر.
  *
- *   U1) الصفحة: مستقلّة بلا طلبٍ خارجي، RTL، نهاري/ليلي، فصحى بلا رموز تعبيرية، علامة نهج،
+ *   U1) الصفحة: مستقلّة بلا طلبٍ خارجي، RTL، نهاريّة فقط كالبرنامج، فصحى بلا رموز تعبيرية، علامة نهج،
  *       تسأل /api/health كل ٣ ثوانٍ وتتباطأ، وتعيد فتح الرابط نفسه، ولا تدور في حلقة.
  *   U2) الخادم: /api/health قبل المصادقة؛ والصفحة تُقدَّم بـnonce يطابق CSP وبلا تخزين.
- *   U3) التطبيق: 5xx بغير JSON على /api ← شريطٌ هادئ واحد ورسالة «نُحدّث»؛ وخطأ خادمنا
+ *   U3) التطبيق: 5xx بغير JSON على /api ← إشعارٌ واحد ورسالة «قيد التحديث»؛ وخطأ خادمنا
  *       (JSON) يبقى كما هو؛ والانقطاع والجهاز متّصل يُظهر الشريط ويُرفع الخطأ نفسه.
  *   U4) الشريط يختفي حين يعود الخادم، ويُعلم من ينتظر.
  */
@@ -21,18 +21,21 @@ const realFetch = globalThis.fetch;
 const PAGE = fs.readFileSync(path.resolve("public/updating.html"), "utf8");
 
 /* ══ U1 ═══════════════════════════════════════════════════════════════════════ */
-test("U1 الصفحة مستقلّة بهوية نهج، نهاري/ليلي، وتسأل الخادم ولا تدور في حلقة", () => {
+test("U1 الصفحة مستقلّة بهوية نهج، نهاريّة فقط، وتسأل الخادم ولا تدور في حلقة", () => {
   assert.match(PAGE, /^<!doctype html>/i);
   assert.match(PAGE, /<html lang="ar" dir="rtl">/);
-  assert.match(PAGE, /<title>نُحدّث البرنامج · نهج<\/title>/);
+  assert.match(PAGE, /<title>قيد التحديث · نهج<\/title>/);
   assert.ok(!/(src|href)=["']https?:/i.test(PAGE) && !/url\(["']?https?:/i.test(PAGE) && !/@import/.test(PAGE), "لا طلب خارجي");
   assert.ok(!/<(link|script)[^>]+(src|href)=/i.test(PAGE), "لا ملف خارجي: سكربتها وأنماطها في الصفحة");
-  assert.match(PAGE, /prefers-color-scheme:dark/);
+  assert.match(PAGE, /color-scheme:light/);
+  assert.ok(!/prefers-color-scheme:dark/.test(PAGE), "نهاريّة فقط كالبرنامج (DESIGN_SYSTEM.md)");
   assert.match(PAGE, /prefers-reduced-motion:reduce/);
   assert.match(PAGE, /url\("\/fonts\/cairo-arabic\.woff2"\)/, "خطّ البرنامج المستضاف ذاتياً");
   assert.match(PAGE, /M18 18v12c0 7\.2 5\.8 13 13 13h9c7\.8 0 14 6\.2 14 14v3/, "علامة نهج نفسها (Brand.tsx)");
-  for (const text of ["نُحدّث البرنامج الآن", "لحظاتٍ ونعود", "أعد المحاولة الآن", "لا اتصال بالإنترنت الآن"]) assert.ok(PAGE.includes(text), text);
+  for (const text of ["نمهّد الطريق لنسخةٍ أحدث", "قيد التحديث الآن", "يعود وحده", "تحقّق الآن", "جهازك غير متّصل بالشبكة", "وقتاً أطول مما نعتاد"]) assert.ok(PAGE.includes(text), text);
   assert.ok(!/\p{Extended_Pictographic}/u.test(PAGE), "بلا رموز تعبيرية (DESIGN_SYSTEM.md)");
+  assert.match(PAGE, /id="note" role="status" aria-live="polite"/, "السطر المتغيّر يُقرأ");
+  assert.match(PAGE, /<button type="button" id="retry">/);
   assert.match(PAGE, /var HEALTH = "\/api\/health"/);
   assert.match(PAGE, /FIRST = 3000, CEILING = 15000, PATIENT = 30000/);
   assert.match(PAGE, /cache: "no-store"/);
@@ -116,7 +119,7 @@ test("U3 جواب المنصّة لا جواب البرنامج: 5xx بغير JS
   for (const status of [200, 400, 401, 402, 403, 404, 429]) assert.equal(isPlatformUpdating(status, "text/html"), false, String(status));
 });
 
-test("U3 الوكيل يجيب 502 أثناء النشر ← شريطٌ واحد ورسالة «نُحدّث» لا «تعذّر (502)»", async () => {
+test("U3 الوكيل يجيب 502 أثناء النشر ← إشعارٌ واحد ورسالة «قيد التحديث» لا «تعذّر (502)»", async () => {
   bars.length = 0; timers.length = 0; events.length = 0; healthy = false;
   next = async () => new Response("", { status: 502 });
   await assert.rejects(api("/work"), (error: unknown) => error instanceof ApiError && error.status === 502 && error.message === UPDATING_MESSAGE);
@@ -126,6 +129,7 @@ test("U3 الوكيل يجيب 502 أثناء النشر ← شريطٌ واحد
   assert.equal(bars[0].textContent, UPDATING_MESSAGE);
   assert.equal(bars[0].attrs.role, "status");
   assert.equal(bars[0].dir, "rtl");
+  assert.equal(bars[0].className, "nahj-updating-notice", "شكله في src/index.css بشكل إشعارات البرنامج");
   assert.ok(!/\p{Extended_Pictographic}/u.test(UPDATING_WRITE_MESSAGE), "بلا رموز تعبيرية");
 
   /* U4: لا يختفي والخادم لا يجيب، ويختفي حين يعود ويُعلم من ينتظر. */

@@ -1569,3 +1569,18 @@ main p, main h1, main h2, main h3, main h4, main strong, main small, main li, ma
 @media (max-width: 620px) {
   .hero-grid .brain-hero-wrap > details > summary { min-height: 44px; }
 }
+
+/* «نهج قيد التحديث» داخل التطبيق (src/lib/updatingNotice.ts): إشعارٌ بشكل .toast،
+   وفي بدايته مسارٌ قصير تمشي عليه نقطة كما تُمهَّد المحطّات في public/updating.html. */
+.nahj-updating-notice{position:fixed;inset-inline-end:24px;bottom:max(24px,env(safe-area-inset-bottom));z-index:2147483000;max-width:min(420px,calc(100vw - 32px));
+  display:flex;align-items:center;gap:11px;padding:12px 15px;padding-inline-start:46px;border-radius:var(--r-md);background:var(--ink-bg);color:#fff;
+  box-shadow:0 20px 60px rgba(16,37,31,.24);font-family:inherit;font-size:var(--fs-xs);font-weight:700;line-height:1.5;text-align:start;pointer-events:none;
+  animation:toastIn .28s var(--ease) both}
+.nahj-updating-notice:before,.nahj-updating-notice:after{content:"";position:absolute;top:50%;border-radius:var(--r-pill)}
+.nahj-updating-notice:before{inset-inline-start:15px;width:20px;height:2px;margin-top:-1px;background:color-mix(in srgb,#fff 28%,transparent)}
+.nahj-updating-notice:after{inset-inline-start:13px;width:6px;height:6px;margin-top:-3px;background:var(--amber);animation:noticePave 2.4s var(--ease) infinite}
+@keyframes noticePave{0%{transform:translateX(0);background:var(--amber)}60%,100%{transform:translateX(-18px);background:#7fc4a8}}
+[dir="ltr"].nahj-updating-notice:after{animation-name:noticePaveLtr}
+@keyframes noticePaveLtr{0%{transform:translateX(0);background:var(--amber)}60%,100%{transform:translateX(18px);background:#7fc4a8}}
+@media(max-width:900px){.nahj-updating-notice{inset-inline:16px;bottom:calc(88px + env(safe-area-inset-bottom));max-width:none}}
+@media(prefers-reduced-motion:reduce){.nahj-updating-notice,.nahj-updating-notice:after{animation:none}.nahj-updating-notice:after{transform:translateX(-9px)}[dir="ltr"].nahj-updating-notice:after{transform:translateX(9px)}}
