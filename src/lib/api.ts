@@ -1,4 +1,5 @@
 import { currencyLabel } from "./labels";
+import { isPlatformUpdating, isServerSwapDrop, showUpdatingNotice, updatingMessage } from "./updatingNotice";
 export class ApiError extends Error {
   status: number;
   payload: unknown;
@@ -22,16 +23,29 @@ export const setApiLang = (lang: "ar" | "en") => { uiLang = lang; };
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const method = (init?.method || "GET").toUpperCase();
-  const response = await fetch(`/api${path}`, {
-    ...init,
-    credentials: "same-origin",
-    headers: {
-      "Content-Type": "application/json",
-      "X-NAHJ-Lang": uiLang,
-      ...(["GET", "HEAD"].includes(method) ? {} : { "X-CSRF-Token": csrfToken() }),
-      ...(init?.headers || {}),
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      ...init,
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "X-NAHJ-Lang": uiLang,
+        ...(["GET", "HEAD"].includes(method) ? {} : { "X-CSRF-Token": csrfToken() }),
+        ...(init?.headers || {}),
+      },
+    });
+  } catch (error) {
+    /* الاتصال انقطع والجهاز متّصل: الخادم يتبدّل أثناء النشر. الخطأ نفسه يُرفع كما كان. */
+    if (isServerSwapDrop(error)) showUpdatingNotice();
+    throw error;
+  }
+
+  /* خادمنا يجيب /api بـJSON دائماً؛ 5xx بغيره هو الوكيل أمامه أثناء النشر — شريطٌ هادئ لا خطأ غامض. */
+  if (isPlatformUpdating(response.status, response.headers.get("content-type"))) {
+    showUpdatingNotice();
+    throw new ApiError(updatingMessage(!["GET", "HEAD"].includes(method)), response.status, { code: "UPDATING" });
+  }
 
   let payload: unknown = null;
   try {

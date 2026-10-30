@@ -25,6 +25,7 @@ import { startBackupWorker, stopBackupWorker } from "./server/archive.ts";
 import { startNotifyWorker, stopNotifyWorker } from "./server/notify.ts";
 import { randomBytes } from "node:crypto";
 import { cspMiddleware } from "./server/securityHeaders.ts";
+import { updatingPageRoute } from "./server/updatingPage.ts";
 
 /*
  * Express 4 لا يلتقط وعداً مرفوضاً من معالجٍ غير متزامن: يبقى الطلب معلّقاً،
@@ -348,6 +349,8 @@ async function startServer() {
     const distPath = path.join(process.cwd(), "dist");
     /* الخطوط المستضافة ذاتياً: أسماء الملفات ثابتة، فتُخزَّن سنة. */
     app.use("/fonts", express.static(path.join(distPath, "fonts"), { maxAge: "365d", immutable: true }));
+    /* قبل الملفات الثابتة: سكربتها المضمَّن يحتاج nonce الطلب (server/updatingPage.ts). */
+    app.get("/updating.html", updatingPageRoute(path.join(distPath, "updating.html")));
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       const indexPath = path.join(distPath, "index.html");
