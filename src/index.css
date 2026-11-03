@@ -1584,3 +1584,16 @@ main p, main h1, main h2, main h3, main h4, main strong, main small, main li, ma
 @keyframes noticePaveLtr{0%{transform:translateX(0);background:var(--amber)}60%,100%{transform:translateX(18px);background:#7fc4a8}}
 @media(max-width:900px){.nahj-updating-notice{inset-inline:16px;bottom:calc(88px + env(safe-area-inset-bottom));max-width:none}}
 @media(prefers-reduced-motion:reduce){.nahj-updating-notice,.nahj-updating-notice:after{animation:none}.nahj-updating-notice:after{transform:translateX(-9px)}[dir="ltr"].nahj-updating-notice:after{transform:translateX(9px)}}
+
+
+/* iPhone Duo folded postures only. Unsupported/disabled Safari preview features
+   leave the existing site styles unchanged on every other device and posture. */
+@media (device-posture: folded) and (horizontal-viewport-segments: 2) {
+  html, body, #root { min-width: 0; max-width: 100%; }
+}
+@media (device-posture: folded) and (vertical-viewport-segments: 2) {
+  html, body, #root { min-width: 0; max-width: 100%; }
+}
+@media (device-posture: folded) and (orientation: landscape) and (max-height: 520px) {
+  html { scroll-padding-block: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-bottom)); }
+}
