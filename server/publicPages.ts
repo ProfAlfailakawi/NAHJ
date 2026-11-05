@@ -171,7 +171,7 @@ const STYLE = `
   .feat li { padding:5px 0; font-size:15px; display:flex; gap:10px; align-items:flex-start; line-height:1.7; }
   .dot { width:9px; height:9px; border-radius:50%; margin-top:9px; flex:none; background:var(--moss); }
   .dot.simulated, .dot.planned { background:var(--amber); }
-  .state { font-size:13px; color:var(--amber); font-weight:700; }
+  .state { font-size:13px; color:#7d5712; font-weight:700; }
   .pricing-note { margin:28px 0 0; color:var(--muted); font-size:15px; }
   .honest-wrap { margin-top:36px; }
   .honest h3 { margin:0; font-size:21px; font-weight:900; }
