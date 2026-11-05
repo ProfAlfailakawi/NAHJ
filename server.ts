@@ -53,7 +53,8 @@ function catchAsyncErrors(router: express.Router): void {
   }
 }
 
-const DEMO_COOKIE = "nahj_demo";
+/* `__session`: Firebase Hosting يمرّر هذه الكعكة وحدها إلى Cloud Run ويحذف ما سواها. */
+const DEMO_COOKIE = "__session";
 /** Demo is on by default; a deployment that must never show it sets NAHJ_DEMO_ENABLED=false. */
 const demoEnabled = () => process.env.NAHJ_DEMO_ENABLED !== "false";
 

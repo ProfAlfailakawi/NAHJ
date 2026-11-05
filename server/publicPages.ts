@@ -401,7 +401,7 @@ function hasAppCookie(req: Request): boolean {
   const cookies = String(req.headers.cookie || "");
   return cookies.split(";").some(part => {
     const name = part.trim().split("=")[0];
-    return name === authCookieNames.session || name === "nahj_demo";
+    return name === authCookieNames.session || name === "__session";
   });
 }
 

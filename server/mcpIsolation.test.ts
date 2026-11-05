@@ -25,13 +25,13 @@ const { DemoSandbox, DEMO_SESSION_TTL_MS } = await import("./db.ts");
 
 const pw = () => ["Mcp", "Isolation", "2026"].join("-");
 
-/* ربط العرض كما في server.ts: كعكة `nahj_demo` تربط الطلب بصندوقه وحده. */
+/* ربط العرض كما في server.ts: كعكة `__session` تربط الطلب بصندوقه وحده. */
 async function start() {
   const app = express();
   app.use(express.json());
   app.use("/api", (req, _res, next) => {
-    const raw = String(req.headers.cookie || "").split(";").map(part => part.trim()).find(part => part.startsWith("nahj_demo="));
-    const sessionId = raw ? raw.slice("nahj_demo=".length) : "";
+    const raw = String(req.headers.cookie || "").split(";").map(part => part.trim()).find(part => part.startsWith("__session="));
+    const sessionId = raw ? raw.slice("__session=".length) : "";
     if (!sessionId.startsWith("demo_") || !DemoSandbox.run(sessionId, DEMO_SESSION_TTL_MS, () => next())) next();
   });
   app.use("/api/auth", authRouter);
@@ -60,7 +60,7 @@ function demoVisitor(base: string) {
   DemoSandbox.create(sessionId);
   return (method: string, url: string, body?: unknown) => fetch(`${base}${url}`, {
     method,
-    headers: { "content-type": "application/json", cookie: `nahj_demo=${sessionId}` },
+    headers: { "content-type": "application/json", cookie: `__session=${sessionId}` },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
