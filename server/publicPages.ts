@@ -145,7 +145,7 @@ export function publicPlans(): PublicPlanView[] {
 
 const STYLE = `
   .pricing { padding:56px 0 8px; }
-  .pricing .eyebrow { display:inline-block; font-size:14px; font-weight:800; color:var(--moss); background:var(--moss-soft); padding:6px 12px; border-radius:999px; }
+  .pricing .eyebrow { display:inline-block; font-size:14px; font-weight:800; color:#276b56; background:var(--moss-soft); padding:6px 12px; border-radius:999px; }
   .pricing h1 { font-size:clamp(32px, 5.4vw, 50px); line-height:1.25; margin:16px 0 12px; font-weight:900; letter-spacing:-.4px; }
   .pricing .lead { color:var(--muted); max-width:720px; margin:0; font-size:clamp(17px, 2.2vw, 20px); }
   .cycle { display:inline-flex; gap:4px; margin:30px 0 22px; padding:5px; border:1px solid var(--line); background:var(--card); border-radius:999px; flex-wrap:wrap; }
