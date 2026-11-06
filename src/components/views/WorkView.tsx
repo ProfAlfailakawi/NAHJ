@@ -58,8 +58,8 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
           </DnaDraw>})()}
         <div className="work-filters" role="tablist" aria-label={ar?"تصفية الحالات":"Filter cases"}>{tabs.map(([key,label])=><button key={key} type="button" role="tab" aria-selected={filter===key} className={filter===key?"active":""} onClick={()=>{setFilter(key);setShown(24)}}>{label}<b>{counts[key]}</b></button>)}</div>
         <div className="work-queue-list">{filtered.slice(0,shown).map(w=><button key={w.id} className={`queue-card ${item?.id===w.id?"selected":""}`} onClick={()=>{setSelectedId(w.id);
-          /* على الهاتف تقع اللوحة تحت قائمةٍ طويلة: يُنقل إليها المستخدم بدل أن يبحث عنها. */
-          if(window.matchMedia("(max-width:1180px)").matches)requestAnimationFrame(()=>document.querySelector(".work-focus")?.scrollIntoView({behavior:"smooth",block:"start"}))}}>
+          /* على الهاتف (أقل من 640px) تقع اللوحة تحت قائمةٍ طويلة فيُنقل إليها؛ من 640 فما فوق هي إلى جانب القائمة فلا تمرير. */
+          if(window.matchMedia("(max-width:639px)").matches)requestAnimationFrame(()=>document.querySelector(".work-focus")?.scrollIntoView({behavior:"smooth",block:"start"}))}}>
           <div><span className={`risk-dot risk-${w.riskLevel}`}/><b>{w.code}</b><em>{w.assignedMode==="ai"?<NahjGlyph/>:<UserRound/>}</em></div>
           <strong>{w.contactName||w.title}</strong><small><Dt t={w.currentStepTitle} ar={ar}/></small>
           <DnaStepper size="xs" steps={workSteps(w.state,ar)} stateText={workStepText(ar)} ariaLabel={workStatePlain(w.state, ar)}/>
