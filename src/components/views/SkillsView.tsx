@@ -163,8 +163,8 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
         <div className="skills-axis">{stages.map((stage,i)=><span key={stage} title={ar?ladderStep(i).yourPart:stage}>{ar?ladderStep(i).plain.split(" ").slice(0,2).join(" "):stage}</span>)}</div>
         <div className="skills-lanes">
         {(()=>{const lane=(s:Skill)=><button key={s.id} className={`skill-lane ${skill?.id===s.id?"selected":""}`} onClick={()=>{setSelected(s.id);
-            /* على الهاتف تقع اللوحة تحت قائمةٍ طويلة: يُنقل إليها المستخدم بدل أن يبحث عنها. */
-            if(window.matchMedia("(max-width:1180px)").matches)requestAnimationFrame(()=>document.querySelector(".skill-inspector")?.scrollIntoView({behavior:"smooth",block:"start"}))}}>
+            /* على الهاتف (أقل من 640px) تقع اللوحة تحت قائمةٍ طويلة فيُنقل إليها؛ من 640 فما فوق هي إلى جانب القائمة فلا تمرير. */
+            if(window.matchMedia("(max-width:639px)").matches)requestAnimationFrame(()=>document.querySelector(".skill-inspector")?.scrollIntoView({behavior:"smooth",block:"start"}))}}>
             <div className="skill-lane-head"><span className={`skill-glyph risk-${s.riskLevel}`}><BrainCircuit/></span><div><strong>{ar?<Dt t={s.name} ar={ar}/>:s.nameEn}</strong><small>{s.category}</small></div><b>{s.reliabilityScore}%</b></div><AutonomyBadge level={s.autonomyLevel} compact/>
             <SkillRunway level={s.autonomyLevel} reliability={s.reliabilityScore} ar={ar}/>
           </button>;

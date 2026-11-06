@@ -1,0 +1,279 @@
+/*
+ * مقاسات الشاشة المتعددة (iPhone Duo وكل نافذةٍ بين 320 و1440).
+ *
+ * القرار هنا بعرض النافذة الفعلي وارتفاعها وحدهما — لا بنوع الجهاز ولا
+ * بواجهات وضعية الطي (غير مفعّلة افتراضياً في Safari). كل قاعدةٍ تعمل في Split View
+ * وفي الشاشة الداخلية المفتوحة وفي المطوي، وتتبدّل لحظياً بلا إعادة تحميل.
+ *
+ *   ≤ 599          هاتف: شريط سفلي، عمود واحد.
+ *   600 – 900      شاشة وسطى (مطوي مفتوح طولياً، Split عريض): عمودان حيث يتّسع المحتوى.
+ *   901 – 1199     عرض عرضي مفتوح: شريط جانبي مضغوط بأسماء تحت الأيقونات + لوحتان.
+ *   ارتفاع ≤ 560   قصير (مطوي عرضياً، فيديو مثبّت أعلى): الشريط يصير جانبياً ويُوفَّر الارتفاع.
+ *
+ * ملف واحد يُحمَّل أخيراً، فلا يُلمس ما قبله.
+ */
+
+/* ---------- ارتفاع الشاشة الحقيقي (شريط Safari يتحرّك) ---------- */
+@supports (min-height: 100dvh) {
+  body, .app-shell, .shell-body, .boot-gate, .org-setup, .partner-shell { min-height: 100dvh; }
+}
+
+/* منع التكبير العَرَضي باللمس المزدوج دون قفل التكبير بالأصابع. */
+button, a, summary, select, label, [role="button"] { touch-action: manipulation; }
+
+/* ---------- الحاوية: هوامش تحترم الحواف الآمنة ---------- */
+@media (max-width: 1180px) {
+  .content-stage {
+    padding-inline: max(16px, 3.2vw, env(safe-area-inset-left)) max(16px, 3.2vw, env(safe-area-inset-right));
+  }
+}
+
+/* =====================================================================
+ * ١) الشريط الجانبي المضغوط: أسماء تحت الأيقونات
+ *    - 901–1199: كان الشريط العريض (208px) يأكل 22٪ من عرض 951.
+ *    - ارتفاع ≤ 560 وعرض ≥ 560: الشريط السفلي يلتهم ثلث الشاشة، فينتقل جانباً.
+ * ===================================================================== */
+@media (min-width: 901px) and (max-width: 1199px),
+       (min-width: 560px) and (max-width: 900px) and (max-height: 560px) {
+  .desktop-rail {
+    display: flex;
+    width: 84px;
+    align-items: stretch;
+    padding: 8px 6px max(8px, env(safe-area-inset-bottom));
+    padding-inline-start: max(6px, env(safe-area-inset-left));
+  }
+  .rail-brand { height: 52px; display: grid; place-items: center; padding: 0; }
+  .rail-brand-name { display: none; }
+  .rail-brand svg { width: 38px; height: 38px; }
+  .rail-nav {
+    min-height: 0;
+    flex: 1;
+    align-items: stretch;
+    gap: 2px;
+    padding: 6px 0 14px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    /* تلاشٍ سفلي يقول إن في القائمة بقية. */
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+  }
+  .rail-nav::-webkit-scrollbar { display: none; }
+  .rail-nav .nav-item-wrap { width: 100%; }
+  .desktop-rail .nav-icon {
+    width: 100%; height: auto; min-height: 56px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; padding: 7px 2px 6px;
+    border-radius: var(--r-md);
+  }
+  .desktop-rail .nav-icon svg { width: 20px; height: 20px; flex: none; }
+  .nav-label {
+    display: block; max-width: 100%;
+    font-size: 12px; line-height: 1.2; font-weight: 700; text-align: center;
+    white-space: normal; overflow-wrap: anywhere;
+  }
+  .desktop-rail .nav-tooltip { display: none; }
+  .rail-divider { width: 36px; margin: 5px auto; }
+  .desktop-rail .nav-signal { inset-block-start: 6px; inset-inline-end: 12px; transform: none; }
+  .rail-help { margin-top: 6px; }
+  .shell-body { padding-inline-start: 84px; }
+  .mobile-dock, .mobile-sheet-backdrop { display: none; }
+  .command-search { display: flex; width: auto; min-width: 44px; }
+  .content-stage { padding-block-end: max(36px, calc(20px + env(safe-area-inset-bottom))); }
+}
+
+/* في الوضع القصير: الرأس أنحف والبحث أيقونة، وطيّ الجدار الفاصل لا يضيّع الارتفاع. */
+@media (min-width: 560px) and (max-width: 900px) and (max-height: 560px) {
+  .topbar { height: 56px; padding-inline: 14px; grid-template-columns: auto 1fr auto; gap: 10px; }
+  .command-search { justify-self: start; height: 44px; padding: 0 12px; }
+  .command-search span, .command-search kbd { display: none; }
+  .content-stage { padding-top: 14px; }
+  .toast { bottom: max(16px, env(safe-area-inset-bottom)); }
+  .emergency-fab { bottom: max(14px, env(safe-area-inset-bottom)); }
+}
+
+/* بين 600 و900 والارتفاع عادي: شريط البحث يظهر حين يتّسع الرأس. */
+@media (min-width: 700px) and (max-width: 900px) and (min-height: 561px) {
+  .command-search { display: flex; width: auto; min-width: 44px; justify-self: stretch; }
+  .topbar { grid-template-columns: auto minmax(160px, 1fr) auto; gap: 14px; }
+}
+
+/* الشريط السفلي: حواف آمنة، وعلى العرض الأوسع يتجمّع في وسط الشاشة. */
+@media (max-width: 900px) {
+  .mobile-dock {
+    bottom: max(12px, env(safe-area-inset-bottom));
+    inset-inline-start: max(12px, env(safe-area-inset-left));
+  }
+}
+@media (min-width: 600px) and (max-width: 900px) and (min-height: 561px) {
+  .mobile-dock { inset-inline-end: 12px; }
+  :root:has(.emergency-fab) .mobile-dock { inset-inline-end: 76px; }
+  .mobile-dock button { height: 54px; }
+  .mobile-dock small { font-size: 13px; }
+  .mobile-dock svg { width: 20px; height: 20px; }
+}
+
+/* =====================================================================
+ * ٢) شريط «بيئة تجريبية»: سطرٌ واحد في كل مقاس ≥ 560
+ * ===================================================================== */
+@media (min-width: 621px) {
+  .demo-banner[role="region"] { flex-wrap: nowrap; gap: 10px; padding: 6px 12px; }
+  .demo-banner[role="region"] p { flex: 1 1 0; min-width: 0; font-size: var(--fs-sm); line-height: 1.35; }
+  .demo-banner[role="region"] p span { display: none; }
+  .demo-banner-switch { flex: 0 1 280px; min-width: 0; }
+  .demo-banner-switch select { min-width: 0; width: 100%; }
+  .demo-banner[role="region"] button { flex: none; width: 44px; height: 44px; justify-content: center; padding: 0; }
+  .demo-banner[role="region"] button span {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .demo-banner[role="region"] button svg { width: 18px; }
+}
+@media (min-width: 1000px) {
+  .demo-banner[role="region"] p span { display: inline; }
+  .demo-banner[role="region"] button { width: auto; padding: 0 12px; }
+  .demo-banner[role="region"] button span { position: static; width: auto; height: auto; clip: auto; }
+}
+
+/* =====================================================================
+ * ٣) «اليوم»: خريطة نهج بارتفاعٍ مرن لا بـ 560px ثابتة
+ * ===================================================================== */
+.apphub-stage { height: clamp(480px, min(128vw, 74dvh), 640px); }
+@media (max-width: 380px) {
+  .apphub-node { width: 66px; }
+  .apphub-disc { width: 42px; height: 42px; }
+  .apphub-disc .apphub-ico { width: 19px; height: 19px; }
+  .apphub-core { width: 88px; height: 88px; }
+  .apphub-core strong { font-size: 24px; }
+  .apphub-core small { font-size: 12px; }
+}
+/* مطوي/نصف 380–599: الأسماء والأرقام أصغر قليلاً كي لا تتماسّ أقراص الحلقة. */
+@media (min-width: 381px) and (max-width: 599px) {
+  .apphub-stage { height: clamp(480px, 118vw, 560px); }
+}
+/* شاشة وسطى: الحلقة بيضاوية عريضة، ولوحة التفاصيل تحتها. */
+@media (min-width: 600px) and (max-width: 900px) {
+  .apphub-stage { height: clamp(500px, min(78vw, 66dvh), 600px); }
+  .apphub-node { width: 96px; }
+  .apphub-disc { width: 58px; height: 58px; }
+  .apphub-core { width: 120px; height: 120px; }
+}
+/* قصير وعريض (مطوي عرضياً، فيديو مثبّت): لوحتان جنباً إلى جنب. */
+@media (min-width: 560px) and (max-height: 560px) {
+  .apphub { grid-template-columns: minmax(200px, .42fr) minmax(0, 1fr); align-items: start; }
+  .apphub-stage { grid-column: 2; grid-row: 1; height: 520px; }
+  .apphub-focus { grid-column: 1; grid-row: 1; flex-direction: column; align-items: stretch; position: sticky; top: 72px; padding: 16px; }
+  .apphub-focus em { display: block; }
+  .apphub-focus-text { display: block; }
+  .apphub-big { display: block; margin-top: 8px; font-size: 32px; }
+  .apphub-focus h3 { font-size: 18px; }
+}
+
+/* =====================================================================
+ * ٤) قائمة + تفاصيل من 640px: كانت كل الشاشات الكثيفة تتحوّل إلى عمودٍ واحد
+ *    حتى 1180px، فتتمدّد بطاقات الهاتف على 669 و951 وتُهدَر المساحة.
+ *    الأعمدة `minmax(0,…)` كي لا يدفع نصٌّ طويل الصفحة جانباً.
+ * ===================================================================== */
+@media (min-width: 640px) and (max-width: 1180px) {
+  :root { --duo-sticky: 84px; }
+  .learn-layout    { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
+  .teach-layout    { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); }
+  .skills-layout   { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); }
+  .work-layout     { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
+  .connections-layout { grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); }
+  .control-layout  { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .graduation-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .people-layout   { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
+  .impact-layout   { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .sim-layout      { grid-template-columns: minmax(0, 1fr) minmax(220px, 250px); }
+  .learn-layout > *, .teach-layout > *, .skills-layout > *, .work-layout > *, .connections-layout > *,
+  .control-layout > *, .graduation-grid > *, .today-lower-grid > *, .people-layout > *, .impact-layout > * { min-width: 0; }
+  /* اللوحة اليمنى تبقى ظاهرةً أثناء تمرير القائمة، وتتمرّر داخلياً إن طالت. */
+  .skills-layout > .skill-inspector,
+  .work-layout > .work-focus,
+  .learn-layout > .learn-radar {
+    position: sticky; top: var(--duo-sticky); align-self: start;
+    max-height: calc(100dvh - var(--duo-sticky) - 16px); overflow: auto; overscroll-behavior: contain;
+  }
+  .skills-layout > .skills-map, .connections-layout > *, .control-layout > * { align-self: start; }
+  .skill-inspector { display: block; padding: 16px; }
+  .reliability-orb { grid-column: auto; grid-row: auto; }
+  .pulse-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .memory-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .work-mini-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .autonomy-chooser { grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: 4px; }
+  .hero-grid { grid-template-columns: minmax(0, 1fr); }
+}
+/* الارتفاع القصير: لا لوحات لاصقة ولا ارتفاعات مُلزِمة — الصفحة تتمرّر كلها. */
+@media (max-height: 560px) {
+  .skills-layout > .skill-inspector, .work-layout > .work-focus, .learn-layout > .learn-radar {
+    position: static; max-height: none; overflow: visible;
+  }
+  .control-core, .sim-trace, .brain-hero { min-height: 0; }
+}
+
+/* عمود قائمة المهارات الضيّق: محور المراحل السبع يضيق عن أسمائه، فيُخفى ويبقى الممرّ داخل كل بطاقة. */
+.skills-map { container-type: inline-size; }
+@container (max-width: 470px) {
+  .skills-axis { display: none; }
+}
+
+/* «اليوم»: العمل الجاري والإشارات لوحتان من 901px فقط (قبلها عمودٌ كامل العرض كي لا تضيق بطاقات المراحل). */
+@media (min-width: 901px) and (max-width: 1180px) {
+  .today-lower-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .work-mini-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+/* ارتفاع قصير جداً (مطوي عرضياً 350px): لا شعار في الشريط الجانبي ليتّسع لأقسام أكثر. */
+@media (max-height: 420px) and (max-width: 900px) {
+  .rail-brand { display: none; }
+  .desktop-rail .nav-icon { min-height: 50px; padding-block: 4px; }
+}
+.skills-layout > .skill-inspector, .work-layout > .work-focus { scrollbar-width: thin; }
+
+/* =====================================================================
+ * ٥) لمسات الجمال: هوية نهج (طحلب + نحاس + ورق) بلا تغيير ألوانها
+ * ===================================================================== */
+/* عنوان الصفحة يتدرّج مع العرض بدل قفزةٍ عند 620px. */
+.page-heading h1 { font-size: clamp(26px, 3.2vw + 14px, 40px); line-height: 1.25; text-wrap: balance; }
+
+/* خريطة نهج: حلقاتٌ هادئة حول النواة وتوهّج تحت القسم المحدد. */
+.apphub-stage::before {
+  content: ""; position: absolute; inset: 7% 4%; border-radius: 50%; pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 0 17%, color-mix(in srgb, var(--moss) 9%, transparent) calc(17% + 1px) calc(17% + 2px), transparent calc(17% + 3px) 34%,
+      color-mix(in srgb, var(--moss) 7%, transparent) calc(34% + 1px) calc(34% + 2px), transparent calc(34% + 3px) 50%,
+      color-mix(in srgb, var(--brass, var(--amber)) 14%, transparent) calc(50% + 1px) calc(50% + 2px), transparent calc(50% + 3px));
+}
+.apphub-spokes, .apphub-core, .apphub-node { z-index: 1; }
+.apphub-core { box-shadow: var(--shadow-1), 0 0 0 10px color-mix(in srgb, var(--mint) 55%, transparent), 0 0 0 11px var(--line); }
+.apphub-node.sel .apphub-disc { box-shadow: 0 0 0 4px var(--mint), 0 10px 26px color-mix(in srgb, var(--moss) 28%, transparent); }
+.apphub-node:active .apphub-disc { transform: scale(.94); }
+.apphub-disc { transition: box-shadow .18s var(--ease), transform .14s var(--ease); }
+
+/* بطاقات اللمس تستجيب بخفّة. */
+.skill-lane:active, .queue-card:active, .mobile-sheet-grid button:active { transform: scale(.985); }
+.skill-lane, .queue-card { transition: transform .14s var(--ease), box-shadow .18s var(--ease), border-color .18s var(--ease); }
+.skill-lane.selected, .queue-card.selected { box-shadow: 0 0 0 2px color-mix(in srgb, var(--moss) 45%, transparent), var(--shadow-1); }
+
+/* الأسطح الرئيسة: خيطٌ نحاسي رفيع على الحافة العليا. */
+.surface-strong { position: relative; }
+.work-focus::before, .skill-inspector::before {
+  content: ""; position: absolute; inset: 0 24px auto; height: 2px; border-radius: 0 0 4px 4px;
+  background: linear-gradient(90deg, transparent, var(--amber), transparent); opacity: .7; pointer-events: none;
+}
+
+/* الشريط السفلي: حبّة التحديد بتوهّج نحاسي خافت. */
+@media (max-width: 900px) {
+  .mobile-dock { box-shadow: var(--shadow-2), 0 0 0 1px color-mix(in srgb, #fff 6%, transparent) inset; }
+  .mobile-dock button.active { box-shadow: 0 -8px 24px -12px color-mix(in srgb, var(--amber) 70%, transparent) inset; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skill-lane, .queue-card, .apphub-disc { transition: none; }
+  .skill-lane:active, .queue-card:active, .apphub-node:active .apphub-disc { transform: none; }
+}
+
+/* مسار الحالة في لوحة العمل الضيقة: اسم المرحلة الحالية وحدها، والباقي في العقد (title / قارئ الشاشة). */
+.work-focus { container-type: inline-size; }
+@container (max-width: 470px) {
+  .work-focus-river .dna-stepi:not([data-state="current"]) .dna-lbl { display: none; }
+  .work-focus-river .work-river { height: auto; }
+}
