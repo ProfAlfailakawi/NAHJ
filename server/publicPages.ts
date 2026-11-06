@@ -157,6 +157,9 @@ const STYLE = `
   .ladder-legend b { color:var(--ink); }
   .plans { display:grid; grid-template-columns:repeat(auto-fit, minmax(235px, 1fr)); gap:14px; }
   .plan { display:flex; flex-direction:column; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:24px 20px; transition:transform .25s, box-shadow .25s, border-color .25s; }
+  .plan { position:relative; overflow:hidden; }
+  .plan::before { content:""; position:absolute; inset-inline:0; top:0; height:4px; background:linear-gradient(90deg, var(--moss), #b9892a); opacity:.85; }
+  @media (min-width:860px) { .plans:has(.plan:nth-child(4):last-child) { grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; } .plans:has(.plan:nth-child(4):last-child) .plan { padding:22px 16px; } .plans:has(.plan:nth-child(4):last-child) .limits li { font-size:14px; } .plans:has(.plan:nth-child(4):last-child) .feat li { font-size:14px; } }
   .plan:hover { transform:translateY(-4px); box-shadow:var(--shadow); border-color:color-mix(in srgb, var(--moss) 50%, var(--line)); }
   .plan h2 { margin:0 0 4px; font-size:24px; font-weight:900; }
   .plan .tag { color:var(--muted); font-size:15px; min-height:26px; }

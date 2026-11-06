@@ -102,7 +102,7 @@ export const BASE_STYLE = `${FONT_FACE_CSS}
   body { margin:0; background:var(--bg); color:var(--ink); font-family:"Cairo",system-ui,"Segoe UI",Tahoma,sans-serif; line-height:1.85; font-size:17px; }
   a { color:inherit; }
   .wrap { max-width:1120px; margin:0 auto; padding:0 20px; }
-  .top { position:sticky; top:0; z-index:5; background:color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter:blur(14px); border-bottom:1px solid var(--line); }
+  .top { position:sticky; top:0; z-index:5; background:color-mix(in srgb, var(--bg) 97%, transparent); backdrop-filter:blur(14px); border-bottom:1px solid var(--line); }
   .top .wrap { display:flex; align-items:center; gap:18px; height:66px; }
   .brand { display:flex; align-items:center; min-height:44px; gap:10px; font-weight:900; font-size:21px; text-decoration:none; }
   .brand svg { width:34px; height:34px; }
