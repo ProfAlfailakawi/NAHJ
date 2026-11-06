@@ -9,7 +9,7 @@
  */
 
 /* رأسٌ مصمت بما يكفي: لا نصّ يطفو خلفه عند التمرير. */
-.topbar { -webkit-backdrop-filter: none; backdrop-filter: none; background: color-mix(in srgb, var(--paper) 99%, transparent); box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent), 0 8px 24px -18px rgba(16,37,31,.35); }
+.topbar { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--paper); box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent), 0 8px 24px -18px rgba(16,37,31,.35); }
 
 /* ---------- عرضٌ عريضٌ قصير (مفتوح أفقياً 951x600): الارتفاع للمحتوى ---------- */
 @media (min-width: 700px) and (max-height: 700px) {
