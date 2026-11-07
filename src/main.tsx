@@ -11,6 +11,7 @@ import './motion.css';
 import './finish.css';
 import './duo.css';
 import './duo-beauty.css';
+import './duo-beauty-3.css';
 
 const started = performance.now();
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
