@@ -49,3 +49,8 @@
   .page-heading > div:last-child { width: auto; }
   .page-heading .btn-primary { width: auto; }
 }
+
+/* مخطط الربط الدائري: لا يلتهم الارتفاع القصير. */
+@media (max-height: 700px) {
+  .connection-constellation { height: clamp(300px, 56dvh, 420px); }
+}
