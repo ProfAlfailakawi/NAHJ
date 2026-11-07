@@ -1,0 +1,7 @@
+/* حدّ حقول الدخول على الشاشات الضيّقة: عرض الحقل كسريّ (288.69px) فيمحو التنعيم الحدّ الأيمن بحدّ 1px.
+   نرسم الحدّ بظلّ داخلي (يتبع حافة الصندوق نفسها كما يتبعها الزرّ تحته) ويبقى border شفافاً. */
+.login-card input {
+  border-color: transparent;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--ink) 26%, transparent);
+}
+.login-card input:focus-visible { box-shadow: inset 0 0 0 1.5px var(--moss), 0 0 0 4px rgba(47,125,101,.14); }
