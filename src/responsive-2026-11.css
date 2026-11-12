@@ -1,0 +1,31 @@
+/*
+ * جولة التجاوب (نوفمبر ٢٠٢٦) — تعديلات صغيرة فوق جولات الجمال السابقة، بلا تغيير في السلوك.
+ */
+
+/* ١) الشريط الجانبي العريض على شاشات الحاسوب القصيرة (1366×768، 1280×800، 1440×900):
+ *    سبعة عشر قسماً بارتفاع 44px تتجاوز الشاشة، فكانت «الاشتراك» و«النشاط» و«لوحة المالك»
+ *    و«المسوّقون» مخفيّة خلف تمريرٍ بلا شريط ولا إشارة. الصفّ يقصر مع ارتفاع الشاشة فتظهر
+ *    الأقسام كلها — للفأرة وحدها؛ الأجهزة اللمسية تبقى على 44px. */
+@media (min-width: 1200px) and (max-height: 1000px) and (pointer: fine) {
+  .desktop-rail { padding-block: 10px 8px; }
+  .rail-brand { height: 46px; }
+  .rail-nav { gap: 1px; padding-top: 6px; }
+  .desktop-rail .nav-icon { height: clamp(32px, calc((100dvh - 200px) / 17), 44px); }
+  .rail-divider { margin: 3px 10px; }
+  .rail-help { margin-top: 4px; height: clamp(34px, calc((100dvh - 200px) / 17), 44px); }
+}
+
+/* ٢) رأس الصفحة بين 901 و1180px: وسم «بلا اتصال بأي قاعدة بيانات» كان يلتفّ سطرين ويدفع
+ *    «صندوق معزول» إلى سطرين أيضاً. الحالة نفسها مقروءة من النقطة والنص بجوارها، والوسم
+ *    مخفيّ أصلاً تحت 640px؛ فيُخفى هنا كذلك ويبقى السطر واحداً. */
+@media (min-width: 901px) and (max-width: 1180px) {
+  .topbar-org .org-pill { display: none !important; }
+  .topbar-org .org-meta { white-space: nowrap; }
+}
+
+/* ٣) الهاتف واللوحي: حقول الدخول بخط 16px حتى لا يكبّر Safari الصفحة عند التركيز،
+ *    وزرّ «جرّب نهج» في بطاقة الدخول بحجم لمسٍ كامل. */
+@media (max-width: 900px) {
+  .login-card input, .login-card select { font-size: 16px; }
+  .login-demo-icon.demo-enter--icon { width: 44px; height: 44px; }
+}
