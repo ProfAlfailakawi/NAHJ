@@ -1,0 +1,29 @@
+{
+  "appId": "com.dralfailakawi.nahj",
+  "appName": "NAHJ",
+  "webDir": "www",
+  "server": {
+    "url": "https://nahj-os.web.app",
+    "errorPath": "offline.html",
+    "allowNavigation": [
+      "nahj-os.web.app",
+      "nahj-a27a4.firebaseapp.com",
+      "*.googleapis.com"
+    ]
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#F4F1E8",
+    "scheme": "NAHJ",
+    "limitsNavigationsToAppBoundDomains": false,
+    "preferredContentMode": "mobile"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 600,
+      "launchAutoHide": true,
+      "backgroundColor": "#F4F1E8",
+      "showSpinner": false
+    }
+  }
+}
