@@ -24,7 +24,8 @@
 }
 .brain-collapse > summary::after {
   content: ""; flex: none; width: 8px; height: 8px;
-  border-inline-end: 2px solid currentColor; border-block-end: 2px solid currentColor;
+  /* حدودٌ فيزيائية عمداً: سهمٌ لأسفل في الاتجاهين، لا يُعكَس مع RTL. */
+  border-right: 2px solid currentColor; border-bottom: 2px solid currentColor;
   color: var(--moss-text, var(--moss)); opacity: .75;
   transform: translateY(-2px) rotate(45deg);
   transition: transform var(--m-base, 180ms) var(--m-ease, ease);
