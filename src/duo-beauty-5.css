@@ -51,3 +51,25 @@
 @media (prefers-reduced-motion: reduce) {
   .brain-collapse > summary, .brain-collapse > summary::after, .ladder-spread i { transition: none; }
 }
+
+/* ٥) معاينة المالك (للقراءة فقط): الأرقام بعرضٍ ثابت، والصفّ يُضاء عند المرور، والحالة شارةٌ لا كلمةٌ عائمة. */
+.demo-ledger td { font-variant-numeric: tabular-nums; }
+.demo-ledger tbody tr { transition: background-color var(--m-fast, 120ms) ease; }
+@media (hover: hover) { .demo-ledger tbody tr:hover { background: color-mix(in srgb, var(--moss) 5%, transparent); } }
+.demo-ledger tbody tr:last-child td { border-bottom: 0; }
+.demo-ledger td:is([data-l="الحالة"], [data-l="Status"]) { color: var(--ink); }
+@media (min-width: 621px) {
+  .demo-ledger td:is([data-l="الحالة"], [data-l="Status"])::before {
+    content: ""; display: inline-block; width: 6px; height: 6px; margin-inline-end: 7px; vertical-align: middle;
+    border-radius: 50%; background: color-mix(in srgb, var(--ink) 30%, transparent);
+  }
+}
+
+/* ٦) السجلّ: كل أثرٍ صفٌّ يُضاء عند المرور، فتتبعه العين داخل العمود. */
+.audit-timeline article.audit-item { border-radius: var(--r-md); transition: background-color var(--m-fast, 120ms) ease; }
+@media (hover: hover) { .audit-timeline article.audit-item:hover { background: color-mix(in srgb, var(--ink) 2.5%, transparent); } }
+.audit-head small { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-ledger tbody tr, .audit-timeline article.audit-item { transition: none; }
+}
