@@ -1,0 +1,20 @@
+{
+  "repo": "NAHJ",
+  "appId": "com.dralfailakawi.nahj",
+  "nameAr": "نهج",
+  "nameEn": "NAHJ",
+  "displayName": "نهج",
+  "url": "https://nahj-os.web.app",
+  "allowNavigation": [
+    "nahj-a27a4.firebaseapp.com",
+    "*.googleapis.com"
+  ],
+  "icon": "public/favicon.svg",
+  "iconInset": 0.18,
+  "background": "#F4F1E8",
+  "backgroundDark": "#14130F",
+  "accent": "#2F5D50",
+  "lsCategory": "public.app-category.business",
+  "version": "1.0.0",
+  "build": 1
+}
