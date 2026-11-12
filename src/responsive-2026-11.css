@@ -29,3 +29,15 @@
   .login-card input, .login-card select { font-size: 16px; }
   .login-demo-icon.demo-enter--icon { width: 44px; height: 44px; }
 }
+
+/* ٤) نافذة الاعتماد على الهاتف: شريط القرار الثابت كان تدرّجاً شفافاً في أعلاه، فنصّ «المهارة»
+ *    و«الدليل» يظهر من خلف الأزرار وبينها (والزرّ المعطّل نصف شفاف). الشريط صلبٌ الآن، والتلاشي
+ *    فوقه لا تحته — فيبقى الإيحاء بأن في النافذة بقية. */
+@media (max-width: 900px) {
+  /* والظلّ الصلب أسفله يغطّي حشوة النافذة تحت الشريط، حيث كان النص يمرّ ظاهراً أيضاً. */
+  .approval-actions { background: var(--white); box-shadow: 0 24px 0 var(--white); }
+  .approval-actions::before {
+    content: ""; position: absolute; inset-inline: 0; bottom: 100%; height: 18px; pointer-events: none;
+    background: linear-gradient(to bottom, color-mix(in srgb, var(--white) 0%, transparent), var(--white));
+  }
+}
