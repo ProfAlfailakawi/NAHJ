@@ -1,0 +1,53 @@
+/*
+ * جولة الجمال (٥) — طبقة عرضٍ فقط، تُحمَّل أخيراً. لا markup ولا منطق.
+ */
+
+/* ١) الشريط الجانبي العريض في شاشة 1440×900: كان «لوحة المالك» و«المسوّقون» يختفيان خلف
+ *    «دليل سريع» بلا إشارة تمرير. نضغط الإيقاع قليلاً فتظهر الأقسام السبعة عشر كلها. */
+@media (min-width: 1200px) and (max-height: 980px) {
+  .desktop-rail { padding-block: 10px 10px; }
+  .rail-brand { height: 50px; }
+  .rail-nav { padding-top: 6px; gap: 1px; }
+  .desktop-rail .nav-icon { height: 38px; }
+  .rail-divider { margin: 4px 10px; }
+  .rail-help { margin-top: 6px; height: 40px; }
+}
+@media (min-width: 1200px) and (max-height: 820px) {
+  .desktop-rail .nav-icon { height: 34px; }
+  .rail-divider { margin: 3px 10px; }
+}
+
+/* ٢) «ذاكرة العمل الحيّة»: ملخّصٌ قابل للطيّ بلا أي علامة. سهمٌ صغير يقول إنه يُفتح. */
+.brain-collapse > summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  transition: background-color var(--m-base, 180ms) ease, border-color var(--m-base, 180ms) ease;
+}
+.brain-collapse > summary::after {
+  content: ""; flex: none; width: 8px; height: 8px;
+  border-inline-end: 2px solid currentColor; border-block-end: 2px solid currentColor;
+  color: var(--moss-text, var(--moss)); opacity: .75;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--m-base, 180ms) var(--m-ease, ease);
+}
+.brain-collapse[open] > summary::after { transform: translateY(2px) rotate(-135deg); }
+.brain-collapse > summary:hover { background: var(--white); border-color: color-mix(in srgb, var(--moss) 22%, transparent); }
+
+/* ٣) الحوكمة: الدرع والحالة وزرّ الإيقاف مجموعةٌ واحدة في الوسط، لا فراغٌ عريض بينها. */
+@media (min-width: 621px) {
+  .control-core { justify-content: center; }
+  .control-core .emergency-button { margin-top: 26px; }
+}
+
+/* ٤) سُلّم الاستقلالية: كان رقم المستوى بنفس هيئة العدد تحته («6 / 6»). المستوى صار شارةً صغيرة. */
+.ladder-spread b { font-size: 15px; font-variant-numeric: tabular-nums; color: var(--ink); }
+.ladder-spread small > span {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding-inline: 5px;
+  margin-bottom: 3px; border-radius: 999px; font-size: 11px; line-height: 1;
+  background: color-mix(in srgb, var(--ink) 6%, transparent); color: var(--muted);
+}
+.ladder-spread .has small > span { background: color-mix(in srgb, var(--moss) 14%, transparent); color: var(--moss-text, var(--moss)); }
+.ladder-spread i { transition: height var(--m-slow, 260ms) var(--m-ease, ease); }
+
+@media (prefers-reduced-motion: reduce) {
+  .brain-collapse > summary, .brain-collapse > summary::after, .ladder-spread i { transition: none; }
+}
