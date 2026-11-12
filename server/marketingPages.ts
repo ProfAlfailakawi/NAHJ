@@ -326,7 +326,7 @@ const LANDING_STYLE = `
   .contact form { display:grid; gap:12px; }
   .contact label { display:grid; gap:6px; font-weight:700; font-size:15px; }
   .contact label small { color:var(--muted); font-weight:600; }
-  .contact input, .contact select, .contact textarea { font:inherit; font-weight:500; padding:12px 14px; border-radius:12px; border:1.5px solid var(--line); background:color-mix(in srgb, var(--bg) 70%, var(--card)); color:var(--ink); width:100%; transition:border-color .2s, box-shadow .2s, background .2s; }
+  .contact input, .contact select, .contact textarea { font:inherit; font-size:16px; font-weight:500; padding:12px 14px; border-radius:12px; border:1.5px solid var(--line); background:color-mix(in srgb, var(--bg) 70%, var(--card)); color:var(--ink); width:100%; transition:border-color .2s, box-shadow .2s, background .2s; }
   .contact input:hover, .contact select:hover, .contact textarea:hover { border-color:color-mix(in srgb, var(--moss) 45%, var(--line)); }
   .contact input:focus, .contact select:focus, .contact textarea:focus { outline:none; border-color:var(--moss); background:var(--card); box-shadow:0 0 0 4px color-mix(in srgb, var(--moss) 22%, transparent); }
   .contact input:focus-visible, .contact select:focus-visible, .contact textarea:focus-visible { outline:2px solid transparent; }
@@ -613,22 +613,25 @@ export function renderLandingPage(): string {
 /* ------------------------------------------------- الشروط والخصوصية */
 
 const DOC_STYLE = `
-  .doc-layout { max-width:1040px; margin:0 auto; padding:48px 20px 0; display:grid; grid-template-columns:230px minmax(0,1fr); gap:44px; align-items:start; }
-  .toc { position:sticky; top:90px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:16px 12px; }
+  .doc-layout { max-width:1040px; margin:0 auto; padding:48px 20px 0; display:grid; grid-template-columns:230px minmax(0,1fr); gap:0 44px; align-items:start; }
+  .toc { grid-column:1; grid-row:1 / span 2; position:sticky; top:90px; background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:16px 12px; }
+  .doc-head { grid-column:2; grid-row:1; max-width:780px; min-width:0; }
+  .doc-layout > article.doc { grid-column:2; grid-row:2; }
   .toc b { display:block; font-size:14px; color:var(--muted); padding:0 10px 8px; }
   .toc ol { list-style:none; margin:0; padding:0; display:grid; gap:2px; }
   .toc a { display:flex; align-items:center; min-height:44px; text-decoration:none; font-weight:700; font-size:15px; line-height:1.5; padding:7px 10px; border-radius:10px; color:var(--ink); }
   .toc a:hover { background:var(--moss-soft); color:var(--moss); }
   .toc a:focus-visible { outline:3px solid var(--moss); outline-offset:1px; }
   article.doc { max-width:780px; min-width:0; }
-  article.doc h1 { font-size:clamp(28px, 4vw, 38px); margin:0 0 6px; line-height:1.3; }
-  article.doc .updated { color:var(--muted); font-size:14px; margin:0 0 28px; }
+  .doc-head h1, article.doc h1 { font-size:clamp(28px, 4vw, 38px); margin:0 0 6px; line-height:1.3; }
+  .doc-head .updated, article.doc .updated { color:var(--muted); font-size:14px; margin:0 0 28px; }
   article.doc h2 { font-size:22px; margin:34px 0 8px; padding-top:6px; }
   article.doc p, article.doc li { color:var(--ink); }
   article.doc a { color:var(--moss); font-weight:700; }
   article.doc ul { padding-inline-start:22px; }
   article.doc .box { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 20px; margin:18px 0; }
-  @media (max-width:900px) { .doc-layout { grid-template-columns:1fr; gap:20px; padding-top:32px; } .toc { position:static; } .toc ol { grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); } }
+  /* الهاتف واللوحي: العنوان أولاً ثم الفهرس ثم النص — كان الفهرس الطويل يسبق عنوان الصفحة فلا يُعرف أين أنت. */
+  @media (max-width:900px) { .doc-layout { grid-template-columns:1fr; gap:0; padding-top:32px; } .doc-head, .toc, .doc-layout > article.doc { grid-column:1; grid-row:auto; } .doc-head .updated { margin-bottom:18px; } .toc { position:static; margin-bottom:8px; } .toc ol { grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); } }
 `;
 
 /** يعطي كل عنوانٍ فرعيّ معرّفاً ويبني فهرساً يقفز إليه — النصّ نفسه لا يتغيّر. */
@@ -639,7 +642,12 @@ function withToc(articleHtml: string): string {
     items.push(`<li><a href="#${id}">${title}</a></li>`);
     return `<h2 id="${id}">${title}</h2>`;
   });
-  return `<div class="doc-layout"><nav class="toc" aria-label="محتويات الصفحة"><b>محتويات الصفحة</b><ol>${items.join("")}</ol></nav>${html}</div>`;
+  /* العنوان وتاريخ التحديث يخرجان إلى رأسٍ يسبق الفهرس في ترتيب المصدر — على الهاتف يُقرأ العنوان أولاً،
+     وعلى الشاشة العريضة يبقى التخطيط كما كان (الفهرس عموداً جانبياً والرأس فوق النص). */
+  const head = html.match(/^<article class="doc">\s*(<h1>[^<]*<\/h1>\s*<p class="updated">[^<]*<\/p>)/);
+  const toc = `<nav class="toc" aria-label="محتويات الصفحة"><b>محتويات الصفحة</b><ol>${items.join("")}</ol></nav>`;
+  if (!head) return `<div class="doc-layout">${toc}${html}</div>`;
+  return `<div class="doc-layout"><div class="doc-head">${head[1]}</div>${toc}<article class="doc">${html.slice(head[0].length)}</div>`;
 }
 
 const UPDATED = "23 سبتمبر 2026";
