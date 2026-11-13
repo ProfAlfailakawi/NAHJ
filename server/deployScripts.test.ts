@@ -107,3 +107,35 @@ test("نشر العميل (NAHJ_MARKETING=off): الجذر للتطبيق، ول
     server.close();
   }
 });
+
+test("خريطة الموقع تعمل في نشر المالك ولو لم يُضبط NAHJ_PUBLIC_URL", async () => {
+  /* نشر Cloud Run لا يضبط المتغير، فكانت /sitemap.xml تُرجع 404 وrobots.txt بلا سطر Sitemap. */
+  process.env.NAHJ_DATABASE_PATH = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "nahj-map-")), "t.sqlite");
+  const { publicRouter, DEFAULT_PUBLIC_URL } = await import("./publicPages.ts");
+  const app = express();
+  app.use(publicRouter);
+  const server = app.listen(0);
+  await new Promise(resolve => server.once("listening", resolve));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const saved = process.env.NAHJ_PUBLIC_URL;
+  try {
+    delete process.env.NAHJ_PUBLIC_URL;
+    const sitemap = await fetch(`${base}/sitemap.xml`, { headers: { "x-forwarded-host": "evil.example" } });
+    assert.equal(sitemap.status, 200);
+    const xml = await sitemap.text();
+    assert.ok(xml.includes(`<loc>${DEFAULT_PUBLIC_URL}/pricing</loc>`), xml);
+    assert.ok(!xml.includes("evil.example"), "العنوان لا يُؤخذ من ترويسةٍ يكتبها الطالب");
+    assert.ok((await (await fetch(`${base}/robots.txt`)).text()).includes(`Sitemap: ${DEFAULT_PUBLIC_URL}/sitemap.xml\n`));
+
+    process.env.NAHJ_PUBLIC_URL = "https://nahj.example.com/";
+    assert.ok((await (await fetch(`${base}/sitemap.xml`)).text()).includes("<loc>https://nahj.example.com/terms</loc>"));
+    assert.ok((await (await fetch(`${base}/robots.txt`)).text()).includes("Sitemap: https://nahj.example.com/sitemap.xml\n"));
+
+    process.env.NAHJ_MARKETING = "off";
+    assert.equal((await fetch(`${base}/sitemap.xml`)).status, 404, "نشر العميل بلا خريطة");
+  } finally {
+    if (saved === undefined) delete process.env.NAHJ_PUBLIC_URL; else process.env.NAHJ_PUBLIC_URL = saved;
+    delete process.env.NAHJ_MARKETING;
+    server.close();
+  }
+});
