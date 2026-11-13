@@ -143,6 +143,10 @@ export const BASE_STYLE = `${FONT_FACE_CSS}
   }
   @media (max-width:900px) { footer nav { gap:4px 8px; } footer nav a { display:inline-flex; align-items:center; min-height:44px; padding:0 6px; } }
   @media (max-width:380px) { .top nav a.keep[href="/pricing"] { display:none; } }
+  /* iPhone Duo / آيفون عرضي: الصفحة تمتد حتى الحافة (viewport-fit=cover) — الخلفيات والترويسة
+     اللاصقة من حافة لحافة، والمحتوى وحده يبتعد عن الكاميرا بجهتيه الفعليتين (لا inline: RTL يعكسها). */
+  body .wrap, body .doc-layout { padding-left:max(20px, calc(env(safe-area-inset-left, 0px) + 8px)); padding-right:max(20px, calc(env(safe-area-inset-right, 0px) + 8px)); }
+  footer { padding-bottom:max(48px, calc(env(safe-area-inset-bottom, 0px) + 24px)); }
   @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } *, *::before, *::after { transition-duration:.01ms !important; animation-duration:.01ms !important; animation-iteration-count:1 !important; } }
 `;
 
@@ -155,7 +159,7 @@ export function page(options: { title: string; description: string; path: string
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${escapeHtml(options.title)}</title>
 <meta name="description" content="${escapeHtml(options.description)}">
 <meta name="theme-color" content="#f4f1e8">
