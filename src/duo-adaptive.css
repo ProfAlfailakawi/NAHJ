@@ -123,6 +123,11 @@
     background: linear-gradient(to bottom, color-mix(in srgb, var(--white) 0%, transparent), var(--white));
   }
 }
+/* الظلّ الأبيض أسفل الشريط اللاصق (يغطّي حشوة النافذة تحته) كان يرسم فوق أعلى زرّ «ارفض» حين
+   تُمرَّر النافذة إلى آخرها — في كل العروض. صفّ الرفض فوق الظل؛ وهو يلي الشريط في التدفق،
+   فلا يتقاطعان أثناء التمرير. */
+.reject-row { position: relative; z-index: 3; }
+
 /* الارتفاع القصير جداً: رأس النافذة أنحف كي يبقى شيءٌ من سجل القرار ظاهراً فوق الأزرار. */
 @media (max-height: 420px) {
   .approval-sheet { padding-block: 14px 12px; }
