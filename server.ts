@@ -168,7 +168,10 @@ async function startServer() {
    */
   app.use(publicRouter);
 
-  // Health check endpoints for cloud deployment and probes
+  // Health check endpoints for cloud deployment and probes.
+  // Point monitors at /api/health (or /_health). On Cloud Run the front end
+  // reserves /healthz and answers 404 before the request reaches this server,
+  // so /healthz only works locally / on a VM or plain Docker host.
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", app: "NAHJ - نهج", timestamp: new Date().toISOString() });
   });
