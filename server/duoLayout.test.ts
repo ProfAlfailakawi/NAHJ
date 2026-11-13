@@ -31,3 +31,32 @@ test("duo.css exists with the mid-width two-pane and short-height rail rules", (
 test("the hub stage no longer has a fixed 560px height after the duo layer", () => {
   assert.ok(!/\.apphub-stage\s*\{[^}]*height:\s*560px/.test(read("src/duo.css")));
 });
+
+/*
+ * جولة الامتداد الكامل (13 نوفمبر 2026): الحواف الآمنة بجهاتها الفعلية، وشريط القرار في نافذة
+ * الاعتماد لاصق في كل المقاسات، وصفحات التسويق ممتدة حتى الحافة.
+ */
+test("duo-adaptive.css loads last and maps safe areas to the element's direction", () => {
+  const main = read("src/main.tsx");
+  const imports = [...main.matchAll(/import '\.\/([\w-]+\.css)'/g)].map(m => m[1]);
+  assert.equal(imports.at(-1), "duo-adaptive.css");
+  const css = read("src/duo-adaptive.css");
+  assert.match(css, /\[dir="rtl"\]\s*\{\s*--safe-start:\s*var\(--safe-r\);\s*--safe-end:\s*var\(--safe-l\)/);
+  assert.match(css, /\[dir="ltr"\]\s*\{\s*--safe-start:\s*var\(--safe-l\);\s*--safe-end:\s*var\(--safe-r\)/);
+  // لا قيمة env() جانبية خام داخل خاصية منطقية في هذه الطبقة: الترجمة وحدها تعرف الاتجاه.
+  const rules = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(!/(padding|inset)-inline[\w-]*:[^;]*env\(safe-area-inset-(left|right)/.test(rules));
+  assert.ok(!/device-posture|viewport-segments/.test(css));
+});
+
+test("the approval decision bar stays sticky on wide windows too (951x600, 951x350)", () => {
+  const css = read("src/duo-adaptive.css");
+  const wide = /@media \(min-width: 901px\) \{\s*\.approval-sheet \{[\s\S]*?\.approval-actions \{([\s\S]*?)\}/.exec(css)?.[1] || "";
+  assert.match(wide, /position:\s*sticky/);
+});
+
+test("marketing pages extend edge to edge and keep content out of the safe areas", () => {
+  const src = read("server/marketingPages.ts");
+  assert.match(src, /<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">/);
+  assert.match(src, /body \.wrap, body \.doc-layout \{ padding-left:max\(20px, calc\(env\(safe-area-inset-left/);
+});

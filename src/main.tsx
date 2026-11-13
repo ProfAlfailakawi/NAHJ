@@ -15,6 +15,7 @@ import './duo-beauty-3.css';
 import './duo-beauty-4.css';
 import './duo-beauty-5.css';
 import './responsive-2026-11.css';
+import './duo-adaptive.css';
 
 const started = performance.now();
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
