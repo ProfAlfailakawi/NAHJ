@@ -377,18 +377,27 @@ publicRouter.get("/api/public/site", (_req: Request, res: Response) => {
   res.json({ marketing: marketingEnabled() });
 });
 
+/*
+ * العنوان العلني لخريطة الموقع وسطر Sitemap في robots.txt.
+ *
+ * نشر المالك على Cloud Run لا يضبط NAHJ_PUBLIC_URL (ذلك المتغير يخص مزوّد الدفع
+ * أيضاً)، فكانت /sitemap.xml تُرجع 404 في الإنتاج. فإن غاب عاد العنوان إلى موقع
+ * المالك المعروف — والموقع التسويقي لا يعمل أصلاً إلا في نشر المالك. ولا يُقرأ
+ * من ترويسة Host/X-Forwarded-Host: تلك يكتبها الطالب.
+ */
+export const DEFAULT_PUBLIC_URL = "https://nahj-os.web.app";
+export const sitemapBaseUrl = () => ((process.env.NAHJ_PUBLIC_URL || "").trim() || DEFAULT_PUBLIC_URL).replace(/\/+$/, "");
+
 publicRouter.get("/robots.txt", (_req: Request, res: Response) => {
   if (!marketingEnabled()) return void res.type("text/plain").send("User-agent: *\nDisallow: /\n");
-  const base = (process.env.NAHJ_PUBLIC_URL || "").replace(/\/+$/, "");
   res.type("text/plain").send(
-    "User-agent: *\nDisallow: /api/\nDisallow: /app\nDisallow: /try/\nAllow: /\n" + (base ? `Sitemap: ${base}/sitemap.xml\n` : ""),
+    "User-agent: *\nDisallow: /api/\nDisallow: /app\nDisallow: /try/\nAllow: /\n" + `Sitemap: ${sitemapBaseUrl()}/sitemap.xml\n`,
   );
 });
 
 publicRouter.get("/sitemap.xml", (_req: Request, res: Response) => {
   if (!marketingEnabled()) return void res.status(404).type("text/plain").send("");
-  const base = (process.env.NAHJ_PUBLIC_URL || "").replace(/\/+$/, "");
-  if (!base) return void res.status(404).type("text/plain").send("NAHJ_PUBLIC_URL غير مضبوط.");
+  const base = sitemapBaseUrl();
   const urls = ["/", "/pricing", "/terms", "/privacy"]
     .map(path => `<url><loc>${escapeHtml(base + path)}</loc></url>`).join("");
   res.type("application/xml").send(`<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`);

@@ -142,7 +142,7 @@ npm run dev
 
 ## النشر
 
-- **الإنتاج الحالي:** موقع Firebase Hosting `nahj-os` يمرّر كل الطلبات إلى خدمة Cloud Run `nahj` في `europe-west2` ([firebase.json](firebase.json)). الصورة تُبنى وتُنشر بـ[cloudbuild.yaml](cloudbuild.yaml) (يستبدل الصورة فقط ويُبقي الإعدادات والأسرار)، ويُشغَّل من مُشغِّل Cloud Build مُعدّ في Google Cloud لا من هذا المستودع. البيانات تبقى عبر مرآة Neon.
+- **الإنتاج الحالي:** موقع Firebase Hosting `nahj-os` يمرّر كل الطلبات إلى خدمة Cloud Run `nahj` في `europe-west2` ([firebase.json](firebase.json)). الصورة تُبنى وتُنشر بـ[cloudbuild.yaml](cloudbuild.yaml) (يستبدل الصورة فقط ويُبقي الإعدادات والأسرار)، ويُشغَّل باليد (`gcloud builds submit --config cloudbuild.yaml --substitutions=COMMIT_SHA=$(git rev-parse HEAD) --project nahj-a27a4`)؛ مُشغِّل Cloud Build `nahj-deployer` موجود لكنه مُعطَّل. البيانات تبقى عبر مرآة Neon.
 - **سير عمل [.github/workflows/deploy.yml](.github/workflows/deploy.yml) («نشر نهج»):** يدوي فقط (`workflow_dispatch`) منذ أُوقف النشر التلقائي لخفض الكلفة؛ يفحص ثم ينشر على خادم بقرص دائم عبر [scripts/deploy-vm.sh](scripts/deploy-vm.sh)، ويتخطّى النشر إن لم تُضبط هوية النشر. الإعداد في [docs/deploy-nahj.md](docs/deploy-nahj.md) والنطاق في [docs/domain.md](docs/domain.md).
 - لا يوجد نشر تلقائي عند الدمج في `main`.
 
