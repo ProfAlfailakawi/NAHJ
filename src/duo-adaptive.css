@@ -143,6 +143,13 @@
   .demo-banner select { height: 44px; }
   .approval-actions button { min-height: 44px; }
   .emergency-fab { min-width: 44px; min-height: 44px; }
+  /* بقيّة ما قاسه تدقيق الجولة الأخيرة أصغر من 44px على شاشة لمس (كان كذلك قبلها). */
+  .login-links a { display: inline-flex; align-items: center; min-height: 44px; }
+  .org-setup-top .top-icon { width: 44px; height: 44px; }
+  .palette-input input { min-height: 44px; }
+  .help-panel header > button { width: 44px; height: 44px; }
+  .emergency-presets button { min-height: 44px; }
+  .content-stage summary, .modal-backdrop summary { min-height: 44px; }
 }
 
 /* ---------- ٤) الدخول: ارتفاع الشاشة الحقيقي والحواف الآمنة ---------- */
@@ -186,4 +193,324 @@
   padding-left: max(16px, calc(var(--safe-l) + 8px));
   padding-right: max(16px, calc(var(--safe-r) + 8px));
   padding-bottom: max(48px, calc(var(--safe-b) + 24px));
+}
+
+/* =====================================================================
+ * ٥) وضع الكتاب — الشاشة الداخلية لـ iPhone Duo (نوفمبر 2026، الجولة الأخيرة)
+ *
+ * المشكلة: على الشاشة الداخلية (≈669×867 طولياً، ≈951×585 عرضياً) كانت الواجهة صفحة iPad
+ * ممطوطة: شريط جانبي وعمود واحد يعبر المفصل. Safari لا يكشف المفصل، فالقرار بالمقاس وحده.
+ *
+ * التركيب: صفحتان متقابلتان وكعبٌ هادئ في المنتصف (--spine) بخيطٍ وظلّ طيّ خفيف.
+ *   - اليمنى (البداية في RTL): المهمة الأساسية — القائمة أو القراءة أو المحادثة أو القرار.
+ *   - اليسرى: السياق — التفاصيل والمؤشرات والفلاتر، وفي أسفلها فهرس الأقسام.
+ *   - رأس القسم سطرٌ واحد يقسمه الكعب: العنوان يميناً والتمهيد يساراً.
+ *   - الخلفية متصلة من الحافة إلى الحافة؛ لا نصّ ولا زرّ ولا حقل يعبر منطقة الكعب.
+ * الآلية: `.page-enter` (جذر كل قسم) شبكةٌ بعمودين متساويين بينهما فاصلٌ بعرض الكعب، وحاويات
+ * الشبكة الداخلية تصير `display: contents` فيُوزَّع أبناؤها على الصفحتين بلا تغيير في الشجرة
+ * ولا JS: الحالة (الكتابة، الاختيار، التمرير، النوافذ المفتوحة) تعيش عبر تغيّر المقاس.
+ * والعمود المتعدد (columns) جُرِّب أولاً ثم تُرك: WebKit لا يرسم العنصر الموضَّع في العمود الثاني.
+ * كل القواعد مقيّدة بـ `screen` (عرض A4 المطبوع ≈ 658px يقع في مدى الكتاب).
+ * ===================================================================== */
+:root { --spine: 32px; }
+@media screen and (min-width: 640px) and (max-width: 720px) and (min-height: 760px),
+       screen and (min-width: 860px) and (max-width: 1000px) and (min-height: 520px) and (max-height: 760px) {
+  :root {
+    /* حاشية متناظرة: الكعب يبقى في منتصف الشاشة حتى مع حافة آمنة على جهة واحدة. */
+    --book-m: max(16px, var(--safe-l), var(--safe-r));
+    --book-top: 60px;
+    --book-gap: 14px;
+    --book-sticky-top: calc(var(--book-top) + var(--safe-t) + 12px);
+  }
+  /* الكعب: خيطٌ وسطي وظلّ طيّ خفيف، فوق الورق ولا يلتقط اللمس. */
+  .app-shell::after {
+    content: ""; position: fixed; z-index: 46; inset-block: 0;
+    left: calc(50% - var(--spine) / 2); width: var(--spine);
+    pointer-events: none;
+    background:
+      linear-gradient(to right, transparent calc(50% - .5px), color-mix(in srgb, var(--ink) 13%, transparent) calc(50% - .5px), color-mix(in srgb, var(--ink) 13%, transparent) calc(50% + .5px), transparent calc(50% + .5px)),
+      linear-gradient(to right, transparent, color-mix(in srgb, var(--ink) 4%, transparent) 44%, color-mix(in srgb, var(--ink) 6.5%, transparent) 50%, color-mix(in srgb, var(--ink) 4%, transparent) 56%, transparent);
+  }
+
+  /* الفهرس ينتقل من الشريط الجانبي إلى أسفل الصفحة اليسرى. */
+  .desktop-rail { display: none; }
+  .shell-body { padding-inline-start: 0; }
+
+  /* الرأس: الهوية يميناً، والبحث والأدوات يساراً. */
+  .topbar {
+    height: calc(var(--book-top) + var(--safe-t));
+    padding: var(--safe-t) var(--book-m) 0;
+    grid-template-columns: calc(50% - var(--spine) / 2) var(--spine) minmax(0, 1fr) auto;
+    column-gap: 0;
+  }
+  .topbar-org { grid-column: 1; }
+  .topbar > .command-search {
+    grid-column: 3; justify-self: start; display: flex;
+    width: auto; max-width: calc(100% - 8px); min-width: 44px; height: 44px; padding: 0 12px;
+  }
+  .topbar > .command-search kbd { display: none; }
+  .topbar > .top-actions { grid-column: 4; gap: 2px; }
+  .user-chip span { display: none; }
+
+  html { scroll-padding-top: calc(var(--book-top) + var(--safe-t) + 8px); scroll-padding-bottom: calc(100px + var(--safe-b)); }
+  /* المحتوى: صفحتان. */
+  .content-stage {
+    max-width: none;
+    padding: 14px var(--book-m) calc(100px + var(--safe-b));
+  }
+  .page-enter {
+    animation: none;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    /* الصف الأول للرأس، ثم صفوف الصفحتين، والصف الأخير مرن يمتصّ فرق الطول. */
+    grid-template-rows: auto repeat(8, auto) minmax(0, 1fr);
+    grid-auto-flow: row dense;
+    column-gap: var(--spine); row-gap: 0;
+    align-content: start; align-items: start;
+  }
+  .page-enter > * { grid-column: 1; min-width: 0; margin: 0 0 var(--book-gap); }
+  /* حاويات «قائمة | تفاصيل» تذوب، فيصير أبناؤها بطاقات الصفحتين. */
+  .page-enter > :is(.learn-layout, .teach-layout, .skills-layout, .graduation-grid, .work-layout, .sim-layout,
+    .connections-layout, .impact-layout, .control-layout, .people-layout) { display: contents; }
+  .page-enter > :is(.learn-layout, .teach-layout, .skills-layout, .graduation-grid, .work-layout, .sim-layout,
+    .connections-layout, .impact-layout, .control-layout, .people-layout) > * {
+    grid-column: 1; min-width: 0; margin: 0 0 var(--book-gap);
+  }
+
+  /* رأس القسم: العنوان يميناً، والتمهيد والإجراء يساراً، على خطٍّ سفلي واحد. */
+  .page-enter > .page-heading {
+    grid-column: 1 / -1; grid-row: 1;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--spine);
+    align-items: end; row-gap: 6px;
+  }
+  .page-heading > .min-w-0 { display: contents; }
+  .page-heading > .min-w-0 > :not(p) { grid-column: 1; }
+  .page-heading > .min-w-0 > p { grid-column: 2; grid-row: 1 / span 2; margin: 0; align-self: end; max-width: none; }
+  .page-heading > div:last-child:not(.min-w-0) { grid-column: 2; justify-self: end; width: auto; }
+  .page-heading:has(> div:last-child:not(.min-w-0)) > .min-w-0 > p { grid-row: 1; }
+  .page-heading h1 { font-size: clamp(23px, 2.9vw, 30px); }
+
+  /* الصفحة اليسرى لكل قسم.
+     (أ) لوحة سياقٍ واحدة تمتدّ بطول الصفحة وتلصق تحت الرأس، فتبقى أمام العين بينما تتمرّر
+         المهمة يميناً (قائمة | تفاصيل، محادثة | أثرها، قرار | حواجزه). */
+  .page-enter :is(.learn-radar, .teach-capture, .skill-inspector, .shadow-deck, .work-focus, .sim-trace, .connection-map,
+    .top-skill-visual, .guardrails, .people-risks, .today-lower-grid),
+  .page-enter > .stat-grid:not(.sub-stats),
+  .page-enter > .sub-block:has(.plan-grid) {
+    grid-column: 2; grid-row: 2 / -1;
+    position: sticky; top: var(--book-sticky-top);
+    max-height: calc(100dvh - var(--book-sticky-top) - 96px - var(--safe-b));
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  /* خريطة «اليوم» في صفحتها: الدوائر فوق، والقسم المحدّد تحتها سطراً واحداً (كتخطيط الهاتف). */
+  .page-enter > .apphub { grid-template-columns: minmax(0, 1fr); padding: 12px; overflow: hidden; }
+  .page-enter > .apphub > .apphub-stage { grid-column: 1; grid-row: 1; height: clamp(330px, calc(100dvh - 250px), 520px); margin-inline: 0; }
+  .page-enter > .apphub > .apphub-focus {
+    grid-column: 1; grid-row: 2; position: static;
+    flex-direction: row; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: var(--r-lg);
+  }
+  /* ما يتّسع لعرض الشاشة كلها يُضبط على عرض صفحة: لا شيء يتسرّب نحو الكعب. */
+  .page-enter > .memory-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .page-enter > .memory-strip > * { min-width: 0; }
+  .page-enter .ladder-spread { gap: 4px; position: relative; overflow-x: auto; }
+  .page-enter .ladder-spread > * { min-width: 0; }
+  .page-enter > .today-lower-grid { display: flex; flex-direction: column; gap: var(--book-gap); }
+  .page-enter > .stat-grid:not(.sub-stats) { grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; }
+  /* (ب) قسمٌ مهمته وثيقةٌ طويلة واحدة: الوثيقة يميناً بطول الصفحة، وأدواتها مكدّسة يساراً. */
+  .page-enter:has(> .audit-surface) > .audit-surface { display: contents; }
+  .page-enter > .audit-surface > * { grid-column: 2; margin: 0 0 var(--book-gap); min-width: 0; }
+  .page-enter > .audit-surface > .audit-timeline { grid-column: 1; grid-row: 2 / -1; max-width: none; margin-inline: 0; }
+  .page-enter > .accounts-list,
+  .page-enter > .sub-block:has(.sector-grid) { grid-row: 2 / -1; }
+  .page-enter > :is(.accounts-self, .accounts-create, .accounts-locked, .sub-demo-note),
+  .page-enter:has(> .sub-block .sector-grid) > .sub-block:has(.channel-preview) { grid-column: 2; }
+  .page-enter:has(> .sub-headline) > .sub-demo-note { grid-column: 1; }
+
+  /* شريط العرض التجريبي: شريطٌ واحد يقسمه الكعب — الوصف يميناً، والقطاع والأزرار يساراً. */
+  .demo-banner[role="region"] {
+    display: grid;
+    grid-template-columns: 22px calc(50% - var(--spine) / 2 - 22px) var(--spine) minmax(0, 1fr) auto auto;
+    column-gap: 0; padding: 6px 12px; margin-bottom: 14px;
+  }
+  .demo-banner[role="region"] > svg { grid-column: 1; }
+  .demo-banner[role="region"] > p { grid-column: 2; padding-inline-start: 8px; }
+  .demo-banner[role="region"] > .demo-banner-switch { grid-column: 4; flex: none; min-width: 0; width: 100%; display: flex; gap: 6px; }
+  .demo-banner[role="region"] > .demo-banner-switch select { flex: 1 1 0; min-width: 0; width: auto; }
+  .demo-banner[role="region"] > button { margin-inline-start: 6px; }
+
+  /* الفهرس: أسفل الصفحة اليسرى. */
+  .mobile-dock {
+    display: flex; position: fixed; z-index: 80;
+    bottom: max(12px, var(--safe-b));
+    inset-inline-start: calc(50% + var(--spine) / 2 + 4px);
+    inset-inline-end: var(--book-m);
+    gap: 2px; padding: 6px; overflow: hidden;
+    border: 1px solid var(--line); border-radius: var(--r-lg);
+  }
+  .mobile-dock button {
+    flex: 1 1 0; min-width: 0; height: 54px; padding: 0 2px;
+    display: grid; place-items: center; align-content: center; gap: 3px;
+    font: inherit; border: 0; border-radius: var(--r-md); background: transparent; cursor: pointer;
+  }
+  .mobile-dock svg { width: 19px; height: 19px; }
+  .mobile-dock small { font-size: 12px; font-weight: 700; line-height: 1.1; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .mobile-sheet-backdrop { display: block; }
+  .mobile-sheet {
+    inset-inline-start: calc(50% + var(--spine) / 2 + 4px);
+    inset-inline-end: var(--book-m);
+    bottom: calc(max(12px, var(--safe-b)) + 74px);
+    max-height: calc(100dvh - var(--book-top) - 110px);
+  }
+  /* زر الإيقاف الطارئ فوق الفهرس عند الحافة الخارجية، فلا يقتطع من عرض أزراره. */
+  :root:has(.emergency-fab) .mobile-dock { inset-inline-end: var(--book-m); }
+  .emergency-fab {
+    inset-inline-end: var(--book-m); bottom: calc(max(12px, var(--safe-b)) + 78px);
+    height: 52px; width: 52px; min-width: 52px; padding: 0; justify-content: center;
+  }
+  .emergency-fab span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .toast {
+    inset-inline-start: calc(50% + var(--spine) / 2 + 4px); inset-inline-end: var(--book-m);
+    bottom: calc(max(12px, var(--safe-b)) + 76px); max-width: none;
+  }
+
+  /* النوافذ: الستار يغطّي الشاشة كلها ويمنع اللمس تحته؛ النافذة وحدها تجلس على صفحة.
+     القرار (الاعتماد، الإيقاف) على اليمنى، والدليل على اليسرى. */
+  .modal-backdrop { justify-items: start; padding-inline-end: calc(50% + var(--spine) / 2); }
+  .modal-backdrop > [role="dialog"] { width: 100%; max-width: none; }
+  .palette-backdrop { justify-content: flex-start; padding-inline-end: calc(50% + var(--spine) / 2); padding-inline-start: var(--book-m); }
+  .palette-backdrop > .palette { width: 100%; max-width: none; }
+  .help-backdrop { justify-content: flex-end; }
+  .help-panel { width: calc(50% - var(--spine) / 2); }
+  /* الدخول: الهوية والتعليمات على اليمنى، والنموذج بطاقةٌ على اليسرى (خلفيتها طبقةٌ زائفة
+     بحجم الصفحة، فلا تغيير في الشجرة ولا يعبر حقلٌ الكعب). */
+  .login-shell { padding-inline: var(--book-m); place-items: center stretch; }
+  .login-card {
+    width: 100%; max-width: none; isolation: isolate;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: calc(var(--spine) + 40px);
+    grid-template-rows: repeat(10, auto) minmax(0, 1fr); grid-auto-flow: row dense;
+    row-gap: 0; align-content: center;
+    padding: 24px 20px 12px; background: transparent; border: 0; box-shadow: none;
+  }
+  .login-card::before {
+    content: ""; position: absolute; z-index: -1; top: 0; bottom: 0; height: auto; opacity: 1;
+    inset-inline-start: calc(50% + var(--spine) / 2); inset-inline-end: 0;
+    border: 1px solid var(--line-strong); border-radius: var(--r-lg);
+    background: linear-gradient(90deg, var(--moss), var(--brass, var(--amber))) top / 100% 3px no-repeat, var(--white);
+    box-shadow: 0 30px 80px -30px rgba(16, 37, 31, .35);
+  }
+  .login-card > * { grid-column: 2; margin: 0 0 12px; min-width: 0; }
+  .login-card > .login-brand { grid-column: 1; grid-row: 1; align-self: end; }
+  .login-card > .login-hint { grid-column: 1; grid-row: 2 / -1; align-self: start; font-size: 17px; line-height: 1.85; }
+  .login-brand strong { font-size: 30px; }
+  .login-brand .login-mark svg { width: 44px; height: 44px; }
+
+  /* إعداد المؤسسة: الاسم وزرّ البدء يميناً، والقطاعات (الاختيار الطويل) يساراً بطول الصفحة. */
+  .org-setup { padding-inline: var(--book-m); }
+  .org-setup-card {
+    max-width: none; margin-inline: 0;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--spine);
+    grid-template-rows: repeat(12, auto) minmax(0, 1fr); grid-auto-flow: row dense; row-gap: 0; align-content: start;
+    padding: 20px 0; background: transparent; border: 0; box-shadow: none;
+  }
+  .org-setup-card::before { display: none; }
+  .org-setup-card > * { grid-column: 1; margin: 0 0 14px; min-width: 0; }
+  .org-setup-card > fieldset { grid-column: 2; grid-row: 1 / -1; }
+  .org-setup-sectors { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* =====================================================================
+ * ٦) وضع الحاسوب (Laptop) والارتفاع القصير العريض: 951×350، 600×350، 594×368، 844×390
+ *    المحتوى في الأعلى ويأخذ العرض كله، وأدوات التنقّل شريطٌ ثابت في الأسفل لا يغطّي شيئاً:
+ *    للمحتوى حشوةٌ سفلية بارتفاع الشريط. والرأس يتمرّر مع الصفحة فلا يأكل ثُمن الارتفاع.
+ * ===================================================================== */
+@media screen and (min-width: 560px) and (max-height: 430px) {
+  :root { --lap-m: max(14px, var(--safe-l), var(--safe-r)); --lap-dock: 58px; }
+  .desktop-rail { display: none; }
+  .shell-body { padding-inline-start: 0; }
+  .topbar {
+    position: relative; height: calc(52px + var(--safe-t));
+    padding: var(--safe-t) var(--lap-m) 0;
+    grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px;
+  }
+  .topbar > .command-search { display: flex; justify-self: start; width: auto; max-width: 320px; min-width: 44px; height: 44px; padding: 0 12px; }
+  .topbar > .command-search kbd { display: none; }
+  .user-chip span { display: none; }
+  .content-stage {
+    max-width: none;
+    padding: 10px var(--lap-m) calc(var(--lap-dock) + 16px + var(--safe-b));
+  }
+  html { scroll-padding-bottom: calc(var(--lap-dock) + 24px + var(--safe-b)); }
+  .page-heading { margin-bottom: 10px; }
+  .page-heading h1 { font-size: clamp(21px, 2.6vw, 26px); }
+  /* شريط أدواتٍ ملتصق بالحافة السفلية بعرض الشاشة (نصف «لوحة المفاتيح»)، وأزراره في الوسط. */
+  .mobile-dock {
+    display: flex; justify-content: center; position: fixed; z-index: 80;
+    bottom: 0; width: 100%; transform: translateX(-50%);
+    gap: 2px; overflow: hidden; border-radius: 0; border-inline: 0; border-bottom: 0;
+    padding: 4px max(var(--lap-m), calc((100% - 560px) / 2)) calc(4px + var(--safe-b));
+  }
+  .mobile-dock button {
+    flex: 1 1 0; min-width: 0; max-width: 112px; height: 48px; padding: 0 2px;
+    display: grid; place-items: center; align-content: center; gap: 2px;
+    font: inherit; border: 0; border-radius: var(--r-md); background: transparent; cursor: pointer;
+  }
+  .mobile-dock svg { width: 18px; height: 18px; }
+  .mobile-dock small { font-size: 12px; font-weight: 700; line-height: 1.1; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  /* الوسط فيزيائي (left + translate) — والقواعد المنطقية الأسبق (ومنها :has) تُحيَّد بالخصوصية نفسها. */
+  :root .mobile-dock, :root:has(.emergency-fab) .mobile-dock { left: 50%; right: auto; }
+  .mobile-sheet-backdrop { display: block; }
+  .mobile-sheet {
+    left: 50%; right: auto; transform: translateX(-50%);
+    width: min(620px, calc(100% - 2 * var(--lap-m)));
+    bottom: calc(var(--safe-b) + var(--lap-dock) + 8px);
+    max-height: calc(100dvh - var(--lap-dock) - 30px - var(--safe-b) - var(--safe-t));
+  }
+  .mobile-sheet-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+  .emergency-fab {
+    inset-inline-end: var(--lap-m); bottom: calc(var(--safe-b) + var(--lap-dock) + 8px);
+    height: 48px; width: 48px; min-width: 48px; padding: 0; justify-content: center;
+  }
+  .emergency-fab span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .toast { bottom: calc(var(--safe-b) + var(--lap-dock) + 10px); }
+}
+
+/* قائمة «كل الأقسام» فوق 900px: قواعدها الأصلية داخل ‎≤900px، فتُعاد هنا كاملةً للوضعين. */
+@media screen and (min-width: 901px) and (max-width: 1000px) and (min-height: 520px) and (max-height: 760px),
+       screen and (min-width: 901px) and (max-height: 430px) {
+  .mobile-sheet-backdrop { position: fixed; inset: 0; z-index: 79; background: color-mix(in srgb, var(--ink) 28%, transparent); }
+  .mobile-sheet {
+    position: absolute; padding: 12px; overflow: auto;
+    border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--white); box-shadow: var(--shadow-2);
+  }
+  .mobile-sheet-head { display: flex; align-items: center; gap: 10px; padding: 4px 4px 12px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
+  .mobile-sheet-avatar { width: 40px; height: 40px; flex: none; border-radius: var(--r-md); background: var(--ink-bg); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 15px; }
+  .mobile-sheet-who { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .mobile-sheet-who strong { font-size: 15px; font-weight: 700; line-height: 1.35; overflow-wrap: anywhere; }
+  .mobile-sheet-who small { font-size: var(--fs-xs); color: var(--muted); font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
+  .mobile-sheet-search { width: 100%; min-height: 46px; margin-bottom: 10px; display: flex; align-items: center; gap: 9px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: color-mix(in srgb, var(--white) 70%, transparent); color: var(--muted); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .mobile-sheet-search svg { width: 17px; flex: none; }
+  .mobile-sheet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+  .mobile-sheet-grid button { min-height: 64px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px 4px; border: 1px solid transparent; border-radius: var(--r-md); background: transparent; color: var(--ink); font: inherit; font-size: var(--fs-xs); font-weight: 700; cursor: pointer; }
+  .mobile-sheet-grid button svg { width: 20px; height: 20px; color: var(--moss-text); }
+  .mobile-sheet-grid button.active { background: var(--ink-bg); color: #fff; }
+  .mobile-sheet-grid button.active svg { color: #fff; }
+}
+
+/* شريط الفهرس «أداة حبر» في الوضعين فوق 900px أيضاً (تحت 900 تتكفّل به elevation.css). */
+@media screen and (min-width: 860px) and (max-width: 1000px) and (min-height: 520px) and (max-height: 760px),
+       screen and (min-width: 560px) and (max-height: 430px) {
+  .mobile-dock {
+    background: var(--chart-ink);
+    border: 1px solid var(--chart-line);
+    box-shadow: 0 14px 30px -12px rgba(15, 42, 36, .55);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  .mobile-dock button { color: var(--chart-text); }
+  .mobile-dock button[aria-current="page"], .mobile-dock button.active {
+    background: rgba(255, 253, 247, .1);
+    color: var(--chart-text-strong);
+    box-shadow: inset 0 -3px 0 var(--brass);
+  }
+  .mobile-dock button.active svg, .mobile-dock button[aria-current="page"] svg { color: var(--brass); }
+  .mobile-dock button:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
 }

@@ -65,7 +65,8 @@ export function DemoOwnerPreview({ lang, kind }: { lang: "ar" | "en"; kind: "own
   const invoiceState: Record<string, [string, string]> = { paid: ["مسدّدة", "Paid"], open: ["مفتوحة", "Open"], overdue: ["متأخرة", "Overdue"] };
 
   return (
-    <>
+    /* جذر القسم كبقية الأقسام (`page-enter`): وضع الكتاب يوزّع أبناءه على الصفحتين. */
+    <div className="page-enter">
       <PageHeader
         eyebrow={kind === "owner" ? t("لوحة المالك", "Owner console") : t("المسوّقون", "Partners")}
         title={kind === "owner" ? t("المنصة من جهة البيع", "The platform from the selling side") : t("المسوّقون بالعمولة", "Commission partners")}
@@ -134,6 +135,6 @@ export function DemoOwnerPreview({ lang, kind }: { lang: "ar" | "en"; kind: "own
           </section>
         </>
       )}
-    </>
+    </div>
   );
 }
