@@ -24,6 +24,9 @@ import {
   humanBytes, listBackups, runBackup, type LedgerName,
 } from "./archive.ts";
 import { ipBlocked, recordIpFailure } from "./loginThrottle.ts";
+import {
+  DELETION_SLA_DAYS, completeDeletionRequest, deletionRateLimited, listDeletionRequests, requestAccountDeletion,
+} from "./accountDeletion.ts";
 import { reviewPromotion } from "./engine/promotionReview.ts";
 import { buildDecisionRecord, reasonRequiredFor } from "./engine/decisionRecord.ts";
 import { assignBackup, coverageReport, recordCoverageSnapshot } from "./engine/coverage.ts";
@@ -159,6 +162,71 @@ authRouter.post("/change-password", requireAuth, async (req: AuthenticatedReques
   } catch (error) {
     const status = Number((error as { status?: number })?.status) || 400;
     res.status(status).json({ error: (error as Error)?.message || "تعذّر تغيير كلمة المرور." });
+  }
+});
+
+/*
+ * حذف الحساب من داخل التطبيق (Guideline 5.1.1(v)).
+ *
+ * مفتوح لكل حساب حقيقي مسجَّل، ولا يمرّ بحارس الاشتراك: حقّ المستخدم لا يتجمّد مع اشتراك مؤسسته.
+ * الزائر التجريبي مرفوض صراحةً — هويته اصطناعية وصندوقه في الذاكرة، فلا شيء حقيقي يُحذف ولا يُسجَّل.
+ * يطلب كلمة المرور ويسجّل الطلب ويعلّق الحساب وينهي الجلسات؛ أما التجهيل فيُنفّذه مشرف المؤسسة.
+ */
+authRouter.post("/account/deletion-request", requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  if (req.account!.id === "demo") {
+    return void res.status(403).json({ error: "حذف الحساب غير متاح في البيئة التجريبية.", code: "DEMO_READONLY" });
+  }
+  const ip = req.ip || req.socket.remoteAddress || "unknown";
+  if (ipBlocked(ip) || deletionRateLimited(req.account!.id)) {
+    return void res.status(429).json({ error: "محاولات كثيرة. حاول بعد قليل.", code: "RATE_LIMITED" });
+  }
+  if (req.body?.confirm !== true) {
+    return void res.status(400).json({ error: "أكّد رغبتك في حذف الحساب.", code: "CONFIRM_REQUIRED" });
+  }
+  try {
+    const request = await requestAccountDeletion(req.account!, req.body?.password, req.body?.reason);
+    db.logAudit({
+      actorType: "human", actorName: req.account!.email, action: "ACCOUNT_DELETION_REQUESTED",
+      provenance: "حذف الحساب", risk: "medium", latencyMs: 0, status: "success",
+      details: `طلب حذف حساب (${request.role}) — عُلّق الحساب وأُنهيت جلساته، والتنفيذ خلال ${DELETION_SLA_DAYS} يوماً. رقم الطلب ${request.id}.`,
+    });
+    clearSessionCookies(req, res);
+    res.json({ ok: true, requestId: request.id, dueBy: request.dueBy, signedOut: true });
+  } catch (error) {
+    const status = Number((error as { status?: number })?.status) || 400;
+    if (status === 403) recordIpFailure(ip);
+    res.status(status).json({ error: (error as Error)?.message || "تعذّر تسجيل طلب الحذف.", code: (error as { code?: string })?.code });
+  }
+});
+
+/* طلبات الحذف لمشرف المؤسسة: كي لا يضيع أي طلب. في الصندوق التجريبي القائمة فارغة دائماً. */
+const deletionAdminGuard = [requireAuth, requireRole("admin")] as const;
+
+authRouter.get("/deletion-requests", ...deletionAdminGuard, (req: AuthenticatedRequest, res: Response) => {
+  if (req.account!.id === "demo") return void res.json({ requests: [], slaDays: DELETION_SLA_DAYS });
+  res.json({ requests: listDeletionRequests(), slaDays: DELETION_SLA_DAYS });
+});
+
+authRouter.post("/deletion-requests/:id/complete", ...deletionAdminGuard, enforceSubscription, (req: AuthenticatedRequest, res: Response) => {
+  if (req.account!.id === "demo") {
+    return void res.status(403).json({ error: "غير متاح في البيئة التجريبية.", code: "DEMO_READONLY" });
+  }
+  try {
+    const { request, anonymizedEmail } = completeDeletionRequest(req.params.id, req.account!);
+    /* اسم صاحب الحساب يُستبدل في سجلّ التدقيق أيضاً؛ تبقى الأحداث نفسها. */
+    for (const event of db.auditEvents) {
+      if (event.actorName === request.email) event.actorName = "حساب محذوف";
+      if (event.details?.includes(request.email)) event.details = event.details.split(request.email).join("حساب محذوف");
+    }
+    db.logAudit({
+      actorType: "human", actorName: req.account!.email, action: "ACCOUNT_DELETION_COMPLETED",
+      provenance: "حذف الحساب", risk: "medium", latencyMs: 0, status: "success",
+      details: `نُفّذ طلب الحذف ${request.id}: جُهِّلت بيانات الحساب الشخصية (${anonymizedEmail}).`,
+    });
+    res.json({ request });
+  } catch (error) {
+    const status = Number((error as { status?: number })?.status) || 400;
+    res.status(status).json({ error: (error as Error)?.message || "تعذّر تنفيذ الطلب.", code: (error as { code?: string })?.code });
   }
 });
 

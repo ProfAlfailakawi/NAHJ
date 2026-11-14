@@ -75,7 +75,7 @@ export async function hashPassword(password: string) {
   return { hash: derived.toString("hex"), salt };
 }
 
-async function verifyPassword(password: string, hash: string, salt: string) {
+export async function verifyPassword(password: string, hash: string, salt: string) {
   const derived = await scrypt(password, salt, 64);
   const expected = Buffer.from(hash, "hex");
   // طول مختلف يعني عدم تطابق، لكن timingSafeEqual يرمي عليه — نتحقق أولاً.

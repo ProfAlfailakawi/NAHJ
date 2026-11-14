@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Eye, EyeOff, KeyRound, LogOut, ShieldCheck, TriangleAlert, UserPlus, Users } from "lucide-react";
 import { PageHeader } from "../Primitives";
-import { accountsApi, ApiError, authApi, type AccountSummary } from "../../lib/api";
+import { accountsApi, ApiError, authApi, deletionApi, type AccountSummary, type DeletionRequestSummary } from "../../lib/api";
+import { DeleteAccountSection } from "../DeleteAccountSection";
 
 interface Props {
   lang: "ar" | "en";
   currentAccountId: string;
   isAdmin: boolean;
   notify: (text: string, error?: boolean) => void;
+  role?: string;
+  isDemo?: boolean;
 }
 
 /*
@@ -28,7 +31,7 @@ const roleLabel = (role: string, ar: boolean) =>
  * ما تفعله الأنظمة المغلقة: المشرف يُصدر كلمة مرور مؤقتة تظهر مرة واحدة على شاشته،
  * ويسلّمها بقناة يثق بها. الشاشة تقول ذلك صراحةً بدل أن توهم بإرسال لا يحدث.
  */
-export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props) {
+export function AccountsView({ lang, currentAccountId, isAdmin, notify, role, isDemo }: Props) {
   const ar = lang === "ar";
   const [accounts, setAccounts] = useState<AccountSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,10 +51,13 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
   const [roleFilter, setRoleFilter] = useState("all");
   const [shown, setShown] = useState(PAGE);
 
+  const [deletions, setDeletions] = useState<DeletionRequestSummary[]>([]);
+
   const load = useCallback(async () => {
     if (!isAdmin) { setLoading(false); return; }
     try {
       setAccounts((await accountsApi.list()).accounts);
+      setDeletions((await deletionApi.list()).requests);
     } catch (error) {
       notify(error instanceof ApiError ? error.message : ar ? "تعذّر جلب الحسابات." : "Could not load accounts.", true);
     } finally {
@@ -142,6 +148,8 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
         </form>
       </section>
 
+      <DeleteAccountSection lang={lang} role={role} isDemo={Boolean(isDemo)} notify={notify} />
+
       {!isAdmin ? (
         <section className="surface-strong accounts-locked">
           <ShieldCheck />
@@ -201,6 +209,28 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify }: Props)
               </div>
             )}
           </section>
+
+          {deletions.some(r => r.status === "PENDING") && (
+            <section className="surface-strong accounts-list" aria-label={ar ? "طلبات حذف الحسابات" : "Account deletion requests"}>
+              <h3><TriangleAlert /> {ar ? "طلبات حذف الحسابات" : "Account deletion requests"}</h3>
+              <p className="accounts-empty">{ar
+                ? "الحسابات المذكورة معلَّقة أصلاً. إتمام الحذف يُجهِّل بريد الحساب واسمه ولا يمسّ بيانات المؤسسة."
+                : "These accounts are already suspended. Completing a request anonymises the account's email and name and never touches organisation data."}</p>
+              <ul>
+                {deletions.filter(r => r.status === "PENDING").map(r => (
+                  <li key={r.id}>
+                    <strong>{r.name}</strong> <code>{r.email}</code> — {ar ? "المهلة" : "due"} {new Date(r.dueBy).toLocaleDateString(ar ? "ar" : "en")}
+                    {r.accountId !== currentAccountId && (
+                      <button type="button" disabled={busyId === r.id}
+                        onClick={() => guard(r.id, async () => { await deletionApi.complete(r.id); notify(ar ? "جُهِّل الحساب" : "Account anonymised"); })}>
+                        {ar ? "إتمام الحذف" : "Complete deletion"}
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="surface-strong accounts-list">
             <h3><Users /> {ar ? "الحسابات" : "Accounts"} <small>{accounts.length}</small></h3>
