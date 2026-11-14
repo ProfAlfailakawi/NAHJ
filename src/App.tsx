@@ -482,7 +482,7 @@ export default function App(){
     case "control":view=<ControlView lang={lang} governance={governance} paused={paused} pause={autopilot.pause} onPause={()=>setPauseOpen(true)}/>;break;
     case "people":view=<PeopleView lang={lang} canAssign={account?.role==="admin"||account?.role==="owner"||account?.role==="manager"} notify={notify} onChanged={()=>void refreshSkills()}/>;break;
     case "audit":view=<AuditView lang={lang} events={audit}/>;break;
-    case "accounts":view=<AccountsView lang={lang} currentAccountId={account?.id||""} isAdmin={account?.role==="admin"||account?.role==="owner"} notify={notify}/>;break;
+    case "accounts":view=<AccountsView lang={lang} currentAccountId={account?.id||""} isAdmin={account?.role==="admin"||account?.role==="owner"} notify={notify} role={account?.role} isDemo={demoActive}/>;break;
     case "partners":view=isAppleNativeShell()?applePlansNotice:demoActive?<DemoOwnerPreview lang={lang} kind="partners"/>:<PartnersAdminView lang={lang} notify={notify}/>;break;
     case "partnerPortal":view=<PartnerPortalView lang={lang} notify={notify}/>;break;
     case "sectors":view=<SectorsView lang={lang} isDemo={demoActive} canApply={account?.role==="admin"||account?.role==="owner"} notify={notify} onApplied={()=>void loadAll()}/>;break;

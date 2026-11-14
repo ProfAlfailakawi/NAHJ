@@ -158,6 +158,21 @@ export const authApi = {
     api<{ ok: boolean }>("/auth/change-password", { method: "POST", body: JSON.stringify({ currentPassword, newPassword }) }),
 };
 
+export interface DeletionRequestSummary {
+  id: string; accountId: string; email: string; name: string; role: string; status: "PENDING" | "COMPLETED";
+  reason: string | null; requestedAt: string; dueBy: string; processedAt: string | null; processedBy: string | null;
+}
+
+/** حذف الحساب (Guideline 5.1.1(v)): الطلب لكل حساب، والقائمة والتنفيذ للمشرف. */
+export const deletionApi = {
+  request: (password: string, reason: string) =>
+    api<{ ok: boolean; requestId: string; dueBy: string; signedOut: boolean }>(
+      "/auth/account/deletion-request", { method: "POST", body: JSON.stringify({ password, reason, confirm: true }) }),
+  list: () => api<{ requests: DeletionRequestSummary[]; slaDays: number }>("/auth/deletion-requests"),
+  complete: (id: string) =>
+    api<{ request: DeletionRequestSummary }>(`/auth/deletion-requests/${encodeURIComponent(id)}/complete`, { method: "POST", body: "{}" }),
+};
+
 export interface AccountSummary {
   id: string; email: string; name: string; role: string; status: string;
   createdAt: string; lastLoginAt: string | null; lockedUntil: string | null; activeSessions: number;
