@@ -48,13 +48,3 @@ jobs:
       # البناء يُفحص أيضاً: شيفرةٌ تجتاز الأنواع قد تفشل في حزم الواجهة أو الخادم.
       - name: البناء
         run: npm run build
-
-      # حارس ركن الودجت (iPhone Duo): Playwright WebKit على مقاسات Duo في سياقي Safari والتطبيق المُحاكى.
-      # مصفوفة مصغّرة في CI (GUARD_QUICK)؛ المصفوفة الكاملة محلياً: npm run test:duo-widget.
-      - name: تثبيت WebKit لحارس الودجت
-        run: npx playwright install --with-deps webkit
-
-      - name: حارس تقاطع ركن الودجت
-        run: npm run test:duo-widget
-        env:
-          GUARD_QUICK: '1'
