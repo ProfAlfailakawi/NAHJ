@@ -151,6 +151,8 @@ test("صفحات الهبوط والشروط والخصوصية تُرسم — �
   const privacy = renderPrivacyPage();
   assert.match(privacy, /Gemini/);
   assert.match(privacy, /Firebase/);
+  assert.match(privacy, /Neon/);
+  assert.match(privacy, /معالجة إضافية للبيانات/);
 });
 
 test("كل قطاعٍ في مبدّل العرض ممتلئ: أسبوعٌ من النشاط، وأشخاص بمعرّفات فريدة، وحوكمة بلا تجاوزات مُختلقة", async () => {

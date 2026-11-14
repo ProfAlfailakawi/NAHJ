@@ -670,6 +670,8 @@ function withToc(articleHtml: string): string {
 }
 
 const UPDATED = "23 سبتمبر 2026";
+// تاريخ آخر تحديث لصفحة الخصوصية وحدها (شروط الاستخدام تبقى على UPDATED).
+const PRIVACY_UPDATED = "14 نوفمبر 2026";
 
 export function renderTermsPage(): string {
   const name = escapeHtml(legalName());
@@ -721,7 +723,7 @@ export function renderPrivacyPage(): string {
   const contact = contactEmail();
   const body = `<article class="doc">
   <h1>سياسة الخصوصية</h1>
-  <p class="updated">آخر تحديث: ${UPDATED}</p>
+  <p class="updated">آخر تحديث: ${PRIVACY_UPDATED}</p>
   <p>توضّح هذه السياسة ما يجمعه ${name} عند استخدام منصة «نهج»، ولماذا، وأين يُحفظ، وما حقوقك.</p>
 
   <h2>1. ما نجمعه</h2>
@@ -757,6 +759,13 @@ export function renderPrivacyPage(): string {
 
   <h2>8. التواصل</h2>
   <p>${contact ? `لأي طلب يتعلّق بالخصوصية: <a href="mailto:${escapeHtml(contact)}">${escapeHtml(contact)}</a>.` : "لأي طلب يتعلّق بالخصوصية تواصل معنا عبر القناة المذكورة في عقد اشتراكك."}</p>
+
+  <h2>9. معالجة إضافية للبيانات</h2>
+  <ul>
+    <li><strong>قاعدة بيانات Neon:</strong> عند ضبط خدمة Neon PostgreSQL، تُنسخ قاعدة بيانات المنصة كاملةً (لقطة كاملة) إلى Neon بصورة دورية، وتُستعاد منها عند بدء تشغيل الخادم.</li>
+    <li><strong>الدفع:</strong> تستضيف بوابة الدفع (Tap أو MyFatoorah) صفحة السداد، ولا تصل بيانات البطاقة إلى خوادمنا.</li>
+    <li><strong>البريد:</strong> تُرسَل رسائل البريد الإلكتروني التشغيلية (مثل الفاتورة وتذكير التجديد) عبر خدمة Resend أو SendGrid.</li>
+  </ul>
 </article>`;
   return page({ title: "سياسة الخصوصية — نهج", description: "كيف تجمع منصة نهج البيانات وتستخدمها وتحميها.", path: "/privacy", body: withToc(body), style: DOC_STYLE });
 }
