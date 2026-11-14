@@ -93,6 +93,33 @@ function legalName(): string {
   return (process.env.NAHJ_LEGAL_NAME || "").trim() || "مشغّل منصة نهج";
 }
 
+/* ------------------------------------------------------------ ركن الودجت (iPhone Duo) */
+
+/*
+ * نسخة مصغّرة من «ركن الودجت» في src/duo-adaptive.css (§٨): الصفحات المصيَّرة من الخادم لا تحمّل حزمة الواجهة.
+ * الاستعلامات والقيم متطابقة حرفياً، ويحرسها server/duoLayout.test.ts. صفر خارج Duo.
+ */
+export const DUO_WIDGET_CSS = `
+  :root { --duo-widget-w:0px; --duo-widget-gap:0px; --duo-widget-h:0px; --duo-widget-clear:calc(var(--duo-widget-w) + var(--duo-widget-gap)); }
+  @media screen and (orientation: portrait) and (max-width: 700px) and (min-aspect-ratio: 3/5),
+         screen and (orientation: landscape) and (min-width: 560px) and (max-width: 1000px) and (min-height: 360px) and (max-height: 960px) and (max-aspect-ratio: 17/10),
+         screen and (min-width: 365px) and (max-width: 371px) and (min-height: 360px),
+         screen and (min-width: 379px) and (max-width: 385px) and (min-height: 360px),
+         screen and (min-width: 467px) and (max-width: 473px) and (min-height: 360px),
+         screen and (min-width: 577px) and (max-width: 588px) and (min-height: 360px),
+         screen and (min-width: 591px) and (max-width: 597px) and (min-height: 360px),
+         screen and (min-width: 668px) and (max-width: 670px) and (min-height: 360px),
+         screen and (min-width: 777px) and (max-width: 783px) and (min-height: 360px),
+         screen and (min-width: 864px) and (max-width: 870px) and (min-height: 360px),
+         screen and (min-width: 948px) and (max-width: 954px) and (min-height: 360px),
+         screen and (horizontal-viewport-segments: 2) {
+    :root { --duo-widget-w:70px; --duo-widget-gap:8px; --duo-widget-h:clamp(64px, 30vh, 200px); }
+  }
+  /* الترويسة لاصقة بارتفاعها المعتاد؛ الشعار (أول عنصر عند اليمين الفيزيائي) يتراجع عن الودجت، وما تحتها يبدأ تحته. */
+  .top .wrap { padding-right:max(20px, calc(env(safe-area-inset-right, 0px) + 8px), var(--duo-widget-clear)); }
+  .top + * { margin-top:max(0px, calc(var(--duo-widget-h) - 66px)); }
+`;
+
 /* ------------------------------------------------------------ الإطار */
 
 export const BASE_STYLE = `${FONT_FACE_CSS}
@@ -111,6 +138,7 @@ export const BASE_STYLE = `${FONT_FACE_CSS}
   .top nav a:hover { color:var(--ink); background:var(--card); }
   .top nav a.cta { background:var(--ink); color:var(--bg); }
   .top nav a { white-space:nowrap; }
+  ${DUO_WIDGET_CSS}
   /* الترويسة لاصقة: القفز إلى قسمٍ لا يُخفي عنوانه تحتها. */
   [id] { scroll-margin-top:84px; }
   .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 22px; border-radius:14px; font-weight:800; text-decoration:none; border:1px solid var(--line); background:var(--card); color:var(--ink); font-size:16px; font-family:inherit; cursor:pointer; transition:transform .2s, box-shadow .2s, border-color .2s, background .2s; }
@@ -156,6 +184,9 @@ export const BASE_STYLE = `${FONT_FACE_CSS}
 
 export const MARK = `<svg viewBox="0 0 72 72" fill="none" aria-hidden="true"><rect x="2" y="2" width="68" height="68" rx="23" fill="var(--card)" stroke="var(--line)"/><path d="M18 18v12c0 7.2 5.8 13 13 13h9c7.8 0 14 6.2 14 14v3" stroke="var(--ink)" stroke-width="4.6" stroke-linecap="round"/><path d="M18 18h10M44 16h10v10" stroke="var(--moss)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18" cy="18" r="5" fill="#e0a04b"/><circle cx="54" cy="60" r="5" fill="#5e79e6"/><circle cx="38" cy="43" r="4.8" fill="var(--moss)"/></svg>`;
 
+/* تشخيص ركن الودجت: يُحمَّل public/duo-debug.js فقط مع ?duo-debug=1. */
+export const DUO_DEBUG_LOADER = `if(/[?&]duo-debug=1(&|$)/.test(location.search)){var s=document.createElement('script');s.src='/duo-debug.js';document.head.appendChild(s);}`;
+
 /*
  * تطبيق iOS هو هذا الموقع نفسه داخل غلاف Capacitor (الوضع المُستضاف)، فلا يعرف الخادم أن الطلب
  * منه. الغلاف يحقن window.Capacitor قبل سكربتات الصفحة، فيُضاف الصنف ios-shell قبل أول رسم.
@@ -188,6 +219,7 @@ ${options.index === false ? `<meta name="robots" content="noindex">` : ""}
 ${FONT_PRELOAD_LINK}
 <style>${BASE_STYLE}${options.style || ""}</style>
 <script>${IOS_SHELL_HEAD_SCRIPT}</script>
+<script>${DUO_DEBUG_LOADER}</script>
 </head>
 <body>
 <header class="top"><div class="wrap">
