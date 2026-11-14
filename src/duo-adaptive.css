@@ -462,7 +462,7 @@
     left: 50%; right: auto; transform: translateX(-50%);
     width: min(620px, calc(100% - 2 * var(--lap-m)));
     bottom: calc(var(--safe-b) + var(--lap-dock) + 8px);
-    max-height: calc(100dvh - var(--lap-dock) - 30px - var(--safe-b) - var(--safe-t));
+    max-height: calc(100dvh - var(--lap-dock) - 30px - var(--safe-b) - var(--safe-t) - var(--duo-widget-h));
   }
   .mobile-sheet-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
   .emergency-fab {
@@ -520,10 +520,8 @@
  * (أ) الأحجام: كل خليّةٍ من خلايا الكتاب «حاوية» (container) بعرض الصفحة ≈ 460–475px، فتختار
  *     الأعمدة من عرض الصفحة لا من عرض النافذة (951px). كانت شبكة المؤشرات الأربعة (‎max-width:1180px)
  *     تُقاس على 951 فتُسحق البلاطات إلى حرفٍ في السطر وتخرج عن حافة الصفحة.
- * (ب) الودجت: ودجت النظام (موقع/ساعة/حلقة) يطفو فوق الزاوية العليا اليمنى الفيزيائية في التطبيق
- *     المثبّت على الشاشة الداخلية فقط (لا نعرف مربّعه بدقة: نحجز زاويةً سخيّة 116×116).
- *     الخلفية تبقى حتى الحافة؛ المحتوى وحده يتجنّب الزاوية. لا نخمّن الشاشة الخارجية المطويّة
- *     (367×740): لا يُميَّز مقاسها عن iPhone عادي، وللآيفون الحقيقي نتوءٌ لا ودجت.
+ * (ب) الودجت: انظر «ركن الودجت» في آخر الملف — منطقة واحدة بمتغيرات --duo-widget-*، ولا قاعدة أخرى
+ *     تخمّن مقاسها.
  * ===================================================================== */
 
 /* الكعب يبدأ تحت الشريط العلوي: الشريط بعرض الشاشة كلها عن قصد (هوية يميناً وأدوات يساراً)،
@@ -560,26 +558,112 @@
   .stat-grid:not(.sub-stats) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* ---- منطقة حجب ودجت النظام: الشاشة الداخلية، في تبويب المتصفح وفي التطبيق المثبّت معاً ---- */
-@media screen and (min-width: 721px) and (max-width: 1000px) and (min-height: 520px) and (max-height: 960px) and (orientation: landscape),
-       screen and (min-width: 640px) and (max-width: 720px) and (min-height: 520px) and (max-height: 960px) and (orientation: portrait) {
-  :root { --duo-cutout-w: 116px; --duo-cutout-h: 116px; }
-  /* النطاق العلوي بارتفاع المنطقة على الأقل: لا صفّ تحته يجري تحت الودجت. */
-  .topbar { min-height: calc(var(--duo-cutout-h) + var(--safe-t)); align-items: center; }
-  /* الأداة/الهوية عند الحافة اليمنى الفيزيائية تتراجع عن الودجت أياً كان اتجاه الصفحة. */
-  [dir="rtl"] .topbar-org, [dir="ltr"] .top-actions { margin-right: calc(var(--duo-cutout-w) - 8px); }
-  /* عناصر ثابتة ملتصقة باليمين وبأعلى الشاشة. */
-  .modal-backdrop, .palette-backdrop, .help-backdrop { padding-top: var(--duo-cutout-h); }
-  .modal-backdrop > [role="dialog"] { max-height: calc(100dvh - var(--duo-cutout-h) - 18px); }
-  .help-panel { max-height: calc(100dvh - var(--duo-cutout-h)); }
+
+/* =====================================================================
+ * ٨) ركن الودجت — iPhone Duo
+ *
+ * على Duo الحقيقي يطفو ودجت النظام (كبسولة المصباح + الحساب/الموقع + الوقت + بطارية/واي فاي) فوق الزاوية العليا
+ * اليمنى الفيزيائية، وهو ليس جزءاً من safe-area (env() = 0 هناك). القياس من لقطة 1371×2034:
+ * عرضه ≈ 58–64pt وبعده عن الحافة اليمنى ≈ 6pt، وارتفاعه ≈ 180–200pt (≈ 30% من الشاشة).
+ *
+ * السبب الجذري لفشل الجولات السابقة (حُذفت قاعدتها «116×116»):
+ *   ١) المنطقة كانت 116 × 116 فقط: أقصر من الودجت (200) بـ ٨٤pt، فيبقى ما تحت الـ 116 جارياً تحته.
+ *   ٢) الكشف كان طولي 640–720 / عرضي 721–1000 بارتفاع ≥ 520 فقط: كل ما دونها لا يُحجَب إطلاقاً —
+ *      382×580 و470×780 (الطولي الضيّق) و594×368 و780×470 (العرضي القصير) كلها خارجه.
+ *   ٣) كانت تُطبَّق على الشريط العلوي والنوافذ فقط: لا الشريط الجانبي (يمين الشاشة في RTL)، ولا القائمة السفلية
+ *      (max-height)، ولا الدخول ولا الإعداد ولا شاشة الشريك ولا رابط التخطي ولا صفحات التسويق.
+ *   ٤) كل سطحٍ يخمّن مقاسه (116 مكرّرة في ٣ أماكن)، فلا يتّفق اثنان على المنطقة.
+ *
+ * الحل: منطقة واحدة بمتغيرات هنا، **صفر خارج Duo** (فتصير كل قاعدة تستعملها بلا أثر على أي جهاز آخر):
+ *   --duo-widget-w    عرض الودجت من الحافة الفيزيائية اليمنى (≈6pt بعد + ≈64pt عرض).
+ *   --duo-widget-gap  هامش أمان بين الودجت والمحتوى.
+ *   --duo-widget-h    ارتفاعه = clamp(64px, 30vh, 200px).
+ *   --duo-widget-clear = w + gap، وهو ما يتجنّبه المحتوى.
+ * المنطقة فيزيائية (right) لا منطقية: الودجت يبقى يمين الشاشة أياً كان اتجاه الصفحة.
+ * `--duo-reserve-start/end` ترجمةٌ لها إلى بداية/نهاية السطر حسب dir العنصر (يمين = بداية في RTL).
+ *
+ * كشف Duo (آمن افتراضياً: ما لم يُطابق لا تُحجَب شيئاً). لا يعتمد على إشارات Safari وحدها: في تطبيق Capacitor
+ * (WKWebView) لا شريط أدوات فالمنفذ أطول من Safari، و`navigator.standalone` غير معرَّف، وUA بلا «Safari/»؛
+ * لذلك الحكم بالعرض (أي ارتفاع ≥ 360) لا بالنسبة ولا بسقف ارتفاع:
+ *   • عروض Duo المعروفة ±3px بأي ارتفاع (طولي وعرضي، Safari أو التطبيق بكامل الشاشة):
+ *     368، 382، 470، 580/585، 594، 669، 780، 867، 951. لا يشاركها أي آيفون عادي (375، 390، 393، 402، 414، 428، 430، 440؛
+ *     عرضياً 667، 844، 852، 874، 932، 956).
+ *   • احتياطي للمقاسات الوسيطة: طولي بعرض ≤ 700 ونسبة ارتفاع/عرض ≤ 5/3؛ وعرضي بعرض 560–1000 وارتفاع 360–960 ونسبة ≤ 1.7.
+ *   • horizontal-viewport-segments: 2 (غير مدعوم في Safari اليوم؛ احتياط لدعمه مستقبلاً).
+ * أثر جانبي مقبول: نافذة iPad ضيّقة (Split View ≤ 700px بنسبة ≤ 5/3) تُحجَز لها الزاوية أيضاً.
+ * هندسة الودجت في العرضي غير مُتحقَّق منها على جهاز حقيقي (القياس من لقطة طولية)؛ تُفحَص عبر ?duo-debug=1.
+ * ===================================================================== */
+:root {
+  --duo-widget-w: 0px;
+  --duo-widget-gap: 0px;
+  --duo-widget-h: 0px;
+  --duo-widget-clear: calc(var(--duo-widget-w) + var(--duo-widget-gap));
+  /* الشريط العلوي: ارتفاع النطاق المحجوز، والهامش الفيزيائي الأيمن لأول عنصر. */
+  --duo-topbar-band: var(--duo-widget-h);
+  --duo-topbar-reserve: var(--duo-widget-clear);
+  /* الشريط الجانبي (يمين الشاشة في RTL): يبدأ محتواه تحت الودجت. */
+  --duo-rail-top: 0px;
 }
-/* الكتاب: النطاق العلوي = ارتفاع المنطقة، فتتبعه كل المسافات المشتقة من --book-top. */
+@media screen and (orientation: portrait) and (max-width: 700px) and (min-aspect-ratio: 3/5),
+       screen and (orientation: landscape) and (min-width: 560px) and (max-width: 1000px) and (min-height: 360px) and (max-height: 960px) and (max-aspect-ratio: 17/10),
+       screen and (min-width: 365px) and (max-width: 371px) and (min-height: 360px),
+       screen and (min-width: 379px) and (max-width: 385px) and (min-height: 360px),
+       screen and (min-width: 467px) and (max-width: 473px) and (min-height: 360px),
+       screen and (min-width: 577px) and (max-width: 588px) and (min-height: 360px),
+       screen and (min-width: 591px) and (max-width: 597px) and (min-height: 360px),
+       screen and (min-width: 668px) and (max-width: 670px) and (min-height: 360px),
+       screen and (min-width: 777px) and (max-width: 783px) and (min-height: 360px),
+       screen and (min-width: 864px) and (max-width: 870px) and (min-height: 360px),
+       screen and (min-width: 948px) and (max-width: 954px) and (min-height: 360px),
+       screen and (horizontal-viewport-segments: 2) {
+  :root {
+    --duo-widget-w: 70px;
+    --duo-widget-gap: 8px;
+    --duo-widget-h: clamp(64px, 30vh, 200px);
+  }
+}
+[dir="rtl"] { --duo-reserve-start: var(--duo-widget-clear); --duo-reserve-end: 0px; }
+[dir="ltr"] { --duo-reserve-start: 0px; --duo-reserve-end: var(--duo-widget-clear); }
+
+/* الشريط الجانبي الأيمن (RTL) يحجز بنفسه ≥ 84px من الحافة اليمنى: الشريط العلوي والمحتوى يقعان يساره،
+   فلا يحتاجان نطاقاً علوياً؛ والشريط نفسه يبدأ محتواه تحت الودجت. (في LTR الشريط يسار الشاشة فلا يُغيَّر شيء.) */
+@media (min-width: 901px) and (max-width: 1199px), (min-width: 560px) and (max-width: 900px) and (max-height: 560px) {
+  [dir="rtl"] { --duo-topbar-band: 0px; --duo-topbar-reserve: 0px; --duo-rail-top: var(--duo-widget-h); }
+}
+/* الكتاب (§٥) والحاسوب/الارتفاع القصير (§٦: عرض ≥ 560 وارتفاع ≤ 430) يُخفيان الشريط الجانبي: يعود الشريط العلوي نطاقاً كاملاً. */
+@media screen and (min-width: 560px) and (max-height: 430px) {
+  [dir="rtl"] { --duo-topbar-band: var(--duo-widget-h); --duo-topbar-reserve: var(--duo-widget-clear); --duo-rail-top: 0px; }
+}
 @media screen and (min-width: 721px) and (max-width: 1000px) and (min-height: 520px) and (max-height: 960px) and (orientation: landscape) {
-  :root { --book-top: var(--duo-cutout-h); }
-  .topbar { height: calc(var(--book-top) + var(--safe-t)); }
+  [dir="rtl"] { --duo-topbar-band: var(--duo-widget-h); --duo-topbar-reserve: var(--duo-widget-clear); --duo-rail-top: 0px; }
+  :root { --book-top: max(60px, var(--duo-topbar-band)); }
 }
-/* الطولي: الرأس اللاصق بارتفاع المنطقة، والمحتوى يبدأ تحته. */
-@media screen and (min-width: 640px) and (max-width: 720px) and (min-height: 520px) and (max-height: 960px) and (orientation: portrait) {
-  .topbar { height: calc(var(--duo-cutout-h) + var(--safe-t)); padding-top: var(--safe-t); }
-  html { scroll-padding-top: calc(var(--duo-cutout-h) + var(--safe-t) + 8px); }
+
+/* الشريط العلوي: نطاق بارتفاع الودجت (الخلفية متصلة تحته)، وأول عنصر عند الحافة اليمنى الفيزيائية يتراجع عنه. */
+.topbar { min-height: calc(var(--duo-topbar-band) + var(--safe-t)); }
+[dir="rtl"] .topbar-org, [dir="ltr"] .top-actions { margin-right: var(--duo-topbar-reserve); }
+.desktop-rail::before { content: ""; flex: none; height: var(--duo-rail-top); }
+
+/* شاشات بلا شريط علوي: الدخول، الإعداد، الشريك. */
+.login-shell { padding-top: max(24px, var(--duo-widget-h)); }
+.org-setup { padding-top: var(--duo-widget-h); }
+.partner-topbar { min-height: max(70px, var(--duo-widget-h)); padding-right: max(clamp(16px, 4vw, 34px), var(--duo-widget-clear)); }
+
+/* النوافذ والأوراق: لا تمتدّ إلى المنطقة. */
+.modal-backdrop { padding-top: max(var(--modal-pad, 18px), var(--safe-t), var(--duo-widget-h)); }
+.help-backdrop { padding-top: var(--duo-widget-h); }
+.palette-backdrop { padding-top: max(11vh, var(--duo-widget-h)); }
+.palette { max-height: min(72vh, calc(100dvh - max(11vh, var(--duo-widget-h)) - 16px)); }
+
+/* رابط «تخطَّ إلى المحتوى» يظهر عند التركيز في بداية السطر (يمين الشاشة في RTL). */
+.skip-link { inset-inline-start: calc(10px + var(--duo-reserve-start)); }
+
+/* الورقة السفلية «كل الأقسام» (هاتف/طولي): تنتهي تحت المنطقة. الكتاب والحاسوب لهما حدّهما الخاص من --book-top. */
+@media (max-width: 900px) and (orientation: portrait) {
+  .mobile-sheet { max-height: calc(100dvh - 120px - var(--duo-widget-h)); }
+}
+/* نافذة الحوار لا تطول عن المساحة تحت المنطقة (وإلا انفلتت من الوسط إلى أعلى الشاشة فعبرت الودجت)؛ ما زاد يتمرّر داخلها. */
+.modal-backdrop > [role="dialog"] {
+  max-height: calc(100dvh - var(--duo-widget-h) - 2 * var(--modal-pad, 18px));
+  overflow-y: auto; overscroll-behavior: contain;
 }

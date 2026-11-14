@@ -17,6 +17,11 @@ import './duo-beauty-5.css';
 import './responsive-2026-11.css';
 import './duo-adaptive.css';
 
+/* تشخيص ركن الودجت (iPhone Duo): لا يُحمَّل إلا مع ?duo-debug=1 (public/duo-debug.js). */
+if (new URLSearchParams(window.location.search).get('duo-debug') === '1') {
+  const dbg = document.createElement('script'); dbg.src = '/duo-debug.js'; document.head.appendChild(dbg);
+}
+
 const started = performance.now();
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);
 requestAnimationFrame(()=>requestAnimationFrame(()=>{

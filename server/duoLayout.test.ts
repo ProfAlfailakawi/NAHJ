@@ -46,7 +46,8 @@ test("duo-adaptive.css loads last and maps safe areas to the element's direction
   // لا قيمة env() جانبية خام داخل خاصية منطقية في هذه الطبقة: الترجمة وحدها تعرف الاتجاه.
   const rules = css.replace(/\/\*[\s\S]*?\*\//g, "");
   assert.ok(!/(padding|inset)-inline[\w-]*:[^;]*env\(safe-area-inset-(left|right)/.test(rules));
-  assert.ok(!/device-posture|viewport-segments/.test(css));
+  assert.ok(!/device-posture/.test(rules));
+  assert.ok((rules.match(/viewport-segments/g) || []).length <= 1, "viewport-segments only as the optional widget-detection query");
 });
 
 test("the approval decision bar stays sticky on wide windows too (951x600, 951x350)", () => {
@@ -155,24 +156,85 @@ function matches(query: string, w: number, h: number): boolean {
   });
 }
 
-test("widget keep-out applies on the Duo inner screen in a browser tab AND installed app, reserves 116px, and nowhere else", () => {
+/* مقيِّم استعلامات الوسائط يدعم أيضاً نسبة العرض/الارتفاع؛ horizontal-viewport-segments غير مدعوم في Safari فيُعدّ خاطئاً. */
+function matchesWidget(query: string, w: number, h: number): boolean {
+  const orient = w > h ? "landscape" : "portrait";
+  return query.split(/\s+and\s+/).every((part) => {
+    const t = part.trim().replace(/^\(|\)$/g, "");
+    if (t === "screen") return true;
+    if (t.startsWith("horizontal-viewport-segments")) return false;
+    const ar = /^(min|max)-aspect-ratio:\s*(\d+)\/(\d+)$/.exec(t);
+    if (ar) { const r = w / h, v = Number(ar[2]) / Number(ar[3]); return ar[1] === "min" ? r >= v : r <= v; }
+    return matches(part, w, h);
+  });
+}
+
+function widgetBlock(css: string) {
+  const m = /@media (screen and \(orientation: portrait\)[^{]*)\{\s*:root \{([^}]*)\}/.exec(css);
+  assert.ok(m, "widget detection block");
+  return { queries: m![1].split(/,\s*(?=screen)/).map((q) => q.trim()), body: m![2] };
+}
+
+test("widget corner: ONE reserved zone as tokens, zero outside Duo, physical right, no stale cutout rules", () => {
   const css = read("src/duo-adaptive.css").replace(/\/\*[\s\S]*?\*\//g, "");
-  const m = /@media (screen and \(min-width: 721px\)[^{]*\(orientation: landscape\),\s*screen and \(min-width: 640px\)[^{]*\(orientation: portrait\)) \{([\s\S]*?)\n\}/.exec(css);
-  assert.ok(m, "keep-out media block");
-  assert.ok(!/display-mode/.test(css), "no display-mode condition remains in duo-adaptive.css");
-  assert.match(m![2], /--duo-cutout-w:\s*116px;\s*--duo-cutout-h:\s*116px/);
-  assert.match(m![2], /\[dir="rtl"\] \.topbar-org, \[dir="ltr"\] \.top-actions \{ margin-right:/);
-  assert.match(m![2], /\.modal-backdrop[^{]*\{ padding-top: var\(--duo-cutout-h\)/);
-  assert.equal([...css.matchAll(/--duo-cutout-w:\s*116px/g)].length, 1);
-  const queries = m![1].split(",").map((q) => q.trim());
-  assert.equal(queries.length, 2);
-  const hit = (w: number, h: number) => queries.some((q) => matches(q, w, h));
-  for (const [w, h] of [[951, 669], [951, 585], [669, 867], [720, 900], [721, 520], [1000, 960], [640, 700], [720, 960]]) assert.ok(hit(w, h), `keep-out must apply at ${w}x${h}`);
-  for (const [w, h] of [[390, 844], [844, 390], [932, 430], [744, 1024], [820, 1180], [1024, 768], [1180, 820], [1280, 800], [1440, 900], [367, 740], [951, 350], [320, 568]]) assert.ok(!hit(w, h), `keep-out must NOT apply at ${w}x${h}`);
+  assert.ok(!/display-mode/.test(css), "no display-mode condition in duo-adaptive.css");
+  assert.ok(!/--duo-cutout/.test(css), "the old 116x116 cutout tokens are gone");
+  /* القيم الافتراضية صفر: لا أثر خارج Duo. */
+  assert.match(css, /:root \{\s*--duo-widget-w: 0px;\s*--duo-widget-gap: 0px;\s*--duo-widget-h: 0px;/);
+  const { queries, body } = widgetBlock(css);
+  assert.match(body, /--duo-widget-w:\s*70px/);
+  assert.match(body, /--duo-widget-gap:\s*8px/);
+  assert.match(body, /--duo-widget-h:\s*clamp\(64px, 30vh, 200px\)/);
+  assert.equal([...css.matchAll(/--duo-widget-w:\s*70px/g)].length, 1, "values are defined once");
+  /* المنطقة فيزيائية: لا inline-end في قاعدة الشريط العلوي؛ الهامش margin-right مع [dir]. */
+  assert.match(css, /\[dir="rtl"\] \.topbar-org, \[dir="ltr"\] \.top-actions \{ margin-right: var\(--duo-topbar-reserve\)/);
+  /* لا !important جديد في القسم. */
+  assert.ok(!/!important/.test(css.slice(css.indexOf("--duo-widget-clear"))), "no !important in the widget section");
+  const hit = (w: number, h: number) => queries.some((q) => matchesWidget(q, w, h));
+  /* مقاسات Duo المعروفة وعكسها. */
+  for (const [w, h] of [[382, 580], [470, 780], [594, 368], [669, 867], [951, 585], [580, 382], [780, 470], [368, 594], [867, 669], [585, 951], [951, 669], [382, 780], [382, 844], [470, 900], [669, 1000], [951, 700], [594, 800], [780, 900]]) assert.ok(hit(w, h), `zone must be active at ${w}x${h}`);
+  /* أجهزة أخرى: صفر. */
+  for (const [w, h] of [[390, 844], [393, 659], [430, 932], [844, 390], [932, 430], [667, 375], [744, 1024], [820, 1180], [1024, 768], [1180, 820], [1280, 800], [1440, 900], [320, 568], [375, 667], [402, 874], [440, 956], [956, 440], [852, 393], [414, 896]]) assert.ok(!hit(w, h), `zone must NOT be active at ${w}x${h}`);
+});
+
+test("widget corner: every surface that touches the top-right uses the shared tokens (no private guesses)", () => {
+  const css = read("src/duo-adaptive.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const re of [
+    /\.topbar \{ min-height: calc\(var\(--duo-topbar-band\) \+ var\(--safe-t\)\); \}/,
+    /\.desktop-rail::before \{[^}]*height: var\(--duo-rail-top\)/,
+    /\.login-shell \{ padding-top: max\(24px, var\(--duo-widget-h\)\); \}/,
+    /\.org-setup \{ padding-top: var\(--duo-widget-h\); \}/,
+    /\.partner-topbar \{[^}]*var\(--duo-widget-clear\)/,
+    /\.modal-backdrop \{ padding-top: max\([^;]*var\(--duo-widget-h\)\); \}/,
+    /\.help-backdrop \{ padding-top: var\(--duo-widget-h\); \}/,
+    /\.palette-backdrop \{ padding-top: max\(11vh, var\(--duo-widget-h\)\); \}/,
+    /\.skip-link \{ inset-inline-start: calc\(10px \+ var\(--duo-reserve-start\)\); \}/,
+  ]) assert.match(css, re);
+});
+
+test("widget corner: server-rendered pages and static shells carry the same detection queries", () => {
+  const want = widgetBlock(read("src/duo-adaptive.css").replace(/\/\*[\s\S]*?\*\//g, "")).queries;
+  const norm = (t: string) => t.replace(/\s+/g, "");
+  for (const [file, start] of [["server/marketingPages.ts", "DUO_WIDGET_CSS"], ["apple/www/index.html", ":root { --duo-widget-w"], ["apple/www/offline.html", ":root { --duo-widget-w"], ["public/updating.html", ":root{--duo-widget-w"]] as const) {
+    const src = norm(read(file));
+    for (const q of want) assert.ok(src.includes(norm(q)), `${file} must contain the query: ${q}`);
+    assert.ok(src.includes(norm("70px")) && src.includes(norm("clamp(64px, 30vh, 200px)")), `${file} values`);
+    void start;
+  }
+  assert.match(read("server/marketingPages.ts"), /\.top \.wrap \{ padding-right:max\(20px, calc\(env\(safe-area-inset-right, 0px\) \+ 8px\), var\(--duo-widget-clear\)\)/);
+});
+
+test("duo-debug panel loads only with ?duo-debug=1", () => {
+  assert.match(read("src/main.tsx"), /get\('duo-debug'\) === '1'[\s\S]*\/duo-debug\.js/);
+  assert.match(read("server/marketingPages.ts"), /duo-debug=1[\s\S]*\/duo-debug\.js/);
+  assert.ok(!/duo-debug/.test(read("index.html")), "index.html never loads it unconditionally");
 });
 
 test("the real-hinge differentiator is not required (no device-posture/viewport-segments dependency)", () => {
-  assert.ok(!/device-posture|viewport-segments/.test(read("src/duo-adaptive.css")));
+  const css = read("src/duo-adaptive.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(!/device-posture/.test(css));
+  /* horizontal-viewport-segments مسموح في سطرٍ واحد: احتياطٌ إضافي لكشف Duo، لا شرطٌ لأي تخطيط. */
+  assert.equal([...css.matchAll(/viewport-segments/g)].length, 1);
 });
 
 /*
