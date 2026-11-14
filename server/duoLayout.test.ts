@@ -70,7 +70,7 @@ test("book spread on the inner screen is screen-only, centred on one spine token
   const css = read("src/duo-adaptive.css");
   const rules = css.replace(/\/\*[\s\S]*?\*\//g, "");
   assert.match(rules, /--spine:\s*32px/);
-  const book = /@media screen and \(min-width: 640px\) and \(max-width: 720px\) and \(min-height: 760px\),\s*screen and \(min-width: 860px\) and \(max-width: 1000px\) and \(min-height: 520px\) and \(max-height: 760px\) \{([\s\S]*?)\n\}/.exec(rules)?.[1] || "";
+  const book = /@media screen and \(min-width: 721px\) and \(max-width: 1000px\) and \(min-height: 520px\) and \(max-height: 960px\) and \(orientation: landscape\) \{([\s\S]*?)\n\}/.exec(rules)?.[1] || "";
   assert.ok(book.length > 0, "book media block exists");
   assert.match(book, /\.page-enter \{[^}]*display:\s*grid;[^}]*column-gap:\s*var\(--spine\)/);
   assert.ok(!/(^|[\s;{])columns:\s*\d/.test(book), "no multi-column fragmentation in the book spread");
@@ -96,10 +96,10 @@ test("laptop posture keeps controls in a bottom bar and reserves room for it", (
  * فكل استعلام كتابٍ طولي سقفه 720px، وكل أفقي سقفه 1000px، وكلها مقيّدة بـ screen،
  * وأي استعلام عام يضمّ حدّاً أعلى للارتفاع فقط (حاسوب) لا يملك حدّاً أدنى للعرض يلتقط iPad قصير.
  */
-test("Duo book/laptop queries can never match an iPad (portrait <= 720px, landscape <= 1000px, screen-scoped)", () => {
+test("Duo book/laptop queries can never match an iPad (landscape only, 721-1000 wide, screen-scoped)", () => {
   const css = read("src/duo-adaptive.css").replace(/\/\*[\s\S]*?\*\//g, "");
   const queries: string[] = [];
-  for (const m of css.matchAll(/@media ([^{]*?(?:min-height: 760px|min-height: 520px|max-height: 430px)[^{]*)\{/g)) {
+  for (const m of css.matchAll(/@media ([^{]*?(?:min-height: 520px|max-height: 430px)[^{]*)\{/g)) {
     for (const q of m[1].split(",")) queries.push(q.trim());
   }
   assert.ok(queries.length >= 6, "book and laptop queries are present");
@@ -109,16 +109,48 @@ test("Duo book/laptop queries can never match an iPad (portrait <= 720px, landsc
     const minH = /min-height:\s*(\d+)px/.exec(q);
     const maxH = /max-height:\s*(\d+)px/.exec(q);
     if (maxH && Number(maxH[1]) <= 430) {
-      /* حاسوب: لا يوجد iPad ارتفاع نافذته ≤ 430px؛ لكن يجب ألا يكون حدّه الأدنى للعرض فوق 560 بلا سقف ارتفاع. */
       assert.ok(!minH, `laptop query has no min-height: ${q}`);
       continue;
     }
-    assert.ok(maxW, `book query has an upper width cap: ${q}`);
-    const cap = Number(maxW![1]);
-    const portrait = minH && Number(minH[1]) >= 760;
-    assert.ok(cap <= (portrait ? 720 : 1000), `${portrait ? "portrait" : "landscape"} book cap ${cap}px would reach an iPad: ${q}`);
-    if (portrait) assert.ok(/min-width:\s*(6[4-9]\d|7[01]\d)px/.test(q), `portrait floor stays 640–719: ${q}`);
+    /* كتاب: أفقي حصراً بسقف عرض 1000؛ الطولي 640-720 لمنطقة الودجت وحدها (standalone). */
+    assert.ok(maxW, `upper width cap: ${q}`);
+    assert.ok(Number(maxW![1]) <= 1000, `cap ${maxW![1]}px would reach an iPad: ${q}`);
+    if (/orientation: portrait/.test(q)) {
+      assert.ok(Number(maxW![1]) <= 720, `portrait cap stays <= 720: ${q}`);
+      assert.match(q, /display-mode: standalone/, `portrait query is only the widget keep-out: ${q}`);
+    } else {
+      assert.match(q, /orientation: landscape/, `book is landscape-only: ${q}`);
+      assert.match(q, /min-width:\s*(721|901)px/, `landscape floor 721 (or 901 for the sheet layer): ${q}`);
+    }
   }
+});
+
+test("no book layout on portrait: the old 640-720 portrait branch is gone", () => {
+  const css = ["src/duo-adaptive.css", "src/duo.css"].map(read).join("\n").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.ok(!/min-width: 640px\) and \(max-width: 720px\) and \(min-height: 760px\)/.test(css));
+  /* لوحتا «قائمة|تفاصيل» لا تنطبقان على الطولي ≤720. */
+  assert.match(read("src/duo.css"), /\(min-width: 640px\) and \(max-width: 1180px\) and \(orientation: landscape\),\s*\(min-width: 721px\) and \(max-width: 1180px\)/);
+});
+
+test("book tiles follow the page not the viewport: 2-column pulse tiles, container cells, spine below the top bar", () => {
+  const css = read("src/duo-adaptive.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(css, /container-type:\s*inline-size/);
+  assert.match(css, /\.page-enter \.pulse-stats \{[^}]*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /@container \(max-width: 520px\) \{[^}]*\.pulse-stats/);
+  assert.match(css, /\.app-shell::after \{ inset-block-start: calc\(var\(--book-top\) \+ var\(--safe-t\)\); \}/);
+  assert.match(css, /\.page-enter table \{[^}]*overflow-x:\s*auto/);
+});
+
+test("widget keep-out exists only for the Duo inner screen in standalone and reserves a 116px corner", () => {
+  const css = read("src/duo-adaptive.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const m = /@media (screen and \(min-width: 721px\)[^{]*display-mode: standalone\),\s*screen and \(min-width: 640px\)[^{]*display-mode: standalone\)) \{([\s\S]*?)\n\}/.exec(css);
+  assert.ok(m, "keep-out media block");
+  assert.match(m![1], /orientation: landscape/);
+  assert.match(m![1], /orientation: portrait/);
+  assert.match(m![2], /--duo-cutout-w:\s*116px;\s*--duo-cutout-h:\s*116px/);
+  assert.match(m![2], /\[dir="rtl"\] \.topbar-org, \[dir="ltr"\] \.top-actions \{ margin-right:/);
+  assert.match(m![2], /\.modal-backdrop[^{]*\{ padding-top: var\(--duo-cutout-h\)/);
+  assert.equal([...css.matchAll(/--duo-cutout-w:\s*116px/g)].length, 1);
 });
 
 test("the real-hinge differentiator is not required (no device-posture/viewport-segments dependency)", () => {

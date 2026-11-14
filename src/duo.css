@@ -173,7 +173,9 @@ button, a, summary, select, label, [role="button"] { touch-action: manipulation;
  *    حتى 1180px، فتتمدّد بطاقات الهاتف على 669 و951 وتُهدَر المساحة.
  *    الأعمدة `minmax(0,…)` كي لا يدفع نصٌّ طويل الصفحة جانباً.
  * ===================================================================== */
-@media (min-width: 640px) and (max-width: 1180px) {
+/* من 640px أفقياً ومن 721px طولياً: الشاشة الداخلية الطولية (≤720) عمودٌ واحد كالهاتف الواسع، لا لوحتان. */
+@media (min-width: 640px) and (max-width: 1180px) and (orientation: landscape),
+       (min-width: 721px) and (max-width: 1180px) {
   :root { --duo-sticky: 84px; }
   .learn-layout    { grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); }
   .teach-layout    { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); }
