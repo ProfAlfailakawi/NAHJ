@@ -89,3 +89,38 @@ test("laptop posture keeps controls in a bottom bar and reserves room for it", (
   assert.match(lap, /\.mobile-dock \{[^}]*position:\s*fixed/);
   assert.match(lap, /\.content-stage \{[^}]*padding:[^;]*var\(--lap-dock\)/);
 });
+
+/*
+ * Duo ≠ iPad (14 نوفمبر 2026): وضع الكتاب للشاشة الداخلية في iPhone Duo وحدها.
+ * الشاشة الداخلية ≈ 669×867 طولياً و951×585 أفقياً؛ أصغر iPad عرضه 744 طولياً و1024 أفقياً.
+ * فكل استعلام كتابٍ طولي سقفه 720px، وكل أفقي سقفه 1000px، وكلها مقيّدة بـ screen،
+ * وأي استعلام عام يضمّ حدّاً أعلى للارتفاع فقط (حاسوب) لا يملك حدّاً أدنى للعرض يلتقط iPad قصير.
+ */
+test("Duo book/laptop queries can never match an iPad (portrait <= 720px, landscape <= 1000px, screen-scoped)", () => {
+  const css = read("src/duo-adaptive.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const queries: string[] = [];
+  for (const m of css.matchAll(/@media ([^{]*?(?:min-height: 760px|min-height: 520px|max-height: 430px)[^{]*)\{/g)) {
+    for (const q of m[1].split(",")) queries.push(q.trim());
+  }
+  assert.ok(queries.length >= 6, "book and laptop queries are present");
+  for (const q of queries) {
+    assert.match(q, /^screen and /, `screen-scoped: ${q}`);
+    const maxW = /max-width:\s*(\d+)px/.exec(q);
+    const minH = /min-height:\s*(\d+)px/.exec(q);
+    const maxH = /max-height:\s*(\d+)px/.exec(q);
+    if (maxH && Number(maxH[1]) <= 430) {
+      /* حاسوب: لا يوجد iPad ارتفاع نافذته ≤ 430px؛ لكن يجب ألا يكون حدّه الأدنى للعرض فوق 560 بلا سقف ارتفاع. */
+      assert.ok(!minH, `laptop query has no min-height: ${q}`);
+      continue;
+    }
+    assert.ok(maxW, `book query has an upper width cap: ${q}`);
+    const cap = Number(maxW![1]);
+    const portrait = minH && Number(minH[1]) >= 760;
+    assert.ok(cap <= (portrait ? 720 : 1000), `${portrait ? "portrait" : "landscape"} book cap ${cap}px would reach an iPad: ${q}`);
+    if (portrait) assert.ok(/min-width:\s*(6[4-9]\d|7[01]\d)px/.test(q), `portrait floor stays 640–719: ${q}`);
+  }
+});
+
+test("the real-hinge differentiator is not required (no device-posture/viewport-segments dependency)", () => {
+  assert.ok(!/device-posture|viewport-segments/.test(read("src/duo-adaptive.css")));
+});
