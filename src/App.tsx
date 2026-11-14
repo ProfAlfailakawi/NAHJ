@@ -32,6 +32,8 @@ import type { PromoteOptions } from "./components/views/SkillsView";
 import { api, apiStrict, ApiError, setApiLang, apiOrNull, authApi, SubscriptionBlockedError, UnauthorizedError, type BillingSnapshot, type Plan } from "./lib/api";
 import { LoginScreen } from "./components/LoginScreen";
 import { OrgSetupView } from "./components/OrgSetupView";
+import { PageHeader } from "./components/Primitives";
+import { APPLE_PLANS_NOTICE, isAppleNativeShell } from "./lib/platform";
 import type { ApprovalRequest,AuditEvent,AutonomyLevel,Connector,LearningProposal,Organization,ShadowComparison,Skill,TestCase,User,WorkItem } from "./types";
 
 /*
@@ -465,6 +467,8 @@ export default function App(){
     </div>;
 
   let view:React.ReactNode;
+  /* داخل تطبيق iOS: لا أسعار ولا باقات ولا شراء، جملة محايدة بلا رابط. */
+  const applePlansNotice=<div className="page-enter"><PageHeader title={APPLE_PLANS_NOTICE.ar} hint={APPLE_PLANS_NOTICE.en} /></div>;
   switch(section){
     case "today":view=<TodayView lang={lang} organization={organization} onNavigate={setSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval} todayMetrics={todayData?.metrics||null} memory={todayData?.institutionalMemoryCoverage||null} skills={skills} practiceCount={practice.length} canManageAccounts={account?.role==="admin"||account?.role==="owner"} serverLive={serverLive} demoActive={demoActive} policiesActive={governance?.policiesActive?.value ?? null} activityTrend={analytics.trend?.available?analytics.trend.points.map(p=>p.events):undefined}/>;break;
     case "learn":view=<LearnView lang={lang} proposals={proposals} onResolve={resolve}/>;break;
@@ -479,12 +483,12 @@ export default function App(){
     case "people":view=<PeopleView lang={lang} canAssign={account?.role==="admin"||account?.role==="owner"||account?.role==="manager"} notify={notify} onChanged={()=>void refreshSkills()}/>;break;
     case "audit":view=<AuditView lang={lang} events={audit}/>;break;
     case "accounts":view=<AccountsView lang={lang} currentAccountId={account?.id||""} isAdmin={account?.role==="admin"||account?.role==="owner"} notify={notify}/>;break;
-    case "partners":view=demoActive?<DemoOwnerPreview lang={lang} kind="partners"/>:<PartnersAdminView lang={lang} notify={notify}/>;break;
+    case "partners":view=isAppleNativeShell()?applePlansNotice:demoActive?<DemoOwnerPreview lang={lang} kind="partners"/>:<PartnersAdminView lang={lang} notify={notify}/>;break;
     case "partnerPortal":view=<PartnerPortalView lang={lang} notify={notify}/>;break;
     case "sectors":view=<SectorsView lang={lang} isDemo={demoActive} canApply={account?.role==="admin"||account?.role==="owner"} notify={notify} onApplied={()=>void loadAll()}/>;break;
-    case "billing":view=<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={account?.role==="admin"||account?.role==="manager"} canPay={account?.role==="admin"||account?.role==="manager"||account?.role==="owner"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
+    case "billing":view=isAppleNativeShell()?applePlansNotice:<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={account?.role==="admin"||account?.role==="manager"} canPay={account?.role==="admin"||account?.role==="manager"||account?.role==="owner"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
     /* لوحة المالك لا تُركَّب أصلاً لغير المالك — والخادم يرفضها أيضاً، فالحجب في الطبقتين. */
-    case "owner":view=demoActive?<DemoOwnerPreview lang={lang} kind="owner"/>:isOwner?<OwnerView lang={lang} notify={notify} onChanged={()=>void refreshBilling()}/>:<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={false} canPay={account?.role==="owner"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
+    case "owner":view=isAppleNativeShell()?applePlansNotice:demoActive?<DemoOwnerPreview lang={lang} kind="owner"/>:isOwner?<OwnerView lang={lang} notify={notify} onChanged={()=>void refreshBilling()}/>:<BillingView lang={lang} snapshot={billing} plans={plans} loading={billingLoading} canRequest={false} canPay={account?.role==="owner"} onRefresh={()=>void refreshBilling()} notify={notify}/>;break;
   }
 
   return <>

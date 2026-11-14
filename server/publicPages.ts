@@ -230,8 +230,18 @@ export function renderPricingPage(): string {
       </ul>
     </article>`).join("");
 
+  /*
+   * داخل تطبيق iOS لا أسعار ولا باقات (انظر IOS_SHELL_* في marketingPages.ts): كل ما في الصفحة
+   * يُعلَّم ios-hide فيُزال من الشجرة، وتحلّ محلّه جملةٌ محايدة بلا رابط ولا رقم.
+   */
   const body = `
-<div class="wrap">
+<div class="wrap ios-only">
+  <section class="pricing">
+    <h1>تُرتَّب الباقات مع مؤسستك.</h1>
+    <p class="lead" lang="en" dir="ltr">Plans are arranged with your organisation.</p>
+  </section>
+</div>
+<div class="wrap ios-hide">
   <section class="pricing">
     <span class="eyebrow">الباقات والأسعار</span>
     <h1>نهج — الباقات</h1>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { FlaskConical, LogIn, TriangleAlert } from "lucide-react";
 import { NahjMark } from "./Brand";
 import { ApiError, authApi } from "../lib/api";
+import { isAppleNativeShell } from "../lib/platform";
 
 interface Props {
   lang: "ar" | "en";
@@ -145,7 +146,7 @@ export function LoginScreen({ lang, needsSetup, onAuthenticated, demoEnabled, de
           <div className="login-links-row">
             <div className="login-links">
               <a href="/">{ar ? "عن نهج" : "About NAHJ"}</a>
-              <a href="/pricing">{ar ? "الباقات والأسعار" : "Plans & pricing"}</a>
+              {!isAppleNativeShell() && <a href="/pricing">{ar ? "الباقات والأسعار" : "Plans & pricing"}</a>}
               <a href="/#contact">{ar ? "اطلب عرضاً" : "Request a demo"}</a>
             </div>
           </div>

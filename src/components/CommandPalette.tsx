@@ -4,6 +4,7 @@ import type { SectionId } from "./Shell";
 import type { AuditEvent, Skill, WorkItem, ApprovalRequest } from "../types";
 import { SKILL_STATUS_PLAIN, WORK_STATE_PLAIN, ladderStep } from "../lib/glossary";
 import { actionLabel, actorLabel, dataText } from "../lib/labels";
+import { isAppleNativeShell } from "../lib/platform";
 
 /*
  * لوحة الأوامر.
@@ -78,6 +79,7 @@ export function CommandPalette({ open, onClose, lang, skills, workItems, approva
   const results = useMemo<CommandTarget[]>(() => {
     const q = query.trim();
     const nav: CommandTarget[] = NAV
+      .filter(item => !(isAppleNativeShell() && item.id === "billing"))
       .filter(item => item.id !== "owner" || isOwner)
       .filter(item => !q || matches(item.ar, q) || matches(item.en, q) || matches(item.hintAr, q))
       .map(item => ({ id: `nav_${item.id}`, kind: "nav", title: ar ? item.ar : item.en, subtitle: item.hintAr, section: item.id }));

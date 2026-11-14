@@ -1,6 +1,7 @@
 import React from "react";
 import { Gauge } from "lucide-react";
 import type { BillingSnapshot } from "../lib/api";
+import { isAppleNativeShell } from "../lib/platform";
 
 /*
  * شريط حدود الباقة: يظهر حين يبلغ أي حدٍّ 80% فأكثر، ويقول أيّ حدٍّ وماذا سيحدث عند بلوغه — قبل أن يتوقف شيء.
@@ -24,7 +25,8 @@ export function limitMeters(snapshot: BillingSnapshot | null, ar: boolean) {
 
 export function LimitsBanner({ snapshot, lang, canAct, onOpen }: Props) {
   const ar = lang === "ar";
-  if (!canAct) return null;
+  /* لا دعوة إلى ترقية الباقة داخل تطبيق iOS. */
+  if (!canAct || isAppleNativeShell()) return null;
   const hot = limitMeters(snapshot, ar).filter(row => row.percent >= 80);
   if (!hot.length) return null;
   const full = hot.filter(row => row.percent >= 100);
