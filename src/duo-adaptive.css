@@ -560,9 +560,9 @@
   .stat-grid:not(.sub-stats) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-/* ---- منطقة حجب ودجت النظام: الشاشة الداخلية + تطبيق مثبّت (display-mode: standalone) ---- */
-@media screen and (min-width: 721px) and (max-width: 1000px) and (min-height: 520px) and (max-height: 960px) and (orientation: landscape) and (display-mode: standalone),
-       screen and (min-width: 640px) and (max-width: 720px) and (min-height: 520px) and (max-height: 960px) and (orientation: portrait) and (display-mode: standalone) {
+/* ---- منطقة حجب ودجت النظام: الشاشة الداخلية، في تبويب المتصفح وفي التطبيق المثبّت معاً ---- */
+@media screen and (min-width: 721px) and (max-width: 1000px) and (min-height: 520px) and (max-height: 960px) and (orientation: landscape),
+       screen and (min-width: 640px) and (max-width: 720px) and (min-height: 520px) and (max-height: 960px) and (orientation: portrait) {
   :root { --duo-cutout-w: 116px; --duo-cutout-h: 116px; }
   /* النطاق العلوي بارتفاع المنطقة على الأقل: لا صفّ تحته يجري تحت الودجت. */
   .topbar { min-height: calc(var(--duo-cutout-h) + var(--safe-t)); align-items: center; }
@@ -574,12 +574,12 @@
   .help-panel { max-height: calc(100dvh - var(--duo-cutout-h)); }
 }
 /* الكتاب: النطاق العلوي = ارتفاع المنطقة، فتتبعه كل المسافات المشتقة من --book-top. */
-@media screen and (min-width: 721px) and (max-width: 1000px) and (min-height: 520px) and (max-height: 960px) and (orientation: landscape) and (display-mode: standalone) {
+@media screen and (min-width: 721px) and (max-width: 1000px) and (min-height: 520px) and (max-height: 960px) and (orientation: landscape) {
   :root { --book-top: var(--duo-cutout-h); }
   .topbar { height: calc(var(--book-top) + var(--safe-t)); }
 }
 /* الطولي: الرأس اللاصق بارتفاع المنطقة، والمحتوى يبدأ تحته. */
-@media screen and (min-width: 640px) and (max-width: 720px) and (min-height: 520px) and (max-height: 960px) and (orientation: portrait) and (display-mode: standalone) {
+@media screen and (min-width: 640px) and (max-width: 720px) and (min-height: 520px) and (max-height: 960px) and (orientation: portrait) {
   .topbar { height: calc(var(--duo-cutout-h) + var(--safe-t)); padding-top: var(--safe-t); }
   html { scroll-padding-top: calc(var(--duo-cutout-h) + var(--safe-t) + 8px); }
 }

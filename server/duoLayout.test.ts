@@ -112,12 +112,12 @@ test("Duo book/laptop queries can never match an iPad (landscape only, 721-1000 
       assert.ok(!minH, `laptop query has no min-height: ${q}`);
       continue;
     }
-    /* كتاب: أفقي حصراً بسقف عرض 1000؛ الطولي 640-720 لمنطقة الودجت وحدها (standalone). */
+    /* كتاب: أفقي حصراً بسقف عرض 1000؛ الطولي 640-720 لمنطقة الودجت وحدها (بلا شرط display-mode). */
     assert.ok(maxW, `upper width cap: ${q}`);
     assert.ok(Number(maxW![1]) <= 1000, `cap ${maxW![1]}px would reach an iPad: ${q}`);
     if (/orientation: portrait/.test(q)) {
       assert.ok(Number(maxW![1]) <= 720, `portrait cap stays <= 720: ${q}`);
-      assert.match(q, /display-mode: standalone/, `portrait query is only the widget keep-out: ${q}`);
+      assert.ok(!/display-mode/.test(q), `keep-out must not depend on display-mode: ${q}`);
     } else {
       assert.match(q, /orientation: landscape/, `book is landscape-only: ${q}`);
       assert.match(q, /min-width:\s*(721|901)px/, `landscape floor 721 (or 901 for the sheet layer): ${q}`);
@@ -141,16 +141,34 @@ test("book tiles follow the page not the viewport: 2-column pulse tiles, contain
   assert.match(css, /\.page-enter table \{[^}]*overflow-x:\s*auto/);
 });
 
-test("widget keep-out exists only for the Duo inner screen in standalone and reserves a 116px corner", () => {
+/* مقيِّم استعلامات وسائط مصغّر (screen + min/max width/height + orientation) على القواعد الحقيقية. */
+function matches(query: string, w: number, h: number): boolean {
+  const orient = w > h ? "landscape" : "portrait";
+  return query.split(/\s+and\s+/).every((part) => {
+    const t = part.trim().replace(/^\(|\)$/g, "");
+    if (t === "screen") return true;
+    const f = /^(min|max)-(width|height):\s*(\d+)px$/.exec(t);
+    if (f) { const v = f[2] === "width" ? w : h; return f[1] === "min" ? v >= Number(f[3]) : v <= Number(f[3]); }
+    const o = /^orientation:\s*(\w+)$/.exec(t);
+    if (o) return o[1] === orient;
+    throw new Error(`unsupported media feature: ${t}`);
+  });
+}
+
+test("widget keep-out applies on the Duo inner screen in a browser tab AND installed app, reserves 116px, and nowhere else", () => {
   const css = read("src/duo-adaptive.css").replace(/\/\*[\s\S]*?\*\//g, "");
-  const m = /@media (screen and \(min-width: 721px\)[^{]*display-mode: standalone\),\s*screen and \(min-width: 640px\)[^{]*display-mode: standalone\)) \{([\s\S]*?)\n\}/.exec(css);
+  const m = /@media (screen and \(min-width: 721px\)[^{]*\(orientation: landscape\),\s*screen and \(min-width: 640px\)[^{]*\(orientation: portrait\)) \{([\s\S]*?)\n\}/.exec(css);
   assert.ok(m, "keep-out media block");
-  assert.match(m![1], /orientation: landscape/);
-  assert.match(m![1], /orientation: portrait/);
+  assert.ok(!/display-mode/.test(css), "no display-mode condition remains in duo-adaptive.css");
   assert.match(m![2], /--duo-cutout-w:\s*116px;\s*--duo-cutout-h:\s*116px/);
   assert.match(m![2], /\[dir="rtl"\] \.topbar-org, \[dir="ltr"\] \.top-actions \{ margin-right:/);
   assert.match(m![2], /\.modal-backdrop[^{]*\{ padding-top: var\(--duo-cutout-h\)/);
   assert.equal([...css.matchAll(/--duo-cutout-w:\s*116px/g)].length, 1);
+  const queries = m![1].split(",").map((q) => q.trim());
+  assert.equal(queries.length, 2);
+  const hit = (w: number, h: number) => queries.some((q) => matches(q, w, h));
+  for (const [w, h] of [[951, 669], [951, 585], [669, 867], [720, 900], [721, 520], [1000, 960], [640, 700], [720, 960]]) assert.ok(hit(w, h), `keep-out must apply at ${w}x${h}`);
+  for (const [w, h] of [[390, 844], [844, 390], [932, 430], [744, 1024], [820, 1180], [1024, 768], [1180, 820], [1280, 800], [1440, 900], [367, 740], [951, 350], [320, 568]]) assert.ok(!hit(w, h), `keep-out must NOT apply at ${w}x${h}`);
 });
 
 test("the real-hinge differentiator is not required (no device-posture/viewport-segments dependency)", () => {
