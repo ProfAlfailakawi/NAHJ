@@ -418,6 +418,12 @@ export function weekdayLabel(day: string, fallback: string, ar: boolean): string
   return Number.isNaN(date.getTime()) ? fallback : date.toLocaleDateString("en-GB", { weekday: "long" });
 }
 
+/** الاسم المختصر لليوم (Sun, Mon…) للواجهة الإنجليزية في العروض الضيّقة؛ بالعربية الاسم كما هو (يتّسع بخطّ أصغر). */
+export function weekdayShort(day: string, fallback: string, ar: boolean): string {
+  if (ar) return fallback;
+  const date = new Date(`${day}T12:00:00`);
+  return Number.isNaN(date.getTime()) ? fallback : date.toLocaleDateString("en-GB", { weekday: "short" });
+}
 
 /**
  * «أمس، 09:55 ص» كما يكتبها الخادم → «Yesterday, 09:55 AM» في الواجهة الإنجليزية.
