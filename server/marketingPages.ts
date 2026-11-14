@@ -143,6 +143,10 @@ export const BASE_STYLE = `${FONT_FACE_CSS}
   }
   @media (max-width:900px) { footer nav { gap:4px 8px; } footer nav a { display:inline-flex; align-items:center; min-height:44px; padding:0 6px; } }
   @media (max-width:380px) { .top nav a.keep[href="/pricing"] { display:none; } }
+  /* داخل تطبيق iOS (يضيف السكربت أدناه الصنف ios-shell): لا أسعار ولا باقات ولا روابط إليها. */
+  .ios-only { display:none; }
+  html.ios-shell .ios-hide { display:none !important; }
+  html.ios-shell .ios-only { display:revert; }
   /* iPhone Duo / آيفون عرضي: الصفحة تمتد حتى الحافة (viewport-fit=cover) — الخلفيات والترويسة
      اللاصقة من حافة لحافة، والمحتوى وحده يبتعد عن الكاميرا بجهتيه الفعليتين (لا inline: RTL يعكسها). */
   body .wrap, body .doc-layout { padding-left:max(20px, calc(env(safe-area-inset-left, 0px) + 8px)); padding-right:max(20px, calc(env(safe-area-inset-right, 0px) + 8px)); }
@@ -151,6 +155,15 @@ export const BASE_STYLE = `${FONT_FACE_CSS}
 `;
 
 export const MARK = `<svg viewBox="0 0 72 72" fill="none" aria-hidden="true"><rect x="2" y="2" width="68" height="68" rx="23" fill="var(--card)" stroke="var(--line)"/><path d="M18 18v12c0 7.2 5.8 13 13 13h9c7.8 0 14 6.2 14 14v3" stroke="var(--ink)" stroke-width="4.6" stroke-linecap="round"/><path d="M18 18h10M44 16h10v10" stroke="var(--moss)" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="18" cy="18" r="5" fill="#e0a04b"/><circle cx="54" cy="60" r="5" fill="#5e79e6"/><circle cx="38" cy="43" r="4.8" fill="var(--moss)"/></svg>`;
+
+/*
+ * تطبيق iOS هو هذا الموقع نفسه داخل غلاف Capacitor (الوضع المُستضاف)، فلا يعرف الخادم أن الطلب
+ * منه. الغلاف يحقن window.Capacitor قبل سكربتات الصفحة، فيُضاف الصنف ios-shell قبل أول رسم.
+ * ثم يُزال كل عنصرٍ معلَّم ios-hide من الشجرة نفسها، فلا يبقى سعرٌ في الصفحة ولو مخفياً.
+ * الموقع (غير iOS) لا يتغيّر فيه حرف.
+ */
+export const IOS_SHELL_HEAD_SCRIPT = `try{var c=window.Capacitor;if(c&&c.isNativePlatform&&c.isNativePlatform()&&c.getPlatform&&c.getPlatform()==='ios'){document.documentElement.classList.add('ios-shell');}}catch(e){}`;
+export const IOS_SHELL_STRIP_SCRIPT = `if(document.documentElement.classList.contains('ios-shell')){document.querySelectorAll('.ios-hide').forEach(function(n){n.remove();});}`;
 
 export function page(options: { title: string; description: string; path: string; body: string; style?: string; index?: boolean }): string {
   const base = (process.env.NAHJ_PUBLIC_URL || "").replace(/\/+$/, "");
@@ -174,6 +187,7 @@ ${options.index === false ? `<meta name="robots" content="noindex">` : ""}
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 ${FONT_PRELOAD_LINK}
 <style>${BASE_STYLE}${options.style || ""}</style>
+<script>${IOS_SHELL_HEAD_SCRIPT}</script>
 </head>
 <body>
 <header class="top"><div class="wrap">
@@ -181,7 +195,7 @@ ${FONT_PRELOAD_LINK}
   <nav aria-label="التنقّل الرئيسي">
     <a href="/#sectors">القطاعات</a>
     <a href="/#how">كيف يعمل</a>
-    <a class="keep" href="/pricing">الأسعار</a>
+    <a class="keep ios-hide" href="/pricing">الأسعار</a>
     <a class="keep" href="/app">دخول</a>
     <a class="cta" href="/#contact">اطلب عرضاً</a>
   </nav>
@@ -190,12 +204,13 @@ ${FONT_PRELOAD_LINK}
 <footer><div class="wrap">
   <span>© ${new Date().getFullYear()} ${escapeHtml(legalName())}</span>
   <nav aria-label="روابط الموقع">
-    <a href="/pricing">الأسعار</a>
+    <a class="ios-hide" href="/pricing">الأسعار</a>
     <a href="/terms">شروط الاستخدام</a>
     <a href="/privacy">سياسة الخصوصية</a>
     ${contact ? `<a href="mailto:${escapeHtml(contact)}">${escapeHtml(contact)}</a>` : ""}
   </nav>
 </div></footer>
+<script>${IOS_SHELL_STRIP_SCRIPT}</script>
 </body>
 </html>`;
 }
@@ -400,9 +415,9 @@ export function renderLandingPage(): string {
     <p class="lead">نهج نظامٌ عربيّ يراقب كيف يعمل فريقك، ويحوّل خبرته إلى إجراءاتٍ مكتوبة، ثم يتدرّب عليها حتى يُثبت أنه يُتقنها — ولا ينفّذ إلا ما أذنتَ له به، ويطلب موافقتك في كل قرارٍ حسّاس.</p>
     <div class="actions">
       <a class="btn primary" href="#contact">اطلب عرضاً توضيحياً</a>
-      <a class="btn" href="/pricing">الباقات والأسعار</a>
+      <a class="btn ios-hide" href="/pricing">الباقات والأسعار</a>
     </div>
-    <div class="note">نعرضه عليك على مثالٍ من قطاعك، ثم نُعِدّ مؤسستك ونبدأ${from ? ` · الباقات تبدأ من ${escapeHtml(from)} شهرياً` : ""}</div>
+    <div class="note">نعرضه عليك على مثالٍ من قطاعك، ثم نُعِدّ مؤسستك ونبدأ${from ? `<span class="ios-hide"> · الباقات تبدأ من ${escapeHtml(from)} شهرياً</span>` : ""}<span class="ios-only"> · تُرتَّب الباقات مع مؤسستك. <span lang="en" dir="ltr">Plans are arranged with your organisation.</span></span></div>
     </div>
     <div class="hero-visual" aria-hidden="true">
       <div class="orbit">
@@ -678,7 +693,7 @@ export function renderTermsPage(): string {
 
   <h2>4. الاشتراك والفوترة</h2>
   <ul>
-    <li>تُحسب الرسوم وفق الباقة ودورة الفوترة المختارة والمنشورة في صفحة <a href="/pricing">الأسعار</a> أو في عرضٍ مكتوب.</li>
+    <li>تُحسب الرسوم وفق الباقة ودورة الفوترة المختارة <span class="ios-hide"> والمنشورة في صفحة <a href="/pricing">الأسعار</a> أو</span> في عرضٍ مكتوب.</li>
     <li>يتجدّد الاشتراك تلقائياً في نهاية كل دورة ما لم يُلغَ قبلها.</li>
     <li>عند عدم السداد بعد مهلة السماح تُجمَّد الكتابة، وتبقى القراءة والتصدير متاحين لبياناتك.</li>
   </ul>

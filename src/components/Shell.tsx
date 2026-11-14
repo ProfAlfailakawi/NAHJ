@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Activity, UserRoundCheck, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, Building2, CreditCard, Crown, FlaskConical, HandCoins, GraduationCap, History, Languages, LayoutGrid, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
 import { BrandLockup, NahjMark } from "./Brand";
 import type { Organization, User } from "../types";
+import { isAppleNativeShell } from "../lib/platform";
 
 export type SectionId = "today" | "learn" | "teach" | "skills" | "practice" | "work" | "simulator" | "connections" | "analytics" | "control" | "audit" | "accounts" | "billing" | "owner" | "sectors" | "partners" | "partnerPortal" | "people";
 
@@ -75,7 +76,9 @@ export function Shell({
    */
   const ownerOnly = new Set<SectionId>(["owner", "partners"]);
   /* في العرض التجريبي تظهر معاينةٌ مُختلَقة للقراءة فقط، لا اللوحة الحقيقية. */
-  const visibleNav = nav.filter(item => !ownerOnly.has(item.id) || isOwner || demoActive);
+  /* داخل تطبيق iOS لا أسعار ولا باقات ولا شراء: يُحذف الاشتراك ولوحة المالك والمسوّقون من القائمة. */
+  const appleShell = isAppleNativeShell();
+  const visibleNav = nav.filter(item => (!ownerOnly.has(item.id) || isOwner || demoActive) && !(appleShell && (item.id === "billing" || item.id === "owner" || item.id === "partners")));
   let lastGroup: string | undefined;
   /*
    * على الهاتف: كان الشريط السفلي يقصّ القائمة عند ثمانية مداخل، فالحوكمة
