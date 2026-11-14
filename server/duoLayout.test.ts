@@ -124,3 +124,19 @@ test("Duo book/laptop queries can never match an iPad (portrait <= 720px, landsc
 test("the real-hinge differentiator is not required (no device-posture/viewport-segments dependency)", () => {
   assert.ok(!/device-posture|viewport-segments/.test(read("src/duo-adaptive.css")));
 });
+
+/*
+ * حراسة الطيّ الخارجي الضيّق (٣٢٠–٣٨٢px): أعطالٌ وُجدت بالفحص بالمتصفّح وأُصلحت في responsive-2026-11.css.
+ * اختبار نصّي لا بصري — يمنع حذف القاعدة أو تعديلها بلا قصد؛ والتحقّق البصري يبقى بالمتصفّح.
+ */
+test("narrow-phone fixes stay in responsive-2026-11.css", () => {
+  const css = read("src/responsive-2026-11.css");
+  /* أوسمة «الأثر» تلتفّ ولا تُسحق في صفٍّ واحد. */
+  assert.match(css, /\.impact-badges\s*\{[^}]*flex-wrap:\s*wrap/);
+  /* مستويات الاستقلالية السبعة بأعمدةٍ بلا حدٍّ أدنى للعرض (لا يسقط المستوى ٦ في صفٍّ ثانٍ). */
+  assert.match(css, /\.autonomy-chooser\s*\{[^}]*repeat\(7,\s*minmax\(0,\s*1fr\)\)/);
+  /* زرّ الإيقاف الطارئ لا يعلو قائمة «كل الأقسام». */
+  assert.match(css, /:has\(\.mobile-sheet-backdrop\)\s*\.emergency-fab\s*\{[^}]*visibility:\s*hidden/);
+  /* لا transform باقٍ على جذر القسم بعد الحركة: وإلا انفلت position:fixed لنوافذ الحوار عن الشاشة. */
+  assert.match(css, /\.page-enter\s*\{\s*animation-fill-mode:\s*backwards/);
+});

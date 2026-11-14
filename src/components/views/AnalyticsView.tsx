@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { ArrowDownRight, ArrowUpRight, CheckCircle2, Clock3, Gauge, Info, ShieldCheck, TimerReset } from "lucide-react";
 import { PageHeader, SectionTitle } from "../Primitives";
 import { DnaRing, DnaDraw, DnaCountUp, dnaStagger } from "../dna";
-import { riskLabel, measureBasis, trendReason, weekdayLabel, hoursLabel } from "../../lib/labels";
+import { riskLabel, measureBasis, trendReason, weekdayLabel, weekdayShort, hoursLabel } from "../../lib/labels";
 
 /*
  * شاشة الأثر.
@@ -135,7 +135,7 @@ export function AnalyticsView({ lang, data }: Props) {
                   aria-label={`${weekdayLabel(point.day, point.label, ar)}: ${point.events} ${ar ? "حدث" : "events"}`}>
                   <span className="dna-rise" style={{ height: `calc((100% - 46px) * ${Math.max(0.06, point.events / max)})`, ...dnaStagger(index) }} />
                   <b>{point.events}</b>
-                  <small title={weekdayLabel(point.day, point.label, ar)}>{weekdayLabel(point.day, point.label, ar)}</small>
+                  <small title={weekdayLabel(point.day, point.label, ar)}><bdi className="wd-long">{weekdayLabel(point.day, point.label, ar)}</bdi><bdi className="wd-short" aria-hidden="true">{weekdayShort(point.day, point.label, ar)}</bdi></small>
                 </div>
               ))}
             </DnaDraw>

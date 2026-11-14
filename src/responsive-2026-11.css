@@ -30,3 +30,69 @@
     background: linear-gradient(to bottom, color-mix(in srgb, var(--white) 0%, transparent), var(--white));
   }
 }
+
+/* ٥) «الأثر»: الأوسمة الثلاثة تحت الحلقة كانت تُضغط في صفٍّ واحد فتنكسر الحروف عموديّاً وتختلف أحجامها
+ *    (ثلاثة أوسمة لا تتّسع في عرض ~300px). تلتفّ الآن على صفّين، ولا يُكسر نصّ الوسم أبداً. */
+@media (max-width: 620px) {
+  .impact-badges { flex-wrap: wrap; width: 100%; row-gap: 6px; }
+  .impact-badges > span { flex: 0 0 auto; white-space: nowrap; }
+}
+
+/* ٦) «المهارات»: مستويات الاستقلالية ٠–٦ سبعة أزرار بحدٍّ أدنى ٤٤px (auto-fit) = ٣٣٢px > عرض البطاقة على
+ *    الطيّ الخارجي (~٣٠٠px)، فيسقط المستوى ٦ وحده في صفٍّ ثانٍ. سبعة أعمدة متساوية بلا حدٍّ أدنى للعرض،
+ *    والارتفاع ٤٤px كما هو فيبقى هدف اللمس مريحاً. */
+@media (max-width: 420px) {
+  .skill-inspector .autonomy-chooser { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .skill-inspector .autonomy-chooser button { min-width: 0; padding-inline: 0; }
+}
+
+/* ٧) قائمة «كل الأقسام» على الهاتف: زرّ الإيقاف الطارئ العائم (خارج سياق التكديس) كان يظهر فوق القائمة
+ *    ويغطّي آخر خانة فيها («دليل سريع»). يُخفى ما دامت القائمة مفتوحة، ويعود فور إغلاقها. */
+@media (max-width: 900px) {
+  :root:has(.mobile-sheet-backdrop) .emergency-fab { visibility: hidden; }
+}
+/* ونوافذ الحوار (ترقية، اعتماد…) كذلك: الزرّ كان يرسو فوق نصّها («الترقية ممنوعة…») بالمقاس الضيّق. */
+:root:has(.modal-backdrop) .emergency-fab { visibility: hidden; }
+
+/* ٨) «الأثر»: أسماء أيام الأسبوع السبعة كانت تُقصّ بنقاط («الثلا…» «الأرب…») في عرض ٣٠٠px.
+ *    فجوةٌ أضيق وخطٌّ أصغر قليلاً يتّسعان للاسم كاملاً؛ والنقاط تبقى احتياطاً لا قاعدة. */
+@media (max-width: 420px) {
+  .weekly-visual .bars { gap: 2px; justify-content: space-between; }
+  .weekly-visual .bars small { font-size: 10px; letter-spacing: 0; }
+}
+
+/* ٩) «الأشخاص»: صفّ «زميل بديل» (تسمية + حقل + زرّ) في ثلاثة أعمدة يترك الحقل بعرض ~٦٠px على ٣٢٠px
+ *    فيُقصّ النصّ البديل («اسم الزميا»). تحت ٣٨٠px تأخذ التسمية سطراً، والحقل والزرّ سطراً تحتها. */
+@media (max-width: 380px) {
+  .backup-form { grid-template-columns: minmax(0, 1fr) auto; }
+  .backup-form > label { grid-column: 1 / -1; }
+}
+
+/* ١٠) نوافذ الحوار المفتوحة من داخل قسم (ترقية مهارة، اعتماد…) لم تكن مثبّتة على الشاشة: `.page-enter` كان يُبقي
+ *     transform بعد انتهاء الحركة (fill-mode: both)، فيصير هو «الأب المرجعي» لـ position:fixed — فيمتدّ الغطاء
+ *     على طول الصفحة كلّها (٢٢٥٧px) لا الشاشة، وتنزل أزرار النافذة («وقّع ورقِّ») إلى ما بعد حافّة الشاشة تحت
+ *     شريط التنقّل. `backwards` يحفظ حركة الدخول نفسها ولا يترك شيئاً بعدها. */
+.page-enter { animation-fill-mode: backwards; }
+
+/* ١١) ٣٢٠px (الإنجليزية خاصة): نصٌّ في بلاطتين ضيّقتين كان ينكسر وسط الكلمة ("activatio/n"، "Undocum/ented"،
+ *     و«64.7 / %» في سطرين)، وتتداخل بطاقتا «Connections» و«389.7h» في خريطة اليوم. تُضيَّق الحشوة والأيقونة
+ *     فيتّسع النصّ، ويُصغَّر خطّ عقدتي الخريطة درجةً. */
+@media (max-width: 380px) {
+  .impact-metric { grid-template-columns: 24px minmax(0, 1fr); column-gap: 6px; padding: 10px; }
+  .impact-metric > span { width: 24px; height: 24px; }
+  .impact-metric strong { white-space: nowrap; }
+  .impact-metric small { overflow-wrap: break-word; hyphens: manual; min-width: 0; }
+  .memory-glyph { padding: 10px; column-gap: 6px; grid-template-columns: 30px minmax(0, 1fr); }
+  .memory-glyph > span { width: 30px; height: 30px; }
+}
+@media (max-width: 340px) {
+  .apphub-label, .apphub-val { font-size: 11px; }
+}
+
+/* ١٢) أيام الأسبوع بالإنجليزية («Wednesday») لا تتّسع في سبعة أعمدة ضيّقة: الاسم المختصر على الشاشات الضيّقة فقط،
+ *     والكامل يبقى في التلميح وقارئ الشاشة وعلى الشاشات العريضة. بالعربية الاسمان واحد فلا أثر. */
+.weekly-visual .bars .wd-short { display: none; }
+@media (max-width: 420px) {
+  .weekly-visual .bars .wd-long { display: none; }
+  .weekly-visual .bars .wd-short { display: inline; }
+}
