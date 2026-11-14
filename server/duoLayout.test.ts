@@ -60,3 +60,32 @@ test("marketing pages extend edge to edge and keep content out of the safe areas
   assert.match(src, /<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">/);
   assert.match(src, /body \.wrap, body \.doc-layout \{ padding-left:max\(20px, calc\(env\(safe-area-inset-left/);
 });
+
+/*
+ * الجولة الأخيرة (14 نوفمبر 2026): وضع الكتاب على الشاشة الداخلية ووضع الحاسوب.
+ * القواعد كلها مقيّدة بـ screen (عرض A4 المطبوع ≈ 658px يقع في مدى الكتاب)، والكعب متغيّرٌ واحد،
+ * والقسم يصير صفحتين بشبكة لا بأعمدة متعددة (WebKit لا يرسم العنصر الموضَّع في العمود الثاني).
+ */
+test("book spread on the inner screen is screen-only, centred on one spine token, and grid-based", () => {
+  const css = read("src/duo-adaptive.css");
+  const rules = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(rules, /--spine:\s*32px/);
+  const book = /@media screen and \(min-width: 640px\) and \(max-width: 720px\) and \(min-height: 760px\),\s*screen and \(min-width: 860px\) and \(max-width: 1000px\) and \(min-height: 520px\) and \(max-height: 760px\) \{([\s\S]*?)\n\}/.exec(rules)?.[1] || "";
+  assert.ok(book.length > 0, "book media block exists");
+  assert.match(book, /\.page-enter \{[^}]*display:\s*grid;[^}]*column-gap:\s*var\(--spine\)/);
+  assert.ok(!/(^|[\s;{])columns:\s*\d/.test(book), "no multi-column fragmentation in the book spread");
+  /* الستار يبقى بعرض الشاشة كلها؛ النافذة وحدها تجلس على صفحة. */
+  assert.match(book, /\.modal-backdrop \{[^}]*padding-inline-end:\s*calc\(50% \+ var\(--spine\) \/ 2\)/);
+  /* لا قاعدة كتابٍ أو حاسوبٍ بلا screen. */
+  for (const m of rules.matchAll(/@media ([^{]*?(?:min-height: 760px|max-height: 430px)[^{]*)\{/g)) {
+    for (const q of m[1].split(",")) assert.match(q.trim(), /^screen and /, q);
+  }
+});
+
+test("laptop posture keeps controls in a bottom bar and reserves room for it", () => {
+  const css = read("src/duo-adaptive.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const lap = /@media screen and \(min-width: 560px\) and \(max-height: 430px\) \{([\s\S]*?)\n\}/.exec(css)?.[1] || "";
+  assert.match(lap, /\.desktop-rail \{ display: none; \}/);
+  assert.match(lap, /\.mobile-dock \{[^}]*position:\s*fixed/);
+  assert.match(lap, /\.content-stage \{[^}]*padding:[^;]*var\(--lap-dock\)/);
+});
