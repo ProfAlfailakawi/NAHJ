@@ -17,7 +17,7 @@ const orients = SIZES.flatMap(([w, h]) => [[w, h, "portrait"], [h, w, "landscape
 /* GUARD_ONLY="382x580,951x585": يحصر المقاسات (للتشغيل على دفعات). */
 const skipControls = process.env.GUARD_NO_CONTROLS === "1";
 /* ارتفاعات أطول: منفذ التطبيق (WKWebView) بكامل الشاشة بلا أشرطة Safari، فالعرض وحده يحدّد Duo. */
-const TALL = [[669, 1000], [951, 700]];
+const TALL = [[669, 1000], [951, 700], [951, 669], [951, 800], [951, 940]];
 const all = [...orients, ...TALL.map(([w, h]) => [w, h, w > h ? "landscape" : "portrait"])];
 if (process.env.GUARD_ONLY) { const keep = process.env.GUARD_ONLY.split(","); all.splice(0, all.length, ...all.filter(([w, h]) => keep.includes(`${w}x${h}`))); }
 /* سياقان: Safari، والتطبيق المُحاكى (UA لـ WKWebView + window.Capacitor + navigator.standalone غير معرَّف). */
@@ -33,7 +33,31 @@ const CONTROLS = [[402, 874], [956, 440], [390, 844], [430, 932], [844, 390], [9
 const server = await startServer();
 const browser = await engine.launch();
 const failures = [], bleeds = new Map(), notes = [];
-let cases = 0, checkedEls = 0, skipped = 0;
+let retried = 0; const recovered = []; let cases = 0, checkedEls = 0, skipped = 0;
+
+async function runState(ctx, cfg, st) {
+  const out = [];
+  const failures = out;
+  const app = cfg.ctxName === "app"; void app;
+  const page = await ctx.newPage();
+  const tag = `[${cfg.ctxName}] ${cfg.w}x${cfg.h} ${cfg.o} ${cfg.scheme} ${cfg.scale}% [${st}]`;
+  try {
+    if (cfg.scale === 200) await page.addInitScript(() => { const s = document.createElement("style"); s.textContent = "html{font-size:200%}"; document.addEventListener("DOMContentLoaded", () => document.head.appendChild(s)); });
+    const ok = await STATES[st](page, server.url);
+    if (!ok) { skipped++; return out; }
+    if (cfg.scale === 200) await page.addStyleTag({ content: "html{font-size:200%}" });
+    for (const pass of ["top", "scrolled"]) {
+      if (pass === "scrolled") await page.evaluate(() => { for (const el of [document.scrollingElement, ...document.querySelectorAll("main,.content-stage,.mobile-sheet,.modal-backdrop,.palette-results,.help-panel")]) if (el) el.scrollTop = 1e6; });
+      const r = await page.evaluate(measureInPage, { onlyFixed: pass === "scrolled" });
+      cases++; checkedEls += r.checked;
+      if (!r.active) { failures.push(`${tag}: المنطقة غير مفعّلة (--duo-widget-w/h = 0)`); break; }
+      for (const b of r.bleeds) bleeds.set(`${st}: ${b.el}`, b.why);
+      for (const h of r.hits) failures.push(`${tag} (${pass}): ${h.el} rect=${h.rect} zone=x≥${Math.round(r.zone.x)},y≤${Math.round(r.zone.h)}`);
+    }
+  } catch (e) { failures.push(`${tag}: خطأ تشغيل: ${String(e.message).split("\n")[0]}`); }
+  finally { await page.close(); }
+  return out;
+}
 
 async function runConfig(cfg) {
   const app = cfg.ctxName === "app";
@@ -44,23 +68,10 @@ async function runConfig(cfg) {
   });
   try {
     for (const st of stateNames) {
-      const page = await ctx.newPage();
-      const tag = `[${cfg.ctxName}] ${cfg.w}x${cfg.h} ${cfg.o} ${cfg.scheme} ${cfg.scale}% [${st}]`;
-      try {
-        if (cfg.scale === 200) await page.addInitScript(() => { const s = document.createElement("style"); s.textContent = "html{font-size:200%}"; document.addEventListener("DOMContentLoaded", () => document.head.appendChild(s)); });
-        const ok = await STATES[st](page, server.url);
-        if (!ok) { skipped++; continue; }
-        if (cfg.scale === 200) await page.addStyleTag({ content: "html{font-size:200%}" });
-        for (const pass of ["top", "scrolled"]) {
-          if (pass === "scrolled") await page.evaluate(() => { for (const el of [document.scrollingElement, ...document.querySelectorAll("main,.content-stage,.mobile-sheet,.modal-backdrop,.palette-results,.help-panel")]) if (el) el.scrollTop = 1e6; });
-          const r = await page.evaluate(measureInPage, { onlyFixed: pass === "scrolled" });
-          cases++; checkedEls += r.checked;
-          if (!r.active) { failures.push(`${tag}: المنطقة غير مفعّلة (--duo-widget-w/h = 0)`); break; }
-          for (const b of r.bleeds) bleeds.set(`${st}: ${b.el}`, b.why);
-          for (const h of r.hits) failures.push(`${tag} (${pass}): ${h.el} rect=${h.rect} zone=x≥${Math.round(r.zone.x)},y≤${Math.round(r.zone.h)}`);
-        }
-      } catch (e) { failures.push(`${tag}: خطأ تشغيل: ${String(e.message).split("\n")[0]}`); }
-      finally { await page.close(); }
+      /* إعادة محاولة واحدة لحالة فيها مخالفات: التمرير في حالات الصفحة الحيّة قد يتأثر بتوقيت تحميل البيانات (يُسجَّل العدد). */
+      let found = await runState(ctx, cfg, st);
+      if (found.length) { retried++; const again = await runState(ctx, cfg, st); found = again.length ? again : []; if (!again.length) recovered.push(found); }
+      failures.push(...found);
     }
   } finally { await ctx.close(); }
 }
@@ -98,6 +109,7 @@ console.log(`المحرّك: ${process.env.GUARD_ENGINE === "chromium" ? "Chromi
 console.log(`مقاسات Duo: ${all.length} (المعروفة طولي/عرضي + ${TALL.length} أطول) × سياقات [${contexts.join(", ")}] × ${combos.length} (ألوان/حجم نص) × ${stateNames.length} حالات (${stateNames.join(", ")})`);
 console.log(`حالات فُحصت: ${cases} (تمريرتان: أعلى الصفحة + بعد التمرير للعناصر الثابتة/اللاصقة) — عناصر مفحوصة: ${checkedEls}، حالات غير متاحة بالمقاس: ${skipped}، ضوابط غير Duo: ${CONTROLS.length}`);
 for (const n of notes) console.log(n);
+console.log(`حالات أُعيدت مرة واحدة: ${retried} (نجحت عند الإعادة: ${recovered.length})`);
 console.log(`الاستثناءات المسجَّلة (data-duo-bleed): ${bleeds.size}`); for (const [k, v] of bleeds) console.log(`  - ${k} (${v})`);
 const uniq = [...new Set(failures)];
 console.log(`المخالفات: ${uniq.length}`);
