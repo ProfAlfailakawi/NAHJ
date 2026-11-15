@@ -101,8 +101,8 @@ function legalName(): string {
  */
 export const DUO_WIDGET_CSS = `
   :root { --duo-widget-w:0px; --duo-widget-gap:0px; --duo-widget-h:0px; --duo-widget-clear:calc(var(--duo-widget-w) + var(--duo-widget-gap)); }
-  @media screen and (orientation: portrait) and (max-width: 700px) and (min-height: 360px) and (min-aspect-ratio: 4/7),
-         screen and (orientation: landscape) and (min-width: 540px) and (max-width: 1000px) and (min-height: 300px) and (max-height: 800px) and (max-aspect-ratio: 17/10),
+  @media screen and (orientation: portrait) and (max-width: 720px) and (min-height: 360px) and (min-aspect-ratio: 4/7),
+         screen and (orientation: landscape) and (min-width: 540px) and (max-width: 1000px) and (min-height: 300px) and (max-height: 960px) and (max-aspect-ratio: 17/10),
          screen and (horizontal-viewport-segments: 2) {
     :root { --duo-widget-w:96px; --duo-widget-gap:8px; --duo-widget-h:clamp(64px, 31vh, 270px); }
   }

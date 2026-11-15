@@ -192,7 +192,7 @@ test("widget corner: ONE reserved zone as tokens, zero outside Duo, physical rig
   assert.ok(!/!important/.test(css.slice(css.indexOf("--duo-widget-clear"))), "no !important in the widget section");
   const hit = (w: number, h: number) => queries.some((q) => matchesWidget(q, w, h));
   /* مقاسات Duo المعروفة وعكسها. */
-  for (const [w, h] of [[382, 580], [470, 780], [594, 368], [669, 867], [951, 585], [580, 382], [780, 470], [368, 594], [867, 669], [585, 951], [951, 669], [457, 678], [457, 760], [457, 700], [440, 660], [480, 720], [669, 1000], [951, 700]]) assert.ok(hit(w, h), `zone must be active at ${w}x${h}`);
+  for (const [w, h] of [[382, 580], [470, 780], [594, 368], [669, 867], [951, 585], [580, 382], [780, 470], [368, 594], [867, 669], [585, 951], [951, 669], [457, 678], [457, 760], [720, 900], [951, 800], [951, 940], [951, 669], [457, 700], [440, 660], [480, 720], [669, 1000], [951, 700]]) assert.ok(hit(w, h), `zone must be active at ${w}x${h}`);
   /* أجهزة أخرى: صفر. */
   for (const [w, h] of [[390, 844], [382, 844], [430, 932], [393, 852], [402, 874], [440, 956], [956, 440], [844, 390], [932, 430], [667, 375], [852, 393], [744, 1024], [820, 1180], [1024, 768], [1180, 820], [1280, 800], [1440, 900], [320, 568], [375, 667]]) assert.ok(!hit(w, h), `zone must NOT be active at ${w}x${h}`);
 });
