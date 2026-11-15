@@ -563,8 +563,12 @@
  * ٨) ركن الودجت — iPhone Duo
  *
  * على Duo الحقيقي يطفو ودجت النظام (كبسولة المصباح + الحساب/الموقع + الوقت + بطارية/واي فاي) فوق الزاوية العليا
- * اليمنى الفيزيائية، وهو ليس جزءاً من safe-area (env() = 0 هناك). القياس من لقطة 1371×2034:
- * عرضه ≈ 58–64pt وبعده عن الحافة اليمنى ≈ 6pt، وارتفاعه ≈ 180–200pt (≈ 30% من الشاشة).
+ * اليمنى الفيزيائية، وهو ليس جزءاً من safe-area (env() = 0 هناك).
+ * القياس تقدير من لقطات المالك لا قياس جهاز: من لقطة Safari 1371×2034 (عرض ≈58–64pt، بعد ≈6pt، ارتفاع ≈180–200pt)،
+ * ومن لقطات التطبيق (1348px عرضاً؛ أزرار 44pt القياسية ≈130px ⇒ ≈2.95px/pt ⇒ منفذ التطبيق ≈457×678 مستنتَج):
+ * العمود ≈54pt عرضاً يبدأ ≈20pt من الحافة (حافته البعيدة ≈75pt) وينتهي ≈166pt من الأعلى؛ وقياس مستقل ≈80px
+ * (30–110px من الحافة، حتى y≈268). فالمدى غير المؤكَّد ≈84–112px عرضاً و≈174–270px ارتفاعاً؛ اخترنا 96+8 و31vh بسقف 270،
+ * وتُعايَر على الجهاز بـ ?duo-debug=1&duo-w=<px>&duo-h=<px>.
  *
  * السبب الجذري لفشل الجولات السابقة (حُذفت قاعدتها «116×116»):
  *   ١) المنطقة كانت 116 × 116 فقط: أقصر من الودجت (200) بـ ٨٤pt، فيبقى ما تحت الـ 116 جارياً تحته.
@@ -577,20 +581,19 @@
  * الحل: منطقة واحدة بمتغيرات هنا، **صفر خارج Duo** (فتصير كل قاعدة تستعملها بلا أثر على أي جهاز آخر):
  *   --duo-widget-w    عرض الودجت من الحافة الفيزيائية اليمنى (≈6pt بعد + ≈64pt عرض).
  *   --duo-widget-gap  هامش أمان بين الودجت والمحتوى.
- *   --duo-widget-h    ارتفاعه = clamp(64px, 30vh, 200px).
+ *   --duo-widget-h    ارتفاعه = clamp(64px, 31vh, 270px).
  *   --duo-widget-clear = w + gap، وهو ما يتجنّبه المحتوى.
  * المنطقة فيزيائية (right) لا منطقية: الودجت يبقى يمين الشاشة أياً كان اتجاه الصفحة.
  * `--duo-reserve-start/end` ترجمةٌ لها إلى بداية/نهاية السطر حسب dir العنصر (يمين = بداية في RTL).
  *
- * كشف Duo (آمن افتراضياً: ما لم يُطابق لا تُحجَب شيئاً). لا يعتمد على إشارات Safari وحدها: في تطبيق Capacitor
- * (WKWebView) لا شريط أدوات فالمنفذ أطول من Safari، و`navigator.standalone` غير معرَّف، وUA بلا «Safari/»؛
- * لذلك الحكم بالعرض (أي ارتفاع ≥ 360) لا بالنسبة ولا بسقف ارتفاع:
- *   • عروض Duo المعروفة ±3px بأي ارتفاع (طولي وعرضي، Safari أو التطبيق بكامل الشاشة):
- *     368، 382، 470، 580/585، 594، 669، 780، 867، 951. لا يشاركها أي آيفون عادي (375، 390، 393، 402، 414، 428، 430، 440؛
- *     عرضياً 667، 844، 852، 874، 932، 956).
- *   • احتياطي للمقاسات الوسيطة: طولي بعرض ≤ 700 ونسبة ارتفاع/عرض ≤ 5/3؛ وعرضي بعرض 560–1000 وارتفاع 360–960 ونسبة ≤ 1.7.
- *   • horizontal-viewport-segments: 2 (غير مدعوم في Safari اليوم؛ احتياط لدعمه مستقبلاً).
- * أثر جانبي مقبول: نافذة iPad ضيّقة (Split View ≤ 700px بنسبة ≤ 5/3) تُحجَز لها الزاوية أيضاً.
+ * كشف Duo (آمن افتراضياً). عام لا بعروض دقيقة، وبلا إشارات Safari (UA، `navigator.standalone`، `display-mode`):
+ * منفذ التطبيق (WKWebView) بلا أشرطة متصفح فهو أطول من Safari، وعرضه ≈457 لا أحد المقاسات «المعروفة».
+ *   • طولي: عرض ≤ 700 وارتفاع ≥ 360 (أي ارتفاع) ونسبة ارتفاع/عرض ≤ 1.75 (457×678 = 1.48، 457×760 = 1.66، 382×580،
+ *     669×867). الآيفون الطويل (390×844، 430×932 ≈ 2.16) وSE (375×667 ≈ 1.78) خارجه (و382×780 ≈ 2.04 كذلك: لا يُفرَّق عن آيفون إلا بعرضٍ دقيق ممنوع).
+ *   • عرضي: عرض 540–1000 وارتفاع 300–800 ونسبة عرض/ارتفاع ≤ 1.7 (594×368، 780×470، 867×669، 951×585). 844×390 و667×375 خارجه.
+ *   • horizontal-viewport-segments: 2 (غير مدعوم في Safari اليوم؛ احتياط).
+ * أثر جانبي مقبول: نافذة iPad ضيّقة (Split View ≤ 700px بنسبة ≤ 1.75)، وآيفون عادي داخل Safari حين تُنقص أشرطته الارتفاع إلى نسبة ≤ 1.75 (مثلاً 390×664)،
+ * تُحجَز لهما الزاوية أيضاً (الافتراضي الآمن: لا يضر جهازاً آخر إلا بنطاق علوي فارغ).
  * هندسة الودجت في العرضي غير مُتحقَّق منها على جهاز حقيقي (القياس من لقطة طولية)؛ تُفحَص عبر ?duo-debug=1.
  * ===================================================================== */
 :root {
@@ -604,22 +607,13 @@
   /* الشريط الجانبي (يمين الشاشة في RTL): يبدأ محتواه تحت الودجت. */
   --duo-rail-top: 0px;
 }
-@media screen and (orientation: portrait) and (max-width: 700px) and (min-aspect-ratio: 3/5),
-       screen and (orientation: landscape) and (min-width: 560px) and (max-width: 1000px) and (min-height: 360px) and (max-height: 960px) and (max-aspect-ratio: 17/10),
-       screen and (min-width: 365px) and (max-width: 371px) and (min-height: 360px),
-       screen and (min-width: 379px) and (max-width: 385px) and (min-height: 360px),
-       screen and (min-width: 467px) and (max-width: 473px) and (min-height: 360px),
-       screen and (min-width: 577px) and (max-width: 588px) and (min-height: 360px),
-       screen and (min-width: 591px) and (max-width: 597px) and (min-height: 360px),
-       screen and (min-width: 668px) and (max-width: 670px) and (min-height: 360px),
-       screen and (min-width: 777px) and (max-width: 783px) and (min-height: 360px),
-       screen and (min-width: 864px) and (max-width: 870px) and (min-height: 360px),
-       screen and (min-width: 948px) and (max-width: 954px) and (min-height: 360px),
+@media screen and (orientation: portrait) and (max-width: 700px) and (min-height: 360px) and (min-aspect-ratio: 4/7),
+       screen and (orientation: landscape) and (min-width: 540px) and (max-width: 1000px) and (min-height: 300px) and (max-height: 800px) and (max-aspect-ratio: 17/10),
        screen and (horizontal-viewport-segments: 2) {
   :root {
-    --duo-widget-w: 70px;
+    --duo-widget-w: 96px;
     --duo-widget-gap: 8px;
-    --duo-widget-h: clamp(64px, 30vh, 200px);
+    --duo-widget-h: clamp(64px, 31vh, 270px);
   }
 }
 [dir="rtl"] { --duo-reserve-start: var(--duo-widget-clear); --duo-reserve-end: 0px; }

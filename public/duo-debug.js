@@ -11,6 +11,13 @@
   var doc = document, root = doc.documentElement;
 
   function px(el, prop) { return parseFloat(getComputedStyle(el)[prop]) || 0; }
+  /* معايرة حيّة على الجهاز: ?duo-debug=1&duo-w=110&duo-h=270 (لا تعمل بلا duo-debug=1). */
+  var qs = new URLSearchParams(location.search);
+  var ow = parseFloat(qs.get("duo-w")), oh = parseFloat(qs.get("duo-h"));
+  if (ow > 0) root.style.setProperty("--duo-widget-w", ow + "px");
+  if (oh > 0) root.style.setProperty("--duo-widget-h", oh + "px");
+  if (ow > 0 || oh > 0) { root.style.setProperty("--duo-widget-gap", "8px"); }
+
   var probe = doc.createElement("div");
   probe.setAttribute("data-duo-debug", "");
   probe.style.cssText = "position:fixed;visibility:hidden;pointer-events:none;left:0;top:0;width:var(--duo-widget-w,0px);height:var(--duo-widget-h,0px);" +
@@ -53,6 +60,8 @@
       "visualViewport " + (vv ? Math.round(vv.width) + "x" + Math.round(vv.height) + " scale=" + vv.scale.toFixed(2) + " off=" + Math.round(vv.offsetLeft) + "," + Math.round(vv.offsetTop) : "n/a") + "\n" +
       "dir=" + (doc.dir || root.getAttribute("dir") || getComputedStyle(doc.body).direction) + "  dpr=" + devicePixelRatio + "\n" +
       "standalone: " + standalone() + "\n" +
+      "override duo-w=" + (ow > 0 ? ow : "-") + " duo-h=" + (oh > 0 ? oh : "-") + "\n" +
+      "send screenshot with frame; adjust duo-w/duo-h until the red frame covers the capsule\n" +
       "Capacitor: " + native() + "  WKWebView-UA: " + (/Mobile\/\w+/.test(navigator.userAgent) && !/Safari\//.test(navigator.userAgent) ? "yes (no Safari/ token)" : "no (Safari-like)") + "\n" +
       "UA: " + navigator.userAgent.replace(/^Mozilla\/5.0 /, "").slice(0, 90);
   }

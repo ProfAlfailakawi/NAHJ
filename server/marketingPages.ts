@@ -101,19 +101,10 @@ function legalName(): string {
  */
 export const DUO_WIDGET_CSS = `
   :root { --duo-widget-w:0px; --duo-widget-gap:0px; --duo-widget-h:0px; --duo-widget-clear:calc(var(--duo-widget-w) + var(--duo-widget-gap)); }
-  @media screen and (orientation: portrait) and (max-width: 700px) and (min-aspect-ratio: 3/5),
-         screen and (orientation: landscape) and (min-width: 560px) and (max-width: 1000px) and (min-height: 360px) and (max-height: 960px) and (max-aspect-ratio: 17/10),
-         screen and (min-width: 365px) and (max-width: 371px) and (min-height: 360px),
-         screen and (min-width: 379px) and (max-width: 385px) and (min-height: 360px),
-         screen and (min-width: 467px) and (max-width: 473px) and (min-height: 360px),
-         screen and (min-width: 577px) and (max-width: 588px) and (min-height: 360px),
-         screen and (min-width: 591px) and (max-width: 597px) and (min-height: 360px),
-         screen and (min-width: 668px) and (max-width: 670px) and (min-height: 360px),
-         screen and (min-width: 777px) and (max-width: 783px) and (min-height: 360px),
-         screen and (min-width: 864px) and (max-width: 870px) and (min-height: 360px),
-         screen and (min-width: 948px) and (max-width: 954px) and (min-height: 360px),
+  @media screen and (orientation: portrait) and (max-width: 700px) and (min-height: 360px) and (min-aspect-ratio: 4/7),
+         screen and (orientation: landscape) and (min-width: 540px) and (max-width: 1000px) and (min-height: 300px) and (max-height: 800px) and (max-aspect-ratio: 17/10),
          screen and (horizontal-viewport-segments: 2) {
-    :root { --duo-widget-w:70px; --duo-widget-gap:8px; --duo-widget-h:clamp(64px, 30vh, 200px); }
+    :root { --duo-widget-w:96px; --duo-widget-gap:8px; --duo-widget-h:clamp(64px, 31vh, 270px); }
   }
   /* الترويسة لاصقة بارتفاعها المعتاد؛ الشعار (أول عنصر عند اليمين الفيزيائي) يتراجع عن الودجت، وما تحتها يبدأ تحته. */
   .top .wrap { padding-right:max(20px, calc(env(safe-area-inset-right, 0px) + 8px), var(--duo-widget-clear)); }

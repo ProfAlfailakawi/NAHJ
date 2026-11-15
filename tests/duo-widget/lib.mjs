@@ -12,7 +12,7 @@ export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "
 export const { webkit, chromium } = require("playwright");
 
 /* مقاسات Duo المعروفة (طولي) ومقلوبها (عرضي). */
-export const SIZES = [[382, 580], [470, 780], [594, 368], [669, 867], [951, 585]];
+export const SIZES = [[382, 580], [470, 780], [594, 368], [669, 867], [951, 585], [457, 678], [457, 760]];
 
 export async function startServer(port = 3199) {
   if (process.env.BASE_URL) return { url: process.env.BASE_URL, stop: async () => {} };

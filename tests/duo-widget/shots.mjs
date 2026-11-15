@@ -1,7 +1,7 @@
 /*
  * لقطات قبل/بعد لركن الودجت. الاستعمال:
  *   node tests/duo-widget/shots.mjs <before|after> <baseUrl> <outDir>
- * يرسم إطار المنطقة (الأحمر) بالصيغة الثابتة 70px × clamp(64px,30vh,200px) كي تظهر الحدود على كود «قبل» أيضاً.
+ * يرسم إطار المنطقة (الأحمر) بالصيغة الثابتة 96px × clamp(64px,31vh,270px) كي تظهر الحدود على كود «قبل» أيضاً.
  */
 import fs from "node:fs";
 import { webkit, STATES } from "./lib.mjs";
@@ -21,7 +21,7 @@ for (const [w, h, st] of SHOTS) {
   await page.waitForSelector("#nahj-splash", { state: "detached", timeout: 8000 }).catch(() => {});
   await page.evaluate(() => {
     const d = document.createElement("div"); d.setAttribute("data-duo-debug", "");
-    d.style.cssText = "position:fixed;top:0;right:0;width:70px;height:clamp(64px,30vh,200px);box-sizing:border-box;border:2px solid rgba(220,30,30,.9);background:rgba(220,30,30,.12);pointer-events:none;z-index:2147483647";
+    d.style.cssText = "position:fixed;top:0;right:0;width:96px;height:clamp(64px,31vh,270px);box-sizing:border-box;border:2px solid rgba(220,30,30,.9);background:rgba(220,30,30,.12);pointer-events:none;z-index:2147483647";
     document.body.appendChild(d);
   });
   const name = st === "home" ? "" : `${st}-`;
