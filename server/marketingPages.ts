@@ -109,6 +109,15 @@ export const DUO_WIDGET_CSS = `
   /* الترويسة لاصقة بارتفاعها المعتاد؛ الشعار (أول عنصر عند اليمين الفيزيائي) يتراجع عن الودجت، وما تحتها يبدأ تحته. */
   .top .wrap { padding-right:max(20px, calc(env(safe-area-inset-right, 0px) + 8px), var(--duo-widget-clear)); }
   .top + * { margin-top:max(0px, calc(var(--duo-widget-h) - 66px)); }
+  /* At the narrow portrait Duo pose the reserved corner leaves little header
+     width. Keep the primary login and demo actions reachable without pushing
+     the navigation beyond the physical left edge. */
+  @media screen and (orientation: portrait) and (max-width: 430px) and (min-height: 360px) and (min-aspect-ratio: 4/7) {
+    .top .wrap { gap:8px; }
+    .top nav { gap:0; }
+    .top nav a.keep[href="/pricing"] { display:none; }
+    .top nav a.keep[href="/app"] { padding-inline:8px; }
+  }
 `;
 
 /* ------------------------------------------------------------ الإطار */
