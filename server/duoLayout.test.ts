@@ -182,19 +182,19 @@ test("widget corner: ONE reserved zone as tokens, zero outside Duo, physical rig
   /* القيم الافتراضية صفر: لا أثر خارج Duo. */
   assert.match(css, /:root \{\s*--duo-widget-w: 0px;\s*--duo-widget-gap: 0px;\s*--duo-widget-h: 0px;/);
   const { queries, body } = widgetBlock(css);
-  assert.match(body, /--duo-widget-w:\s*70px/);
+  assert.match(body, /--duo-widget-w:\s*96px/);
   assert.match(body, /--duo-widget-gap:\s*8px/);
-  assert.match(body, /--duo-widget-h:\s*clamp\(64px, 30vh, 200px\)/);
-  assert.equal([...css.matchAll(/--duo-widget-w:\s*70px/g)].length, 1, "values are defined once");
+  assert.match(body, /--duo-widget-h:\s*clamp\(64px, 31vh, 270px\)/);
+  assert.equal([...css.matchAll(/--duo-widget-w:\s*96px/g)].length, 1, "values are defined once");
   /* المنطقة فيزيائية: لا inline-end في قاعدة الشريط العلوي؛ الهامش margin-right مع [dir]. */
   assert.match(css, /\[dir="rtl"\] \.topbar-org, \[dir="ltr"\] \.top-actions \{ margin-right: var\(--duo-topbar-reserve\)/);
   /* لا !important جديد في القسم. */
   assert.ok(!/!important/.test(css.slice(css.indexOf("--duo-widget-clear"))), "no !important in the widget section");
   const hit = (w: number, h: number) => queries.some((q) => matchesWidget(q, w, h));
   /* مقاسات Duo المعروفة وعكسها. */
-  for (const [w, h] of [[382, 580], [470, 780], [594, 368], [669, 867], [951, 585], [580, 382], [780, 470], [368, 594], [867, 669], [585, 951], [951, 669], [382, 780], [382, 844], [470, 900], [669, 1000], [951, 700], [594, 800], [780, 900]]) assert.ok(hit(w, h), `zone must be active at ${w}x${h}`);
+  for (const [w, h] of [[382, 580], [470, 780], [594, 368], [669, 867], [951, 585], [580, 382], [780, 470], [368, 594], [867, 669], [585, 951], [951, 669], [457, 678], [457, 760], [457, 700], [440, 660], [480, 720], [669, 1000], [951, 700]]) assert.ok(hit(w, h), `zone must be active at ${w}x${h}`);
   /* أجهزة أخرى: صفر. */
-  for (const [w, h] of [[390, 844], [393, 659], [430, 932], [844, 390], [932, 430], [667, 375], [744, 1024], [820, 1180], [1024, 768], [1180, 820], [1280, 800], [1440, 900], [320, 568], [375, 667], [402, 874], [440, 956], [956, 440], [852, 393], [414, 896]]) assert.ok(!hit(w, h), `zone must NOT be active at ${w}x${h}`);
+  for (const [w, h] of [[390, 844], [382, 844], [430, 932], [393, 852], [402, 874], [440, 956], [956, 440], [844, 390], [932, 430], [667, 375], [852, 393], [744, 1024], [820, 1180], [1024, 768], [1180, 820], [1280, 800], [1440, 900], [320, 568], [375, 667]]) assert.ok(!hit(w, h), `zone must NOT be active at ${w}x${h}`);
 });
 
 test("widget corner: every surface that touches the top-right uses the shared tokens (no private guesses)", () => {
@@ -218,7 +218,7 @@ test("widget corner: server-rendered pages and static shells carry the same dete
   for (const [file, start] of [["server/marketingPages.ts", "DUO_WIDGET_CSS"], ["apple/www/index.html", ":root { --duo-widget-w"], ["apple/www/offline.html", ":root { --duo-widget-w"], ["public/updating.html", ":root{--duo-widget-w"]] as const) {
     const src = norm(read(file));
     for (const q of want) assert.ok(src.includes(norm(q)), `${file} must contain the query: ${q}`);
-    assert.ok(src.includes(norm("70px")) && src.includes(norm("clamp(64px, 30vh, 200px)")), `${file} values`);
+    assert.ok(src.includes(norm("96px")) && src.includes(norm("clamp(64px, 31vh, 270px)")), `${file} values`);
     void start;
   }
   assert.match(read("server/marketingPages.ts"), /\.top \.wrap \{ padding-right:max\(20px, calc\(env\(safe-area-inset-right, 0px\) \+ 8px\), var\(--duo-widget-clear\)\)/);

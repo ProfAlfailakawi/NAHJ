@@ -17,7 +17,7 @@ const orients = SIZES.flatMap(([w, h]) => [[w, h, "portrait"], [h, w, "landscape
 /* GUARD_ONLY="382x580,951x585": يحصر المقاسات (للتشغيل على دفعات). */
 const skipControls = process.env.GUARD_NO_CONTROLS === "1";
 /* ارتفاعات أطول: منفذ التطبيق (WKWebView) بكامل الشاشة بلا أشرطة Safari، فالعرض وحده يحدّد Duo. */
-const TALL = [[382, 780], [382, 844], [470, 900], [669, 1000], [951, 700]];
+const TALL = [[669, 1000], [951, 700]];
 const all = [...orients, ...TALL.map(([w, h]) => [w, h, w > h ? "landscape" : "portrait"])];
 if (process.env.GUARD_ONLY) { const keep = process.env.GUARD_ONLY.split(","); all.splice(0, all.length, ...all.filter(([w, h]) => keep.includes(`${w}x${h}`))); }
 /* سياقان: Safari، والتطبيق المُحاكى (UA لـ WKWebView + window.Capacitor + navigator.standalone غير معرَّف). */
@@ -28,7 +28,7 @@ const configs = [];
 for (const [w, h, o] of all) for (const ctxName of contexts) for (const [scheme, scale] of combos) configs.push({ w, h, o, scheme, scale, ctxName });
 
 /* أجهزة أخرى: يجب ألا تتفعّل المنطقة عليها (صفر خارج Duo). */
-const CONTROLS = [[402, 874], [956, 440], [390, 844], [393, 659], [844, 390], [932, 430], [744, 1024], [820, 1180], [1024, 768], [1280, 800], [375, 667]];
+const CONTROLS = [[402, 874], [956, 440], [390, 844], [430, 932], [844, 390], [932, 430], [744, 1024], [820, 1180], [1024, 768], [1280, 800], [375, 667]];
 
 const server = await startServer();
 const browser = await engine.launch();
@@ -68,6 +68,21 @@ async function runConfig(cfg) {
 const queue = [...configs]; 
 await Promise.all(Array.from({ length: concurrency }, async () => { for (let c; (c = queue.shift());) await runConfig(c); }));
 
+/* ضابط سلبي: الحارس يجب أن «يرى» عنصراً مزروعاً داخل المنطقة، وأن تُقاس المنطقة بأبعادٍ موجبة (لا نجاح فارغ). */
+{
+  const ctx = await browser.newContext({ viewport: { width: 457, height: 678 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  await STATES.login(page, server.url);
+  await page.evaluate(() => {
+    const b = document.createElement("button"); b.textContent = "negative-control";
+    b.style.cssText = "position:fixed;top:12px;right:12px;z-index:99999;width:44px;height:44px"; document.body.appendChild(b);
+  });
+  const r = await page.evaluate(measureInPage, {});
+  if (!(r.zone.w > 0 && r.zone.h > 0)) failures.push(`ضابط سلبي: أبعاد المنطقة غير موجبة (${r.zone.w}×${r.zone.h})`);
+  else if (!r.hits.some((h) => h.el.includes("negative-control"))) failures.push("ضابط سلبي: الحارس لم يلتقط عنصراً مزروعاً داخل المنطقة");
+  else notes.push(`ضابط سلبي ناجح: المنطقة ${r.zone.w}×${Math.round(r.zone.h)} والحارس التقط العنصر المزروع`);
+  await ctx.close();
+}
 /* الضوابط: صفر خارج Duo. */
 for (const [w, h] of skipControls ? [] : CONTROLS) {
   const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true });
@@ -82,6 +97,7 @@ await browser.close(); await server.stop();
 console.log(`المحرّك: ${process.env.GUARD_ENGINE === "chromium" ? "Chromium (قيد: ليس WebKit)" : "WebKit"}`);
 console.log(`مقاسات Duo: ${all.length} (المعروفة طولي/عرضي + ${TALL.length} أطول) × سياقات [${contexts.join(", ")}] × ${combos.length} (ألوان/حجم نص) × ${stateNames.length} حالات (${stateNames.join(", ")})`);
 console.log(`حالات فُحصت: ${cases} (تمريرتان: أعلى الصفحة + بعد التمرير للعناصر الثابتة/اللاصقة) — عناصر مفحوصة: ${checkedEls}، حالات غير متاحة بالمقاس: ${skipped}، ضوابط غير Duo: ${CONTROLS.length}`);
+for (const n of notes) console.log(n);
 console.log(`الاستثناءات المسجَّلة (data-duo-bleed): ${bleeds.size}`); for (const [k, v] of bleeds) console.log(`  - ${k} (${v})`);
 const uniq = [...new Set(failures)];
 console.log(`المخالفات: ${uniq.length}`);
