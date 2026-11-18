@@ -548,6 +548,16 @@
   /* جداول عريضة (لوحة المالك، المسوّقون): تتمرّر داخل الصفحة ولا تعبر الكعب. */
   .page-enter table { display: block; max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; }
 }
+/* هاتف خارجي ضيق: قاعدة تقليص الخريطة السابقة تبدأ عند 560px، لذلك نافذة 382px
+   بقيت على ارتفاع 560px وامتدت عقدها أسفل شريط التنقل الثابت. */
+@media screen and (max-width: 559px) and (min-height: 431px) {
+  .content-stage { padding-block-end: calc(104px + var(--safe-b)); }
+  .page-enter > .apphub { padding: 10px; gap: 10px; }
+  .page-enter > .apphub > .apphub-stage {
+    height: clamp(260px, calc(100dvh - 320px), 360px);
+  }
+}
+
 /* حتى بلا دعم الحاويات: النصوص لا تُكسر حرفاً حرفاً. */
 @container (max-width: 520px) {
   .pulse-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
