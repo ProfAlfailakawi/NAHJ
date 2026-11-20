@@ -238,3 +238,64 @@ html[data-device="duo"] { --duo-clock-end: 160px; }
   html[data-device="duo"] body .topbar > .command-search kbd { display: none; }
   html[data-device="duo"] body .content-stage { max-width: none; padding-top: 10px; }
 }
+
+/* ==========================================================================
+ * ٩) مساحة العمل المتكاملة: الداخلية طولاً والمفصل أفقي.
+ *    الشاشتان عملٌ واحد: العليا تعرض ما يُعمل عليه، والسفلى أدوات التحكّم المرتبطة به، وما يُكتب في السفلى
+ *    يُقرأ مع ما في العليا. Safari لا يعلن موضع المفصل، فيُقدَّر من نسبة الشاشة: بعد شريط Safari ≈ 42٪ من
+ *    نافذة العرض، وفي التطبيق 50٪. حزامٌ هادئ بعرض --duo-hinge-band حول المفصل لا يعبره شيء. عرضٌ فقط.
+ * ========================================================================== */
+@media screen and (orientation: portrait) and (min-width: 600px) and (max-width: 820px) and (min-height: 700px) {
+  html[data-device="duo"] { --duo-hinge-y: 42dvh; --duo-hinge-band: 28px; --duo-sheet-pad: 10px; }
+  html[data-device="duo"][data-shell="app"] { --duo-hinge-y: 50dvh; }
+
+  /* بوابة الاعتماد: العليا حتى المفصل للمعاينة — سجلّ القرار (المهارة، القاعدة، الدليل، وما سيُنفَّذ قبل/بعد)
+     ويُمرَّر داخلها؛ والسفلى للقرار: الطلب نفسه وخطورته ومن يعتمده، ثم سبب القرار وأزرار «اعتمد ونفّذ»
+     و«استلم الحالة» و«ارفض». الرأس بارتفاعٍ معروف، فينتهي السجلّ عند حزام المفصل بالضبط. */
+  html[data-device="duo"] .modal-backdrop:has(> .decision-sheet) {
+    place-items: stretch; padding: calc(var(--safe-t) + var(--duo-sheet-pad)) var(--duo-sheet-pad) calc(var(--safe-b) + var(--duo-sheet-pad));
+  }
+  html[data-device="duo"] .approval-sheet.decision-sheet {
+    --duo-actions-h: 48px; --duo-reject-h: 44px; --duo-row-gap: 8px; --duo-eyebrow-h: 18px; --duo-title-h: 36px; --duo-sheet-pt: 12px;
+    --duo-record-h: calc(var(--duo-hinge-y) - var(--duo-hinge-band) / 2 - var(--safe-t) - var(--duo-sheet-pad) - var(--duo-sheet-pt) - var(--duo-eyebrow-h) - var(--duo-title-h));
+    width: 100%; max-width: none; height: 100%; max-height: none; box-sizing: border-box; overflow: hidden;
+    padding: var(--duo-sheet-pt) 18px 12px;
+    display: grid; grid-template-columns: minmax(0, 1fr); row-gap: 0;
+    grid-template-areas: "eyebrow" "title" "record" "band" "object" "reason" "actions" "reject";
+    grid-template-rows:
+      var(--duo-eyebrow-h) var(--duo-title-h) max(120px, var(--duo-record-h)) var(--duo-hinge-band)
+      minmax(0, auto) minmax(0, 1fr) calc(var(--duo-actions-h) + var(--duo-row-gap)) calc(var(--duo-reject-h) + var(--duo-row-gap));
+  }
+  /* الرأس سطران مضغوطان: الأيقونة زخرفية (aria-hidden)، والعنوان وتسميته يبقيان. الترتيب في الشجرة لم يتغيّر. */
+  html[data-device="duo"] .decision-sheet > .approval-mark { display: none; }
+  html[data-device="duo"] .decision-sheet > .approval-eyebrow { grid-area: eyebrow; margin: 0; line-height: var(--duo-eyebrow-h); }
+  html[data-device="duo"] .decision-sheet > h2 {
+    grid-area: title; margin: 0; font-size: 19px; line-height: var(--duo-title-h); padding-inline-end: 56px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  html[data-device="duo"] .decision-sheet > .modal-close { top: 10px; }
+  html[data-device="duo"] .decision-sheet > .approval-object { grid-area: object; max-height: 30dvh; overflow-y: auto; overscroll-behavior: contain; }
+  html[data-device="duo"] .decision-sheet > .decision-record {
+    grid-area: record; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0; padding-bottom: 4px;
+  }
+  html[data-device="duo"] .decision-sheet > .decision-reason {
+    grid-area: reason; min-height: 0; margin: 0; padding-top: 10px;
+  }
+  html[data-device="duo"] .decision-sheet > .decision-reason textarea { flex: 1 1 auto; min-height: 64px; resize: none; }
+  html[data-device="duo"] .decision-sheet > .approval-actions {
+    grid-area: actions; position: static; margin: 0; padding: var(--duo-row-gap) 0 0; box-shadow: none; background: none;
+  }
+  html[data-device="duo"] .decision-sheet > .approval-actions::before { display: none; }
+  html[data-device="duo"] .decision-sheet > .approval-actions button { height: var(--duo-actions-h); min-height: 0; }
+  html[data-device="duo"] .decision-sheet > .reject-row { grid-area: reject; margin: 0; padding-top: var(--duo-row-gap); }
+  html[data-device="duo"] .decision-sheet > .reject-row button { height: var(--duo-reject-h); min-height: 0; }
+}
+
+/* ==========================================================================
+ * ١٠) الخارجية طولاً: خريطة «اليوم» كانت تُضغط إلى ~358px، فصار الفارق بين قرصين متجاورين على جانبي الحلقة
+ *     (التدرّب/العمل، الأشخاص/الحوكمة) أقلّ من ارتفاع القرص مع اسمه ورقمه، فيقع رقم «التدرّب» على أيقونة «العمل».
+ *     الحلقة أطول قليلاً على الدوو، فيبتعد كل قرصٍ عن جاره. الصفحة تُمرَّر أصلاً، فلا يُقصّ شيء.
+ * ========================================================================== */
+@media screen and (orientation: portrait) and (max-width: 559px) {
+  html[data-device="duo"] #root .apphub-stage { height: 440px; }
+}
