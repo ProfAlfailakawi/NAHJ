@@ -77,7 +77,7 @@ html[data-device="duo"] .toast {
   /* زرّ الإيقاف الطارئ في طرف الصفّ نفسه (يسار الشاشة)، والأقسام تترك له مكانه. */
   html[data-device="duo"][data-shell="browser"]:has(.emergency-fab) body .mobile-dock { padding-left: calc(64px + var(--safe-l)); }
   html[data-device="duo"][data-shell="browser"] body .emergency-fab {
-    position: fixed; z-index: 81; left: calc(8px + var(--safe-l)); right: auto; inset-inline-end: auto;
+    position: fixed; z-index: 81; inset-inline-start: auto; inset-inline-end: auto; left: calc(8px + var(--safe-l)); right: auto;
     bottom: calc(5px + var(--safe-b)); top: auto;
     width: 48px; height: 48px; min-width: 48px; padding: 0; justify-content: center; border-radius: var(--r-md);
     box-shadow: none;
