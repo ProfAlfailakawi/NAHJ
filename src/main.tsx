@@ -16,6 +16,11 @@ import './duo-beauty-4.css';
 import './duo-beauty-5.css';
 import './responsive-2026-11.css';
 import './duo-adaptive.css';
+import './duo-device.css';
+import {installDuoMarkers} from './lib/duo-markers';
+
+/* علامات iPhone Duo على الجذر (data-device، data-shell، data-widget-side) — تُقرأ في duo-device.css وحده. */
+installDuoMarkers();
 
 /* تشخيص ركن الودجت (iPhone Duo): لا يُحمَّل إلا مع ?duo-debug=1 (public/duo-debug.js). */
 if (new URLSearchParams(window.location.search).get('duo-debug') === '1') {

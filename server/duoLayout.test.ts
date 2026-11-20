@@ -36,10 +36,10 @@ test("the hub stage no longer has a fixed 560px height after the duo layer", () 
  * جولة الامتداد الكامل (13 نوفمبر 2026): الحواف الآمنة بجهاتها الفعلية، وشريط القرار في نافذة
  * الاعتماد لاصق في كل المقاسات، وصفحات التسويق ممتدة حتى الحافة.
  */
-test("duo-adaptive.css loads last and maps safe areas to the element's direction", () => {
+test("duo-adaptive.css loads before the device layer and maps safe areas to the element's direction", () => {
   const main = read("src/main.tsx");
   const imports = [...main.matchAll(/import '\.\/([\w-]+\.css)'/g)].map(m => m[1]);
-  assert.equal(imports.at(-1), "duo-adaptive.css");
+  assert.deepEqual(imports.slice(-2), ["duo-adaptive.css", "duo-device.css"]);
   const css = read("src/duo-adaptive.css");
   assert.match(css, /\[dir="rtl"\]\s*\{\s*--safe-start:\s*var\(--safe-r\);\s*--safe-end:\s*var\(--safe-l\)/);
   assert.match(css, /\[dir="ltr"\]\s*\{\s*--safe-start:\s*var\(--safe-l\);\s*--safe-end:\s*var\(--safe-r\)/);
@@ -251,4 +251,26 @@ test("narrow-phone fixes stay in responsive-2026-11.css", () => {
   assert.match(css, /:has\(\.mobile-sheet-backdrop\)\s*\.emergency-fab\s*\{[^}]*visibility:\s*hidden/);
   /* لا transform باقٍ على جذر القسم بعد الحركة: وإلا انفلت position:fixed لنوافذ الحوار عن الشاشة. */
   assert.match(css, /\.page-enter\s*\{\s*animation-fill-mode:\s*backwards/);
+});
+
+/*
+ * نمط الدوو المعتمد (19 نوفمبر 2026): طبقةٌ أخيرة كل قواعدها تحت علامة الجهاز، فلا يتغيّر iPhone ولا iPad،
+ * والحجز الثابت للودجت يتبع حدود النظام على الدوو.
+ */
+test("duo-device.css scopes every rule to html[data-device=\"duo\"]", () => {
+  const css = read("src/duo-device.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const selectors = [...css.matchAll(/([^{}@]+)\{[^{}]*\}/g)].map(m => m[1].trim()).filter(Boolean);
+  assert.ok(selectors.length > 20);
+  for (const sel of selectors) {
+    for (const part of sel.split(",")) assert.match(part.trim(), /^(html|:root)\[data-device="duo"\]/, part);
+  }
+  assert.match(css, /:root\[data-device="duo"\]\s*\{[^}]*--duo-widget-h:\s*0px/);
+  assert.match(css, /--duo-sa-t:\s*env\(safe-area-inset-top/);
+});
+
+test("the Duo markers are installed from the entry script", () => {
+  assert.match(read("src/main.tsx"), /installDuoMarkers\(\)/);
+  const markers = read("src/lib/duo-markers.ts");
+  assert.match(markers, /box: 'border-box'/);
+  assert.match(markers, /dataset\.widgetSide/);
 });
