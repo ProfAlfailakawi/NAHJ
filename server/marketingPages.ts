@@ -204,6 +204,7 @@ export function page(options: { title: string; description: string; path: string
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-itunes-app" content="app-id=6834584202">
 <title>${escapeHtml(options.title)}</title>
 <meta name="description" content="${escapeHtml(options.description)}">
 <meta name="theme-color" content="#f4f1e8">
