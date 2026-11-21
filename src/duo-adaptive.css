@@ -626,6 +626,14 @@
     --duo-widget-h: clamp(64px, 31vh, 270px);
   }
 }
+/* الاستعلام أعلاه بحجم النافذة وحده، فكان يطابق iPhone العادي في Safari (390×664 بأشرطته) ونافذة iPad أو الحاسوب الضيقة،
+   فيترك نطاقاً علوياً فارغاً وشريطاً بنحو 104px على اليمين. الركن لا يُحجز إلا على iPhone Duo (html[data-device="duo"] من
+   src/lib/duo-markers.ts، وهناك يتبع حدود النظام في duo-device.css)؛ وفي غيره تعود المتغيرات صفراً (تخصيص أعلى من :root). */
+html:not([data-device="duo"]) {
+  --duo-widget-w: 0px;
+  --duo-widget-gap: 0px;
+  --duo-widget-h: 0px;
+}
 [dir="rtl"] { --duo-reserve-start: var(--duo-widget-clear); --duo-reserve-end: 0px; }
 [dir="ltr"] { --duo-reserve-start: 0px; --duo-reserve-end: var(--duo-widget-clear); }
 

@@ -212,16 +212,33 @@ test("widget corner: every surface that touches the top-right uses the shared to
   ]) assert.match(css, re);
 });
 
-test("widget corner: server-rendered pages and static shells carry the same detection queries", () => {
-  const want = widgetBlock(read("src/duo-adaptive.css").replace(/\/\*[\s\S]*?\*\//g, "")).queries;
-  const norm = (t: string) => t.replace(/\s+/g, "");
-  for (const [file, start] of [["server/marketingPages.ts", "DUO_WIDGET_CSS"], ["apple/www/index.html", ":root { --duo-widget-w"], ["apple/www/offline.html", ":root { --duo-widget-w"], ["public/updating.html", ":root{--duo-widget-w"]] as const) {
-    const src = norm(read(file));
-    for (const q of want) assert.ok(src.includes(norm(q)), `${file} must contain the query: ${q}`);
-    assert.ok(src.includes(norm("96px")) && src.includes(norm("clamp(64px, 31vh, 270px)")), `${file} values`);
-    void start;
+test("widget corner: server-rendered pages and static shells carry no width-only zone (no Duo markers there)", () => {
+  /* التفعيل بحجم النافذة وحده طابق كل iPhone عادي (Safari 390×664) ونافذة الحاسوب الضيقة، وهذه الصفحات بلا علامات Duo. */
+  for (const file of ["server/marketingPages.ts", "apple/www/index.html", "apple/www/offline.html", "public/updating.html"]) {
+    const src = read(file);
+    assert.match(src, /:root ?\{ ?--duo-widget-w: ?0px; ?--duo-widget-gap: ?0px; ?--duo-widget-h: ?0px/, `${file}: zero tokens stay defined`);
+    assert.ok(!/--duo-widget-w:\s*(?!\s|0px)[^;}]+/.test(src), `${file}: a non-zero --duo-widget-w is back`);
   }
   assert.match(read("server/marketingPages.ts"), /\.top \.wrap \{ padding-right:max\(20px, calc\(env\(safe-area-inset-right, 0px\) \+ 8px\), var\(--duo-widget-clear\)\)/);
+});
+
+test("widget corner: off the iPhone Duo every zone token is 0 (html:not([data-device=\"duo\"]) beats the window-size query)", () => {
+  const css = read("src/duo-adaptive.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const rules = [...css.matchAll(/([^{};]+)\{([^{}]*)\}/g)].map((m) => ({ sel: m[1].trim(), body: m[2] }));
+  const resets = rules.filter((r) => r.sel === 'html:not([data-device="duo"])');
+  assert.equal(resets.length, 1, "the reset is missing: the zone would return on ordinary iPhones in Safari, narrow iPads and desktops");
+  const { body } = widgetBlock(css);
+  for (const m of body.matchAll(/(--duo-[\w-]+)\s*:/g)) assert.match(resets[0].body, new RegExp(`${m[1]}:\\s*0px;`), `${m[1]} must be 0px off the Duo`);
+  for (const file of ["src/duo-adaptive.css", "src/duo-device.css", "src/duo.css"]) {
+    for (const r of [...read(file).replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{};]+)\{([^{}]*)\}/g)]) {
+      for (const d of r[2].matchAll(/(--duo-widget-[whg]\w*)\s*:\s*([^;]+)/g)) {
+        assert.ok(!/!important/.test(d[2]), `${file}: ${d[1]} must not be !important`);
+        if (d[2].trim() === "0px") continue;
+        const sel = r[1].trim();
+        assert.ok(sel === ":root" || (/\[data-device="duo"\]/.test(sel) && !/:not\(/.test(sel)), `${file}: ${d[1]}: ${d[2].trim()} reaches non-Duo screens through ${sel}`);
+      }
+    }
+  }
 });
 
 test("duo-debug panel loads only with ?duo-debug=1", () => {
