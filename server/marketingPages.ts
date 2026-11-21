@@ -96,16 +96,11 @@ function legalName(): string {
 /* ------------------------------------------------------------ ركن الودجت (iPhone Duo) */
 
 /*
- * نسخة مصغّرة من «ركن الودجت» في src/duo-adaptive.css (§٨): الصفحات المصيَّرة من الخادم لا تحمّل حزمة الواجهة.
- * الاستعلامات والقيم متطابقة حرفياً، ويحرسها server/duoLayout.test.ts. صفر خارج Duo.
+ * «ركن الودجت» في الصفحات المصيَّرة من الخادم: صفر. هذه الصفحات لا تحمّل حزمة الواجهة ولا علامات Duo، والتفعيل بحجم
+ * النافذة وحده كان يطابق كل iPhone عادي ونافذة الحاسوب الضيقة فيترك شريطاً فارغاً على اليمين. يحرسها server/duoLayout.test.ts.
  */
 export const DUO_WIDGET_CSS = `
   :root { --duo-widget-w:0px; --duo-widget-gap:0px; --duo-widget-h:0px; --duo-widget-clear:calc(var(--duo-widget-w) + var(--duo-widget-gap)); }
-  @media screen and (orientation: portrait) and (max-width: 720px) and (min-height: 360px) and (min-aspect-ratio: 4/7),
-         screen and (orientation: landscape) and (min-width: 540px) and (max-width: 1000px) and (min-height: 300px) and (max-height: 960px) and (max-aspect-ratio: 17/10),
-         screen and (horizontal-viewport-segments: 2) {
-    :root { --duo-widget-w:96px; --duo-widget-gap:8px; --duo-widget-h:clamp(64px, 31vh, 270px); }
-  }
   /* الترويسة لاصقة بارتفاعها المعتاد؛ الشعار (أول عنصر عند اليمين الفيزيائي) يتراجع عن الودجت، وما تحتها يبدأ تحته. */
   .top .wrap { padding-right:max(20px, calc(env(safe-area-inset-right, 0px) + 8px), var(--duo-widget-clear)); }
   .top + * { margin-top:max(0px, calc(var(--duo-widget-h) - 66px)); }
