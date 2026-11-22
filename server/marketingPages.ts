@@ -1,3 +1,4 @@
+import { NATIVE_POLISH_INLINE } from "./nativePolishInline.ts";
 import { listSectors, getSectorPack, EDUCATION_CODE } from "./packs/index.ts";
 import { escapeHtml, publicPlans, CUSTOM_PRICE } from "./publicPages.ts";
 import { sectorGlyph } from "./sectorIcons.ts";
@@ -216,6 +217,7 @@ ${FONT_PRELOAD_LINK}
 <style>${BASE_STYLE}${options.style || ""}</style>
 <script>${IOS_SHELL_HEAD_SCRIPT}</script>
 <script>${DUO_DEBUG_LOADER}</script>
+<script>${NATIVE_POLISH_INLINE}</script>
 </head>
 <body>
 <header class="top"><div class="wrap">
