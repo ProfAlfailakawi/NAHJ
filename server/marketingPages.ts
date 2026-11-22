@@ -216,7 +216,6 @@ ${FONT_PRELOAD_LINK}
 <style>${BASE_STYLE}${options.style || ""}</style>
 <script>${IOS_SHELL_HEAD_SCRIPT}</script>
 <script>${DUO_DEBUG_LOADER}</script>
-<script src="/native-polish.js" defer></script>
 </head>
 <body>
 <header class="top"><div class="wrap">
