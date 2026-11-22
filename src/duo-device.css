@@ -113,16 +113,17 @@ html[data-device="duo"] .toast {
  *    وزرّ الإيقاف الطارئ أسفل العمود. لا «+»: لا يوجد في نهج إجراء إنشاءٍ واحدٌ يصلح لكل صفحة.
  *    العمود يتبع data-widget-side بعد التدوير.
  * ========================================================================== */
-html[data-device="duo"] { --duo-clock-end: 160px; }
+/* بداية العمود تحت مربع الساعة والبطارية (يبلغ نحو 165px من الأعلى) بفاصلٍ ظاهر، لا ملاصقاً لحافته. */
+html[data-device="duo"] { --duo-clock-end: 176px; }
 @media screen and (orientation: landscape) { html[data-device="duo"] { --duo-clock-end: 110px; } }
 
 @media screen and (orientation: portrait) and (max-width: 559px), screen and (orientation: landscape) and (max-height: 520px) {
   html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .topbar {
-    padding-right: calc(10px + var(--duo-sa-r)); padding-left: calc(10px + var(--duo-sa-l));
+    padding-right: calc(16px + var(--duo-sa-r)); padding-left: calc(10px + var(--duo-sa-l));
     padding-top: var(--duo-sa-t);
   }
   html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .content-stage {
-    padding-right: calc(12px + var(--duo-sa-r)) !important; padding-left: calc(12px + var(--duo-sa-l)) !important;
+    padding-right: calc(20px + var(--duo-sa-r)) !important; padding-left: calc(12px + var(--duo-sa-l)) !important;
     padding-bottom: calc(24px + var(--duo-sa-b)) !important;
   }
   html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .mobile-dock,
