@@ -5,6 +5,7 @@ import {
   daysBetween, evaluateSubscription, formatMoney, getSubscription, listInvoices,
   outstandingBalance, recordBillingEvent,
 } from "./billing.ts";
+import { pushForNotification } from "./nativePush.ts";
 
 /*
  * الإشعارات.
@@ -269,6 +270,9 @@ export function enqueue(input: EnqueueInput): Notification | null {
     /* القيد الفريد رفض التكرار — وهذا هو المقصود منه. */
     return null;
   }
+
+  /* الإشعار الشخصي يصل كذلك إلى تطبيق صاحبه على iOS — مع البريد أو بدونه. */
+  pushForNotification({ kind: input.kind, recipient, subject: input.subject, body: input.body });
 
   return listNotifications(1).find(notification => notification.id === id) ?? null;
 }
