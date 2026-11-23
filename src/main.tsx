@@ -15,9 +15,11 @@ import './duo-beauty-3.css';
 import './duo-beauty-4.css';
 import './duo-beauty-5.css';
 import './responsive-2026-11.css';
+import './dock-motion.css';
 import './duo-adaptive.css';
 import './duo-device.css';
 import {installDuoMarkers} from './lib/duo-markers';
+import {installDockMotion} from './lib/dockMotion';
 
 /* علامات iPhone Duo على الجذر (data-device، data-shell، data-widget-side) — تُقرأ في duo-device.css وحده. */
 installDuoMarkers();
@@ -26,6 +28,9 @@ installDuoMarkers();
 if (new URLSearchParams(window.location.search).get('duo-debug') === '1') {
   const dbg = document.createElement('script'); dbg.src = '/duo-debug.js'; document.head.appendChild(dbg);
 }
+
+/* حركة شريط التنقّل (بصرية فقط): مؤشّرٌ منزلق وضغطةٌ فورية، على الهاتف والدوو. */
+installDockMotion({dock: '.mobile-dock', link: 'button', active: 'button.active:not([aria-expanded="true"]), button[aria-current="page"]', sampleActive: true});
 
 const started = performance.now();
 createRoot(document.getElementById('root')!).render(<StrictMode><App /></StrictMode>);

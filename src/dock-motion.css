@@ -1,0 +1,45 @@
+/* ==========================================================================
+   حركة شريط التنقّل (src/lib/dockMotion.ts) — بصرية فقط، على الهاتف والدوو.
+   شريط الجوال (`.mobile-dock`) في كل وضعياته: الشريط السفلي في الهاتف، والكبسولة في عمود الساعة،
+   والشريط العائم في الداخلية. مؤشّرٌ واحد (.dm-ind) ينزلق تحت الوجهة النشطة بدل خلفيةٍ تقفز من زرّ
+   إلى زرّ، ويأخذ لون الزرّ النشط وظلّه واستدارته كما يرسمها كل وضعٍ (يقيسها السكربت في سمة data-dm-sample).
+   الوجهات وترتيبها وموضع الشريط وحجمه كما هي. سطح المكتب وiPad (الشريط مخفي فيهما) لا يتغيّران.
+   ========================================================================== */
+.mobile-dock[data-dm-ready]{ transition:transform .32s cubic-bezier(.32,.72,0,1), opacity .22s ease }
+html body .mobile-dock > .dm-ind{
+  position:absolute; z-index:0; pointer-events:none; opacity:0; display:block;
+  min-width:0; min-height:0; margin:0; padding:0; border:0; flex:none;
+  border-radius:var(--dm-ind-radius, var(--dm-auto-radius, 12px));
+  background-color:var(--dm-ind-bg, var(--dm-auto-bg, rgb(255 255 255 / .16)));
+  background-image:var(--dm-auto-img, none);
+  box-shadow:var(--dm-auto-shadow, none);
+  transition:transform .26s cubic-bezier(.34,1.56,.64,1), opacity .2s ease;
+}
+html body .mobile-dock > .dm-ind.dm-press{ transform:scale(.94); transition-duration:.09s; transition-timing-function:ease-out }
+
+html body .mobile-dock[data-dm-ready] button{ position:relative; z-index:1; -webkit-tap-highlight-color:transparent }
+/* الخلفية النشطة صار يرسمها المؤشّر المنزلق (إلا لحظة القياس). */
+/* «المزيد» المفتوح يبقى مضاءً بخلفيته هو (يُفتح فوق القسم النشط ولا يأخذ مؤشّره). */
+html body .mobile-dock[data-dm-ready]:not([data-dm-sample]) button:is(.active, [aria-current="page"]):not([aria-expanded="true"]),
+html body .mobile-dock[data-dm-ready]:not([data-dm-sample]) button:active{ background:transparent !important; box-shadow:none !important }
+html body .mobile-dock[data-dm-ready] button{ transition:transform .26s cubic-bezier(.34,1.56,.64,1), color .2s ease !important }
+html body .mobile-dock[data-dm-sample] button{ transition:none !important }
+html body .mobile-dock[data-dm-ready] button.dm-press{ transform:scale(.9); transition-duration:.09s !important; transition-timing-function:ease-out !important }
+html body .mobile-dock[data-dm-ready] button:active:not(.dm-press){ transform:none }
+/* الأيقونة التي صارت نشطة تتنفّس مرّةً واحدة، فيُفهم الانتقال دون لونٍ وحده. */
+html body .mobile-dock[data-dm-ready] button:is(.active, [aria-current="page"]) > svg{ animation:dm-pop .38s cubic-bezier(.32,.72,0,1) }
+@keyframes dm-pop{ 0%{ transform:scale(.84) } 55%{ transform:scale(1.07) } 100%{ transform:none } }
+
+/* لوحة المفاتيح: يتنحّى الشريط ويعود حين تُغلق. */
+html body .mobile-dock.dm-kb{ transform:translateY(calc(100% + 28px)); opacity:0; pointer-events:none }
+
+@media (prefers-reduced-motion:reduce){
+  html body .mobile-dock[data-dm-ready], html body .mobile-dock > .dm-ind, html body .mobile-dock[data-dm-ready] button{ transition:none !important }
+  html body .mobile-dock[data-dm-ready] button.dm-press{ transform:scale(.96) }
+  html body .mobile-dock[data-dm-ready] button > svg{ animation:none }
+}
+@media (prefers-contrast:more){
+  html body .mobile-dock > .dm-ind{ outline:2px solid var(--brass, currentColor); outline-offset:-2px }
+}
+/* مرجعٌ للمؤشّر حين لا يكون الشريط مُموضَعًا أصلًا؛ أدنى أولوية فلا يغلب «fixed» في أي صفحة. */
+:where(.mobile-dock){ position:relative }
