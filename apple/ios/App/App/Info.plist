@@ -35,6 +35,14 @@
 	<string>public.app-category.business</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>يُستخدم عند اختيارك التقاط صورة أو مسح رمز داخل التطبيق فقط.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>يُستخدم للوصول إلى الصور والملفات التي تختارها بنفسك لرفعها داخل التطبيق، ولا يُقرأ شيء آخر من مكتبتك.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>يُستخدم الميكروفون عند اختيارك الإملاء الصوتي أو التسجيل داخل التطبيق فقط.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>يُستخدم التعرّف على الكلام لتحويل صوتك إلى نص عندما تختار الإملاء الصوتي فقط.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
