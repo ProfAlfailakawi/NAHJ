@@ -310,3 +310,61 @@ html[data-device="duo"] { --duo-clock-end: 176px; }
     --book-m: calc(max(var(--safe-l), var(--safe-r)) + 12px);
   }
 }
+
+/* ==========================================================================
+ * ١٢) الكتاب العرضي في التطبيق: شريط التنقّل كان «فهرسًا» في أسفل الصفحة اليسرى وحدها، فيبدو التنقّل
+ *     ملتصقًا بنصفٍ واحد. صار كبسولةً عمودية في عمود الساعة تحت الساعة (كما في الشاشة الخارجية)، وزرّ
+ *     الإيقاف الطارئ في أسفل العمود؛ والصفحتان تبقيان للمحتوى. وشريط البيئة التجريبية: أزراره أيقوناتٌ
+ *     (تسميتها باقية لقارئ الشاشة وفي التلميح) فلا ينضغط مبدّل القطاع إلى حرفٍ واحد.
+ * ========================================================================== */
+@media screen and (min-width: 721px) and (max-width: 1000px) and (min-height: 520px) and (max-height: 960px) and (orientation: landscape) {
+  html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .mobile-dock,
+  html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]):has(.emergency-fab) body .mobile-dock {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 6px;
+    position: fixed; z-index: 80; top: calc(var(--duo-clock-end) + 8px); bottom: auto; transform: none;
+    width: 58px; min-width: 0; max-width: 58px; height: auto; padding: 5px; overflow: visible;
+    border-radius: 29px; background: var(--duo-glass); border: 1px solid var(--duo-glass-line);
+    box-shadow: var(--duo-glass-shadow);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4);
+  }
+  html[data-device="duo"][data-shell="app"][data-widget-side="right"] body .mobile-dock { inset-inline: auto; right: calc((var(--duo-sa-r) - 58px) / 2); left: auto; }
+  html[data-device="duo"][data-shell="app"][data-widget-side="left"] body .mobile-dock { inset-inline: auto; left: calc((var(--duo-sa-l) - 58px) / 2); right: auto; }
+  html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .mobile-dock button {
+    flex: none; width: 46px; height: 46px; min-width: 46px; max-width: none; padding: 0; border-radius: 50%;
+    display: grid; place-items: center; border: 0; background: none; box-shadow: none; color: rgb(255 255 255 / .8);
+  }
+  html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .mobile-dock button.active { background: rgb(255 255 255 / .16); color: #fff; }
+  html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .mobile-dock button svg { width: 21px; height: 21px; color: inherit; }
+  html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .mobile-dock button::before,
+  html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .mobile-dock button::after { display: none; }
+  html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .mobile-dock small {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .emergency-fab {
+    position: fixed; z-index: 81; top: auto; bottom: calc(14px + var(--duo-sa-b)); inset-inline: auto;
+    width: 48px; height: 48px; min-width: 48px; padding: 0; justify-content: center; border-radius: 50%;
+  }
+  html[data-device="duo"][data-shell="app"][data-widget-side="right"] body .emergency-fab { right: calc((var(--duo-sa-r) - 48px) / 2); left: auto; }
+  html[data-device="duo"][data-shell="app"][data-widget-side="left"] body .emergency-fab { left: calc((var(--duo-sa-l) - 48px) / 2); right: auto; }
+  /* الصفحة اليسرى لم تعد تحجز أسفلها للفهرس. */
+  html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .content-stage { padding-bottom: calc(24px + var(--duo-sa-b)) !important; }
+
+  html[data-device="duo"] body .demo-banner[role="region"] > button { width: 40px; min-width: 40px; padding: 0; justify-content: center; }
+  html[data-device="duo"] body .demo-banner[role="region"] > button > span {
+    position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  html[data-device="duo"] body .demo-banner[role="region"] > .demo-banner-switch select { min-width: 9rem; }
+}
+
+/* ==========================================================================
+ * ١٣) الخارجية عرضاً (678×466): «الأثر» كان عمودين في ~570px، فتنكسر «المهارات» حرفاً حرفاً وتنزل «%»
+ *     إلى سطرٍ وحدها في بطاقات المؤشرات. المؤشرات صفٌّ واحد تحت بطاقة الأتمتة، والقيمة سطرٌ واحد.
+ * ========================================================================== */
+@media screen and (orientation: landscape) and (max-height: 520px) {
+  html[data-device="duo"] body .impact-layout { grid-template-columns: minmax(0, 1fr); grid-template-areas: none; }
+  html[data-device="duo"] body .impact-layout > * { grid-area: auto; }
+  html[data-device="duo"] body .impact-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  html[data-device="duo"] body .impact-metric strong { white-space: nowrap; }
+  html[data-device="duo"] body .impact-metric strong { overflow-wrap: normal; word-break: normal; }
+  html[data-device="duo"] body .impact-metric small { overflow-wrap: normal; word-break: normal; }
+}

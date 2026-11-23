@@ -288,6 +288,13 @@ const LANDING_STYLE = `
   .orbit-core svg { width:62%; height:62%; }
   @keyframes orbitSpin { to { transform:rotate(360deg); } }
   @media (max-width:560px) { .hero .actions .btn { flex:1 1 100%; } }
+  /* iPhone Duo مفتوحاً عرضاً: البطل صفحتان متساويتان والحشوة متناظرة، فلا يعبر العنوانُ المفصل. */
+  @media screen and (min-width:721px) and (max-width:1000px) and (min-height:520px) and (max-height:960px) and (orientation:landscape) {
+    body main > .wrap:has(> .hero), body .wrap:has(> .hero) {
+      padding-left:max(20px, calc(env(safe-area-inset-left, 0px) + 12px), calc(env(safe-area-inset-right, 0px) + 12px));
+      padding-right:max(20px, calc(env(safe-area-inset-left, 0px) + 12px), calc(env(safe-area-inset-right, 0px) + 12px)); }
+    .hero { grid-template-columns:repeat(2, minmax(0,1fr)); column-gap:48px; }
+  }
   @media (max-width:900px) { .hero { grid-template-columns:1fr; padding-top:40px; } .hero-visual { order:2; } .orbit { --s:min(300px, 78vw); } }
   .hero .eyebrow { display:inline-block; font-size:14px; font-weight:800; color:#276b56; background:var(--moss-soft); padding:6px 12px; border-radius:999px; }
   @media (min-width:700px) and (max-height:700px) { .hero { padding-block:36px 16px; } .hero h1 { font-size:clamp(32px, 4.6vw, 46px) !important; margin:12px 0 10px !important; } }
@@ -684,6 +691,16 @@ const DOC_STYLE = `
   article.doc a { color:var(--moss); font-weight:700; }
   article.doc ul { padding-inline-start:22px; }
   article.doc .box { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 20px; margin:18px 0; }
+  /* iPhone Duo مفتوحاً عرضاً (كتاب 951–1000): النص كان عموداً واحداً يعبر المفصل. صفحتان متساويتان: العنوان والفهرس
+     على اليمنى، والنص على اليسرى، والحشوة متناظرة (بقدر عمود الساعة في التطبيق) فيقع الفاصل على المفصل. */
+  @media screen and (min-width:721px) and (max-width:1000px) and (min-height:520px) and (max-height:960px) and (orientation:landscape) {
+    body .doc-layout { max-width:none; grid-template-columns:repeat(2, minmax(0,1fr)); grid-template-rows:auto 1fr; gap:0 48px;
+      padding-left:max(20px, calc(env(safe-area-inset-left, 0px) + 12px), calc(env(safe-area-inset-right, 0px) + 12px));
+      padding-right:max(20px, calc(env(safe-area-inset-left, 0px) + 12px), calc(env(safe-area-inset-right, 0px) + 12px)); }
+    .doc-head { grid-column:1; grid-row:1; }
+    .toc { grid-column:1; grid-row:2; position:sticky; top:90px; }
+    .doc-layout > article.doc { grid-column:2; grid-row:1 / span 2; max-width:none; }
+  }
   /* الهاتف واللوحي: العنوان أولاً ثم الفهرس ثم النص — كان الفهرس الطويل يسبق عنوان الصفحة فلا يُعرف أين أنت. */
   @media (max-width:900px) { .doc-layout { grid-template-columns:1fr; gap:0; padding-top:32px; } .doc-head, .toc, .doc-layout > article.doc { grid-column:1; grid-row:auto; } .doc-head .updated { margin-bottom:18px; } .toc { position:static; margin-bottom:8px; } .toc ol { grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); } }
 `;
