@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isAppleNativeShell } from "./platform";
 
 /*
  * الإملاء الصوتي في وضع التعليم — Web Speech API باللهجة الكويتية (ar-KW).
@@ -16,6 +17,8 @@ type Recognition = {
 
 const recognitionCtor = (): (new () => Recognition) | null => {
   if (typeof window === "undefined") return null;
+  /* غلاف iOS (WKWebView) لا يوفّر التعرّف الصوتي: يُخفى الإملاء هناك والكتابة تبقى. */
+  if (isAppleNativeShell()) return null;
   const w = window as any;
   return w.SpeechRecognition || w.webkitSpeechRecognition || null;
 };
