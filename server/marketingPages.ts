@@ -105,6 +105,11 @@ export const DUO_WIDGET_CSS = `
   /* الترويسة لاصقة بارتفاعها المعتاد؛ الشعار (أول عنصر عند اليمين الفيزيائي) يتراجع عن الودجت، وما تحتها يبدأ تحته. */
   .top .wrap { padding-right:max(20px, calc(env(safe-area-inset-right, 0px) + 8px), var(--duo-widget-clear)); }
   .top + * { margin-top:max(0px, calc(var(--duo-widget-h) - 66px)); }
+  /* الداخلية طولًا (≈669×951): الساعة شريطٌ علوي (safe-area-inset-top ≈ 82px في التطبيق)، فتنزل الترويسة تحته بدل أن تقع في الشريط.
+     حدّها حجمُ الشاشة (669–720 عرضًا، نسبتها ≤ 1.5) فلا يتغيّر iPhone ولا iPad. */
+  @media screen and (orientation:portrait) and (min-width:600px) and (max-width:720px) and (max-aspect-ratio:3/2) {
+    .top { padding-top:env(safe-area-inset-top, 0px); }
+  }
   /* At the narrow portrait Duo pose the reserved corner leaves little header
      width. Keep the primary login and demo actions reachable without pushing
      the navigation beyond the physical left edge. */
