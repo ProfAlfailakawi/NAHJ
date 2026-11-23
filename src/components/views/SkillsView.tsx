@@ -2,6 +2,8 @@ import React,{useEffect,useId,useMemo,useState} from "react";
 import { AlertTriangle, ArrowDownToLine, BrainCircuit, Check, CircleDot, GitCommitVertical, X, CirclePause, FileText, History, ShieldCheck, Sparkles, UserPlus, Zap } from "lucide-react";
 import { api, ApiError, apiOrNull } from "../../lib/api";
 import { Dialog } from "../Dialog";
+import { ManualPrintOverlay } from "../ManualPrintOverlay";
+import { isAppleNativeShell } from "../../lib/platform";
 import type { AutonomyLevel, Skill } from "../../types";
 import { Dt, PageHeader, SectionTitle } from "../Primitives";
 import { SkillRunway } from "../Visuals";
@@ -83,8 +85,10 @@ function ManualPanel({lang,skill,onSkillUpdated,notify}:{lang:"ar"|"en";skill:Sk
   const ids={lang:useId(),cal:useId(),dig:useId(),ver:useId(),sig:useId()};
   useEffect(()=>{setVersion(skill.activeVersion);setVerdict(null);setDrafts({})},[skill.id,skill.activeVersion]);
   const versions=[...new Set([skill.activeVersion,...(skill.versions||[]).map(v=>v.version)])].sort((a,b)=>b-a);
+  const [printUrl,setPrintUrl]=useState<string|null>(null);
   const open=()=>{
     const url=`/api/skills/${encodeURIComponent(skill.id)}/manual?version=${version}&lang=${mlang}&calendar=${calendar}&digits=${digits}`;
+    if(isAppleNativeShell()){setPrintUrl(url);return}
     const w=window.open(url,"_blank");
     if(w)w.addEventListener("load",()=>{try{w.focus();w.print()}catch{/* الطباعة من المتصفح */}});
   };
@@ -99,6 +103,7 @@ function ManualPanel({lang,skill,onSkillUpdated,notify}:{lang:"ar"|"en";skill:Sk
     }catch(error){notify?.(error instanceof ApiError?error.message:(ar?"تعذّر الحفظ":"Could not save"),true)}
   };
   return <section className="manual-panel">
+    {printUrl&&<ManualPrintOverlay url={printUrl} ar={ar} onClose={()=>setPrintUrl(null)}/>}
     <SectionTitle title={ar?"دليل الإجراء المطبوع":"Printable procedure manual"} meta={`v${version}`}/>
     <div className="manual-options">
       <label htmlFor={ids.ver}>{ar?"الإصدار":"Version"}</label>

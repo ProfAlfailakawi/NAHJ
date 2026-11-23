@@ -56,3 +56,13 @@
 .skip-link:focus, .skip-link:focus-visible { transform: none; outline: 2px solid var(--brass, var(--moss)); outline-offset: 2px; }
 #main-content:focus { outline: none; }
 @media (prefers-reduced-motion: reduce) { .skip-link { transition: none; } }
+
+/* طباعة دليل الإجراء داخل غلاف iOS: طبقة داخل الصفحة، و@media print يُخفي ما عداها */
+.manual-print-overlay { position: fixed; inset: 0; z-index: 2000; overflow: auto; background: var(--paper, #fff); color: var(--ink, #141413); padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+.manual-print-bar { position: sticky; top: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; background: var(--paper, #fff); border-bottom: 1px solid rgba(0,0,0,.12); }
+.manual-print-page { padding: 16px; }
+@media print {
+  body.manual-print-open > #root { display: none !important; }
+  body.manual-print-open .manual-print-bar { display: none !important; }
+  body.manual-print-open .manual-print-overlay { position: static; overflow: visible; padding: 0; }
+}
