@@ -180,6 +180,24 @@ const STYLE = `
   .honest h3 { margin:0; font-size:21px; font-weight:900; }
   .honest .why { color:var(--muted); font-size:15px; margin:14px 0 0; }
   .p-cta { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin:40px 0 0; }
+  /* iPhone Duo مفتوحاً عرضاً (كتاب 951–1000): أربع بطاقات في صفٍّ كان يقع فاصلها الضيّق على المفصل. صفحتان متساويتان:
+     بطاقتان في كل صفحة بفجوةٍ عريضة عند المفصل، والعنوان والشرح على الصفحة اليمنى ومبدّل الدورة على اليسرى،
+     والنصوص الطويلة لا تعبر المفصل. */
+  @media screen and (min-width:721px) and (max-width:1000px) and (min-height:520px) and (max-height:960px) and (orientation:landscape) {
+    .wrap:has(> .pricing) { padding-left:max(20px, calc(env(safe-area-inset-left, 0px) + 12px), calc(env(safe-area-inset-right, 0px) + 12px)); padding-right:max(20px, calc(env(safe-area-inset-left, 0px) + 12px), calc(env(safe-area-inset-right, 0px) + 12px)); }
+    .pricing { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); column-gap:48px; align-items:start; }
+    .pricing > .eyebrow { grid-column:1; grid-row:1; justify-self:start; }
+    .pricing > h1 { grid-column:1; grid-row:2; }
+    .pricing > .lead { grid-column:1; grid-row:3; max-width:none; }
+    .pricing > .cycle { grid-column:2; grid-row:1 / span 3; align-self:end; justify-self:center; margin:0 0 6px; }
+    .pricing > .plans, .pricing > .plans:has(.plan:nth-child(4):last-child) { grid-column:1 / -1; grid-template-columns:repeat(2, minmax(0,1fr)); gap:20px 48px; margin-top:24px; }
+    .plans:has(.plan:nth-child(4):last-child) .plan { padding:24px 20px; }
+    .plans:has(.plan:nth-child(4):last-child) .limits li, .plans:has(.plan:nth-child(4):last-child) .feat li { font-size:15px; }
+    .pricing > .ladder-legend { grid-column:1; max-width:none; }
+    .honest-wrap ul { grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px 48px; align-items:start; }
+    .p-cta { justify-content:flex-start; }
+    .honest-wrap .why, .pricing-note { max-width:calc(50% - 24px); }
+  }
 `;
 
 /**
