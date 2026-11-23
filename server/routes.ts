@@ -34,6 +34,7 @@ import { normalizeManualOptions, renderManualHtml, signManual, verifyManual } fr
 import { SECTOR_COMPLIANCE_PRESETS } from "./engine/policyEngine.ts";
 import { flushNotifications, listNotifications, notifyEmergencyPause, notifyStatus } from "./notify.ts";
 import { incrementUsage, maxAutonomyLevel } from "./billing.ts";
+import { pushApprovalRequested, pushRouter } from "./nativePush.ts";
 import { blockIfOverLimit, countMonthly, evaluate, noteUsage, recordBlock } from "./entitlements.ts";
 import {
   AuthenticatedRequest,
@@ -381,6 +382,12 @@ apiRouter.use((req: AuthenticatedRequest, _res: Response, next: NextFunction) =>
   if (!account) return next();
   requestAccount.run({ id: account.id, name: account.name, email: account.email, role: account.role }, next);
 });
+
+/*
+ * تنبيهات تطبيق iOS — قبل حارس المشاهدة عمداً: تسجيلُ جهازٍ ليتلقّى تنبيهاته
+ * لا يغيّر شيئاً في التشغيل، ومن يملك حساب مشاهدة يحقّ له أن يُنبَّه.
+ */
+apiRouter.use("/push", pushRouter);
 
 /*
  * حساب المشاهدة للقراءة فقط — في كل مسار، لا في المسارات التي تذكّر أحدٌ حراستها.
@@ -1691,6 +1698,8 @@ apiRouter.post("/simulator/message", requireRole("admin", "manager", "operator")
       db.simulatorState.requiresManagerApproval = true;
       db.simulatorState.approvalStatus = "pending";
       db.simulatorState.approvalId = approvalId;
+      /* البيئة التجريبية لا تُنبّه أحداً: طلبها اصطناعي. */
+      if (!db.isDemo) pushApprovalRequested({ id: approvalId, workTitle: workItem.title, actionName: turn.approval.action, requiredRole: turn.approval.requiredRole });
     }
     return res.json({ success: true, state: db.simulatorState });
   }

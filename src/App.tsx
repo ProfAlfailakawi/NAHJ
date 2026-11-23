@@ -34,6 +34,7 @@ import { LoginScreen } from "./components/LoginScreen";
 import { OrgSetupView } from "./components/OrgSetupView";
 import { PageHeader } from "./components/Primitives";
 import { APPLE_PLANS_NOTICE, isAppleNativeShell } from "./lib/platform";
+import { onNativePushOpened } from "./lib/nativePush";
 import type { ApprovalRequest,AuditEvent,AutonomyLevel,Connector,LearningProposal,Organization,ShadowComparison,Skill,TestCase,User,WorkItem } from "./types";
 
 /*
@@ -198,6 +199,19 @@ export default function App(){
   },[]);
 
   useEffect(()=>{document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.documentElement.lang=lang},[lang]);
+  /*
+   * لمسُ تنبيهٍ من iOS يفتح وجهته: «#approval=<id>» يفتح طلب الاعتماد نفسه،
+   * و«#<شاشة>» يفتح الشاشة. الرابط من خادمنا، ولا يُقبل منه إلا هذان الشكلان.
+   */
+  useEffect(()=>{
+    let stop=()=>{};
+    void onNativePushOpened(url=>{
+      const hash=url.includes("#")?decodeURIComponent(url.slice(url.indexOf("#")+1)):"";
+      if(hash.startsWith("approval=")){setSection("today");setActiveApproval(hash.slice(9));return;}
+      if(/^[a-zA-Z]+$/.test(hash))setSection(hash as SectionId);
+    }).then(fn=>{stop=fn;});
+    return ()=>stop();
+  },[]);
   /*
    * الاختصار المكتوب على الحقل منذ البداية ولم يكن مربوطاً بشيء. ويُلتقط على
    * مستوى النافذة ليعمل من أي شاشة، ويُمنع السلوك الافتراضي للمتصفح.

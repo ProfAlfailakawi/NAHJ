@@ -3,6 +3,7 @@ import { Eye, EyeOff, KeyRound, LogOut, ShieldCheck, TriangleAlert, UserPlus, Us
 import { PageHeader } from "../Primitives";
 import { accountsApi, ApiError, authApi, deletionApi, type AccountSummary, type DeletionRequestSummary } from "../../lib/api";
 import { DeleteAccountSection } from "../DeleteAccountSection";
+import { NativePushSection } from "../NativePushSection";
 
 interface Props {
   lang: "ar" | "en";
@@ -147,6 +148,8 @@ export function AccountsView({ lang, currentAccountId, isAdmin, notify, role, is
           </button>
         </form>
       </section>
+
+      <NativePushSection lang={lang} />
 
       <DeleteAccountSection lang={lang} role={role} isDemo={Boolean(isDemo)} notify={notify} />
 
