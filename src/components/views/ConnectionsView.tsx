@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import type { Connector } from "../../types";
 import { Dt, PageHeader, SectionTitle } from "../Primitives";
-import { ConnectionConstellation } from "../Visuals";
+import { HonestConstellation } from "../wave/HonestConstellation";
 import { DnaLive, DnaStatusHeader, useDnaFlash } from "../dna";
 import { apiOrNull } from "../../lib/api";
 
@@ -173,7 +173,9 @@ export function ConnectionsView({ lang, connectors, testingId, onTest, isDemo = 
 
       <div className="connections-layout">
         <section className="connection-map surface">
-          <ConnectionConstellation statuses={status} ar={ar} />
+          {/* عقدةٌ لكل موصلٍ موجود (الكوكبة الصادقة)؛ الحالة المجمّعة كانت تُرسم أعداداً. */}
+          <HonestConstellation ar={ar} connectors={connectors} testingId={testingId} />
+          <span className="sr-only">{ar ? `سليم ${status.healthy}، متراجع ${status.degraded}، منقطع ${status.disconnected}` : `Healthy ${status.healthy}, degraded ${status.degraded}, disconnected ${status.disconnected}`}</span>
         </section>
 
         <section className="connection-list surface-strong">

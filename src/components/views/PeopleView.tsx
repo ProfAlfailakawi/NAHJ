@@ -4,6 +4,8 @@ import { api, ApiError, apiOrNull } from "../../lib/api";
 import { Dt, PageHeader, SectionTitle } from "../Primitives";
 import { DnaRing, DnaDraw } from "../dna";
 import { dataText } from "../../lib/labels";
+import type { Skill, WorkItem } from "../../types";
+import { AbsencePanel, absenceImpact } from "../wave/AbsenceSim";
 
 /*
  * من تعتمد عليه المؤسسة وحده.
@@ -22,7 +24,7 @@ interface CoverageReport {
   history: { date: string; score: number; singlePoints: number; total: number }[];
 }
 
-type Props = { lang: "ar" | "en"; canAssign: boolean; notify: (text: string, error?: boolean) => void; onChanged?: () => void };
+type Props = { lang: "ar" | "en"; canAssign: boolean; notify: (text: string, error?: boolean) => void; onChanged?: () => void; skills?: Skill[]; workItems?: WorkItem[] };
 
 function BackupForm({ skillId, ar, onAssigned, notify }: { skillId: string; ar: boolean; onAssigned: (c: CoverageReport) => void; notify: Props["notify"] }) {
   const [name, setName] = useState("");
@@ -48,7 +50,7 @@ function BackupForm({ skillId, ar, onAssigned, notify }: { skillId: string; ar: 
   );
 }
 
-export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
+export function PeopleView({ lang, canAssign, notify, onChanged, workItems }: Props) {
   const ar = lang === "ar";
   const [coverage, setCoverage] = useState<CoverageReport | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -92,6 +94,10 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
     for (const info of bySkill.values()) for (const backup of info.backups) if (!names.includes(backup)) names.push(backup);
     return { bySkill, names };
   })();
+  /* «يومٌ غائب»: محاكاة للقراءة فقط من الشبكة نفسها. */
+  const [absent, setAbsent] = useState<string | null>(null);
+  const impact = absent ? absenceImpact(absent, gridHolders.bySkill, new Map(gridSkills.map(s => [s.id, s.name])), workItems || []) : null;
+  const stalledIds = new Set(impact?.stalled.map(s => s.id) || []);
   return (
     <div className="page-enter">
       <PageHeader eyebrow={ar ? "الأشخاص / الاعتماد" : "PEOPLE / COVERAGE"}
@@ -137,8 +143,11 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
             ))}
           </ul>
         </section>
+        {coverage && gridHolders.names.length > 0 && gridSkills.length > 0 && (
+          <AbsencePanel ar={ar} people={gridHolders.names} absent={absent} onPick={setAbsent} impact={impact} workLoaded={workItems !== undefined} />
+        )}
         {coverage && coverage.people.length > 0 && gridSkills.length > 0 && (
-          <section className="surface people-matrix">
+          <section className={`surface people-matrix ${absent ? "has-absent" : ""}`}>
             <SectionTitle title={ar ? "من يحمل ماذا" : "Who holds what"} />
             <p className="scroll-hint" aria-hidden="true">{ar ? "← اسحب الجدول جانبياً لرؤية بقية المهارات" : "Swipe the table sideways to see more skills"}</p>
             <div className="people-matrix-scroll" tabIndex={0} role="region" aria-label={ar ? "شبكة الأشخاص والمهارات" : "People by skill grid"}>
@@ -147,8 +156,8 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
                 <thead><tr><td />{gridSkills.map(skill => <th key={skill.id} scope="col" title={dataText(skill.name, ar)}><span><Dt t={skill.name} ar={ar} /></span></th>)}</tr></thead>
                 <tbody>
                   {gridHolders.names.map(personName => (
-                    <tr key={personName}>
-                      <th scope="row">{personName}</th>
+                    <tr key={personName} className={absent === personName ? "is-absent" : ""}>
+                      <th scope="row"><button type="button" className="pm-person" aria-pressed={absent === personName} title={ar ? "محاكاة غيابه (قراءة فقط)" : "Simulate their absence (read-only)"} onClick={() => setAbsent(absent === personName ? null : personName)}>{personName}</button></th>
                       {gridSkills.map(skill => {
                         const info = gridHolders.bySkill.get(skill.id);
                         const isOwner = info?.owner === personName;
@@ -158,7 +167,7 @@ export function PeopleView({ lang, canAssign, notify, onChanged }: Props) {
                           ? (info?.covered ? (ar ? "يحملها ومغطّاة" : "Holds, covered") : (ar ? "يحملها وحده" : "Sole holder"))
                           : isBackup ? (ar ? "يحملها احتياطاً" : "Backup holder")
                           : (ar ? "لا يحملها" : "Does not hold");
-                        return <td key={skill.id} className={`pm-${state}`} title={text}>
+                        return <td key={skill.id} className={`pm-${state}${stalledIds.has(skill.id) ? " pm-stall" : ""}`} title={text}>
                           {state === "warn" ? <AlertTriangle aria-hidden="true" /> : <Circle aria-hidden="true" fill={state === "ok" ? "currentColor" : "none"} />}
                           <span className="sr-only">{text}</span>
                         </td>;

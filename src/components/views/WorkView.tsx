@@ -3,7 +3,8 @@ import { Hand, PauseCircle, Play, ShieldAlert, UserRound, Waypoints } from "luci
 import { NahjGlyph } from "../Brand";
 import type { WorkItem } from "../../types";
 import { Dt, PageHeader, SectionTitle } from "../Primitives";
-import { DnaStepper, DnaTimeline, DnaDraw, dnaStagger, type DnaStep } from "../dna";
+import { DnaStepper, DnaTimeline, DnaDraw, DnaSegmented, dnaStagger, type DnaStep } from "../dna";
+import { WorkRiver } from "../wave/WorkRiver";
 import { workStatePlain } from "../../lib/glossary";
 import { timelineBadgeLabel, dataText } from "../../lib/labels";
 
@@ -46,12 +47,19 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
   const matches=(w:WorkItem)=>filter==="all"||(filter==="live"?w.state!=="completed"&&w.state!=="waiting_approval"&&w.state!=="escalated":filter==="approval"?w.state==="waiting_approval"||w.state==="escalated":w.state==="completed");
   const filtered=useMemo(()=>items.filter(matches),[items,filter]); // eslint-disable-line react-hooks/exhaustive-deps
   const counts={all:items.length,live:items.filter(w=>w.state!=="completed"&&w.state!=="waiting_approval"&&w.state!=="escalated").length,approval:items.filter(w=>w.state==="waiting_approval"||w.state==="escalated").length,done:items.filter(w=>w.state==="completed").length};
+  /* «النهر» عرضٌ بديل؛ القمع والقائمة كما كانا بزرّ واحد. */
+  const [view,setView]=useState<"river"|"list">("river");
   const tabs:[typeof filter,string][]=[["all",ar?"الكل":"All"],["live",ar?"جارية بلا قرار":"Running, no decision"],["approval",ar?"تحتاج قراراً":"Needs a decision"],["done",ar?"مكتملة":"Completed"]];
   return <div className="page-enter">
     <PageHeader eyebrow={ar?"العمل / مباشر":"WORK / LIVE"} title={ar?"العمل يتحرك أمامك.":"Watch the work move."} hint={ar?"كل حالة لها مسار، قرار، مصدر، وإنسان يستطيع الاستلام فورًا.":"Every case has a path, evidence, and a human takeover switch."}/>
     <div className="work-layout">
       <section className="work-queue surface">
         <SectionTitle title={ar?"الجاري":"Live"} meta={ar?`${items.filter(i=>i.state!=="completed").length} لم تكتمل بعد`:`${items.filter(i=>i.state!=="completed").length} not completed`}/>
+        {items.length>0&&<DnaSegmented className="work-view-switch" ariaLabel={ar?"طريقة عرض الحالات":"Cases view"} value={view} onChange={setView}
+          options={[{value:"river",label:ar?"النهر":"River"},{value:"list",label:ar?"القمع والقائمة":"Funnel & list"}]}/>}
+        {items.length>0&&view==="river"&&<WorkRiver ar={ar} items={items} selectedId={item?.id} onSelect={id=>{setSelectedId(id);
+          if(window.matchMedia("(max-width:639px)").matches)requestAnimationFrame(()=>document.querySelector(".work-focus")?.scrollIntoView({behavior:"smooth",block:"start"}))}}/>}
+        {(view==="list"||items.length===0)&&<>
         {items.length>0&&(()=>{const stages=[...WORK_FLOW,...(items.some(w=>w.state==="escalated")?["escalated"]:[])];const max=Math.max(1,...stages.map(st=>items.filter(w=>w.state===st).length));
           return <DnaDraw className="work-funnel" role="list" aria-label={ar?"عدد الحالات في كل مرحلة":"Cases per stage"} playKey="work:funnel">
             {stages.map((st,si)=>{const n=items.filter(w=>w.state===st).length;return <div role="listitem" key={st} className={`${n?"has":""} ${st==="escalated"?"esc":""}`}><small>{workStatePlain(st,ar)}</small><span aria-hidden="true"><i className="dna-grow" style={{width:`${n?Math.max(4,n/max*100):0}%`,...dnaStagger(si)}}/></span><b>{n}</b></div>})}
@@ -66,6 +74,7 @@ export function WorkView({lang,items,onTakeOver,onResume,onApproval,approvalByWo
         </button>)}</div>
         {filtered.length>shown&&<button type="button" className="btn-secondary work-more" onClick={()=>setShown(v=>v+24)}>{ar?`عرض المزيد (${Math.min(24,filtered.length-shown)} من ${filtered.length-shown} متبقية)`:`Show more (${Math.min(24,filtered.length-shown)} of ${filtered.length-shown} left)`}</button>}
         {filtered.length===0&&<p className="decision-muted">{ar?"لا حالات في هذا التصنيف.":"No cases in this group."}</p>}
+        </>}
       </section>
       {item&&<section className="work-focus surface-strong">
         <div className="work-focus-top"><div><em>{item.code}</em><h2>{item.contactName||item.title}</h2><span><Dt t={item.skillName} ar={ar}/></span></div><div className={`mode-orb ${item.assignedMode}`}><span>{item.assignedMode==="ai"?<NahjGlyph/>:<UserRound/>}</span><small>{item.assignedMode==="ai"?(ar?"نهج":"AI"):(ar?"موظف":"HUMAN")}</small></div></div>

@@ -35,6 +35,7 @@ import { OrgSetupView } from "./components/OrgSetupView";
 import { PageHeader } from "./components/Primitives";
 import { APPLE_PLANS_NOTICE, isAppleNativeShell } from "./lib/platform";
 import { onNativePushOpened } from "./lib/nativePush";
+import { sectionFromHash, withViewTransition, writeSectionHash } from "./lib/sectionHash";
 import type { ApprovalRequest,AuditEvent,AutonomyLevel,Connector,LearningProposal,Organization,ShadowComparison,Skill,TestCase,User,WorkItem } from "./types";
 
 /*
@@ -88,7 +89,7 @@ export default function App(){
    * يحتاج فيها التأكيد أكثر من أي لحظة أخرى.
    */
   const [section,setSection]=useState<SectionId>(()=>
-    new URLSearchParams(window.location.search).has("payment")||window.location.hash==="#billing"?"billing":"today");
+    new URLSearchParams(window.location.search).has("payment")||window.location.hash==="#billing"?"billing":(sectionFromHash()??"today"));
   const [organization,setOrganization]=useState<Organization>(blankOrganization);
   const [user,setUser]=useState<User>(blankUser);
   const [skills,setSkills]=useState<Skill[]>([]);
@@ -199,6 +200,24 @@ export default function App(){
   },[]);
 
   useEffect(()=>{document.documentElement.dir=lang==="ar"?"rtl":"ltr";document.documentElement.lang=lang},[lang]);
+  /*
+   * رابطٌ عميق لكل قسم (إضافة): القسم يُكتب في #، والرجوع/التقدّم في المتصفح يعيده.
+   * أول كتابة تستبدل ولا تُضيف إلى السجل، فلا يصير «رجوع» خطوةً فارغة.
+   */
+  const firstHashWrite=useRef(true);
+  useEffect(()=>{
+    if(authState!=="authenticated")return;
+    writeSectionHash(section,firstHashWrite.current); firstHashWrite.current=false;
+  },[section,authState]);
+  useEffect(()=>{
+    const onPop=()=>{const s=sectionFromHash();if(s)withViewTransition(()=>setSection(s))};
+    window.addEventListener("popstate",onPop);
+    return()=>window.removeEventListener("popstate",onPop);
+  },[]);
+  /* الانتقال بين الأقسام من الشريط يمرّ بانتقالٍ مشترك حيث يتوفّر؛ الوجهة نفسها. */
+  /* الإيقاف الطارئ مرئيٌّ في الواجهة كلها (لونٌ وحركةٌ مجمّدة) — يتبع الحالة المقروءة من الخادم وحدها. */
+  useEffect(()=>{document.documentElement.toggleAttribute("data-autopilot-paused",paused)},[paused]);
+  const goSection=useCallback((s:SectionId)=>withViewTransition(()=>setSection(s)),[]);
   /*
    * لمسُ تنبيهٍ من iOS يفتح وجهته: «#approval=<id>» يفتح طلب الاعتماد نفسه،
    * و«#<شاشة>» يفتح الشاشة. الرابط من خادمنا، ولا يُقبل منه إلا هذان الشكلان.
@@ -484,17 +503,17 @@ export default function App(){
   /* داخل تطبيق iOS: لا أسعار ولا باقات ولا شراء، جملة محايدة بلا رابط. */
   const applePlansNotice=<div className="page-enter"><PageHeader title={APPLE_PLANS_NOTICE.ar} hint={APPLE_PLANS_NOTICE.en} /></div>;
   switch(section){
-    case "today":view=<TodayView lang={lang} organization={organization} onNavigate={setSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval} todayMetrics={todayData?.metrics||null} memory={todayData?.institutionalMemoryCoverage||null} skills={skills} practiceCount={practice.length} canManageAccounts={account?.role==="admin"||account?.role==="owner"} serverLive={serverLive} demoActive={demoActive} policiesActive={governance?.policiesActive?.value ?? null} activityTrend={analytics.trend?.available?analytics.trend.points.map(p=>p.events):undefined}/>;break;
+    case "today":view=<TodayView lang={lang} organization={organization} onNavigate={goSection} approvals={approvals} proposals={proposals} workItems={work} onApproval={setActiveApproval} todayMetrics={todayData?.metrics||null} memory={todayData?.institutionalMemoryCoverage||null} skills={skills} practiceCount={practice.length} canManageAccounts={account?.role==="admin"||account?.role==="owner"} serverLive={serverLive} demoActive={demoActive} policiesActive={governance?.policiesActive?.value ?? null} activityTrend={analytics.trend?.available?analytics.trend.points.map(p=>p.events):undefined} audit={audit} paused={paused}/>;break;
     case "learn":view=<LearnView lang={lang} proposals={proposals} onResolve={resolve}/>;break;
     case "teach":view=<TeachView lang={lang} onSkillCodified={()=>void codified()} onNotify={notify}/>;break;
-    case "skills":view=<SkillsView lang={lang} skills={skills} onPromote={(id,l,o)=>void promote(id,l,o)} onOpenPeople={()=>setSection("people")} onSkillUpdated={sk=>setSkills(v=>v.map(x=>x.id===sk.id?sk:x))} notify={notify} onRollback={(id,v)=>void rollback(id,v)} onToggleKill={id=>void toggleSkill(id)}/>;break;
+    case "skills":view=<SkillsView lang={lang} skills={skills} onPromote={(id,l,o)=>void promote(id,l,o)} onOpenPeople={()=>setSection("people")} onSkillUpdated={sk=>setSkills(v=>v.map(x=>x.id===sk.id?sk:x))} notify={notify} onRollback={(id,v)=>void rollback(id,v)} onToggleKill={id=>void toggleSkill(id)} audit={audit}/>;break;
     case "practice":view=<PracticeView lang={lang} cases={practice} shadow={shadow} running={practiceBusy} shadowRunning={shadowBusy} onRunPractice={()=>void runPractice()} onRunShadow={()=>void runShadow()}/>;break;
     case "work":view=<WorkView lang={lang} items={work} approvalByWork={approvalByWork} onTakeOver={id=>void takeOver(id)} onResume={id=>void resume(id)} onApproval={setActiveApproval}/>;break;
     case "simulator":view=<SimulatorView lang={lang} state={sim} busy={simBusy} onSend={t=>void simSend(t)} onReset={()=>void simReset()} onUpload={()=>void simUpload()} onOpenApproval={()=>{/* الطلب الذي فتحته هذه المحادثة بعينه — لا أول طلبٍ معلّق في المؤسسة. */const a=approvals.find(x=>x.id===sim.approvalId&&x.status==="pending")||approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id)}}/>;break;
     case "connections":view=<ConnectionsView lang={lang} connectors={connectors} testingId={testingConnector} onTest={id=>void testConnector(id)} isDemo={demoActive}/>;break;
     case "analytics":view=<AnalyticsView lang={lang} data={analytics}/>;break;
     case "control":view=<ControlView lang={lang} governance={governance} paused={paused} pause={autopilot.pause} onPause={()=>setPauseOpen(true)}/>;break;
-    case "people":view=<PeopleView lang={lang} canAssign={account?.role==="admin"||account?.role==="owner"||account?.role==="manager"} notify={notify} onChanged={()=>void refreshSkills()}/>;break;
+    case "people":view=<PeopleView lang={lang} canAssign={account?.role==="admin"||account?.role==="owner"||account?.role==="manager"} notify={notify} onChanged={()=>void refreshSkills()} skills={skills} workItems={work}/>;break;
     case "audit":view=<AuditView lang={lang} events={audit}/>;break;
     case "accounts":view=<AccountsView lang={lang} currentAccountId={account?.id||""} isAdmin={account?.role==="admin"||account?.role==="owner"} notify={notify} role={account?.role} isDemo={demoActive}/>;break;
     case "partners":view=isAppleNativeShell()?applePlansNotice:demoActive?<DemoOwnerPreview lang={lang} kind="partners"/>:<PartnersAdminView lang={lang} notify={notify}/>;break;
@@ -506,7 +525,7 @@ export default function App(){
   }
 
   return <>
-    <Shell section={section} onSection={setSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut} onHelp={()=>setHelpOpen(true)} onSearch={()=>setPaletteOpen(true)} isOwner={isOwner} licenceBanner={<><SubscriptionBanner snapshot={billing} lang={lang} onOpen={()=>setSection("billing")}/><LimitsBanner snapshot={billing} lang={lang} canAct={account?.role==="admin"||account?.role==="manager"} onOpen={()=>setSection("billing")}/></>}>{demoActive&&<DemoBanner lang={lang} sector={demoSector} sectors={demoSectors} busy={demoBusy} onSwitch={s=>void switchDemoSector(s)} onReset={()=>void resetDemo()} onExit={()=>void exitDemo()}/>}{paused&&<div className="pause-banner" role="status"><TriangleAlert aria-hidden="true"/><span>{lang==="ar"?`التنفيذ الآلي متوقف${autopilot.pause?.by?` — أوقفه ${autopilot.pause.by}`:""}${autopilot.pause?.reason?`: ${autopilot.pause.reason}`:""}. التعلم والمراجعة يعملان.`:"Autonomous execution is paused. Learning and review remain active."}</span></div>}{view}</Shell>
+    <Shell section={section} onSection={goSection} organization={organization} user={user} lang={lang} onToggleLang={()=>setLang(v=>v==="ar"?"en":"ar")} alerts={alertCount} onAlert={()=>{const a=approvals.find(x=>x.status==="pending");if(a)setActiveApproval(a.id);else setSection("learn")}} serverLive={serverLive} demoEnabled={demoEnabled} demoActive={demoActive} demoBusy={demoBusy} onEnterDemo={()=>void enterDemo()} onResetDemo={()=>void resetDemo()} onExitDemo={()=>void exitDemo()} onSignOut={()=>void signOut()} signingOut={signingOut} onHelp={()=>setHelpOpen(true)} onSearch={()=>setPaletteOpen(true)} isOwner={isOwner} licenceBanner={<><SubscriptionBanner snapshot={billing} lang={lang} onOpen={()=>setSection("billing")}/><LimitsBanner snapshot={billing} lang={lang} canAct={account?.role==="admin"||account?.role==="manager"} onOpen={()=>setSection("billing")}/></>}>{demoActive&&<DemoBanner lang={lang} sector={demoSector} sectors={demoSectors} busy={demoBusy} onSwitch={s=>void switchDemoSector(s)} onReset={()=>void resetDemo()} onExit={()=>void exitDemo()}/>}{paused&&<div className="pause-banner" role="status"><TriangleAlert aria-hidden="true"/><span>{lang==="ar"?`التنفيذ الآلي متوقف${autopilot.pause?.by?` — أوقفه ${autopilot.pause.by}`:""}${autopilot.pause?.reason?`: ${autopilot.pause.reason}`:""}. التعلم والمراجعة يعملان.`:"Autonomous execution is paused. Learning and review remain active."}</span></div>}{view}</Shell>
     {(autopilot.autopilotSkills.length>0||paused)&&canManageAutopilot&&<EmergencyFab lang={lang} paused={paused} onOpen={()=>setPauseOpen(true)}/>}
     <EmergencyPauseDialog lang={lang} open={pauseOpen} paused={paused} busy={pauseBusy} autopilotCount={autopilot.autopilotSkills.length} onClose={()=>setPauseOpen(false)} onConfirm={r=>void emergency(r)}/>
     <ApprovalModal lang={lang} approval={activeApprovalObj} busy={approvalBusy} onClose={()=>setActiveApproval(null)} onApprove={(id,r)=>void decideApproval(id,"approved",r)} onReject={(id,r)=>void decideApproval(id,"rejected",r)} onTakeOver={id=>void takeOver(id)}/>

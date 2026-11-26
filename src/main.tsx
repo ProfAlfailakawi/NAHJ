@@ -16,10 +16,15 @@ import './duo-beauty-4.css';
 import './duo-beauty-5.css';
 import './responsive-2026-11.css';
 import './dock-motion.css';
+import './visual-wave.css';
 import './duo-adaptive.css';
 import './duo-device.css';
 import {installDuoMarkers} from './lib/duo-markers';
 import {installDockMotion} from './lib/dockMotion';
+import {installInkTheme} from './lib/inkTheme';
+
+/* وضع الحبر (داكن اختياري): يُطبَّق قبل أول رسم فلا يومض المظهر الفاتح. */
+installInkTheme();
 
 /* علامات iPhone Duo على الجذر (data-device، data-shell، data-widget-side) — تُقرأ في duo-device.css وحده. */
 installDuoMarkers();
