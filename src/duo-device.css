@@ -113,9 +113,11 @@ html[data-device="duo"] .toast {
  *    وزرّ الإيقاف الطارئ أسفل العمود. لا «+»: لا يوجد في نهج إجراء إنشاءٍ واحدٌ يصلح لكل صفحة.
  *    العمود يتبع data-widget-side بعد التدوير.
  * ========================================================================== */
-/* بداية العمود تحت مربع الساعة والبطارية (يبلغ نحو 165px من الأعلى) بفاصلٍ ظاهر، لا ملاصقاً لحافته. */
-html[data-device="duo"] { --duo-clock-end: 176px; }
-@media screen and (orientation: landscape) { html[data-device="duo"] { --duo-clock-end: 110px; } }
+/* بداية العمود تحت مربع الساعة والبطارية بفاصلٍ ظاهر، لا ملاصقاً لحافته. على الجهاز الحقيقي يمتدّ المربع على الشاشة
+   الخارجية من الحبّة العليا إلى حلقة البطارية (≈235px، لقطة المالك 2026-11-26؛ نحو 165px في المحاكاة)، طولاً وعرضاً:
+   فيبدأ العمود بعد 244px، أو بعد ارتفاع الودجت الذي يكتبه الغلاف الأصلي + 8 إن كان أكبر. الداخلية عرضاً ركنُها أقصر. */
+html[data-device="duo"] { --duo-clock-end: max(244px, calc(var(--duo-widget-h, 0px) + 8px)); }
+@media screen and (orientation: landscape) and (min-height: 521px) { html[data-device="duo"] { --duo-clock-end: 110px; } }
 
 @media screen and (orientation: portrait) and (max-width: 559px), screen and (orientation: landscape) and (max-height: 520px) {
   html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .topbar {
@@ -152,6 +154,13 @@ html[data-device="duo"] { --duo-clock-end: 176px; }
   html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .mobile-dock button::after { display: none; }
   html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .mobile-dock small {
     position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  /* عرضاً لا يتّسع العمود تحت الساعة للكبسولة كاملةً: تنتهي فوق زرّ الإيقاف الطارئ وتتمرّر داخلها. */
+  @media (orientation: landscape) {
+    html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .mobile-dock {
+      max-height: calc(100dvh - var(--duo-clock-end) - 14px - var(--duo-sa-b) - 48px - 10px);
+      overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none;
+    }
   }
   /* الإيقاف الطارئ: دائرةٌ في أسفل عمود الساعة. */
   html[data-device="duo"][data-shell="app"]:not([data-widget-side="none"]) body .emergency-fab {
