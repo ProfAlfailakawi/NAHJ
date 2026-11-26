@@ -275,6 +275,12 @@
     .connections-layout, .impact-layout, .control-layout, .people-layout) > * {
     grid-column: 1; min-width: 0; margin: 0 0 var(--book-gap);
   }
+  /* «الأثر»: مناطق شبكة الحاسوب المسمّاة (hero/metrics/weekly/risk) لا وجود لها في شبكة الكتاب، فكانت البطاقات الأربع
+     تتراكب في صفٍّ واحد وتبقى الصفحة اليمنى فارغة. تعود إلى الصفوف التلقائية. */
+  .page-enter > .impact-layout > :not(.top-skill-visual) { grid-area: auto; grid-column: 1; }
+  /* وأوسمتها الثلاثة تحت الحلقة في صفحةٍ عرضها ~390px: سطرٌ يلتفّ ولا يُكسر نصّ الوسم («أتمت/ة»). */
+  .page-enter .impact-badges { position: static; grid-column: 1 / -1; flex-wrap: wrap; justify-content: center; row-gap: 6px; margin-top: 10px; }
+  .page-enter .impact-badges > span { flex: 0 0 auto; white-space: nowrap; }
 
   /* رأس القسم: العنوان يميناً، والتمهيد والإجراء يساراً، على خطٍّ سفلي واحد. */
   .page-enter > .page-heading {
