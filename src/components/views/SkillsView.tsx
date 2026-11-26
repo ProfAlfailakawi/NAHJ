@@ -4,7 +4,8 @@ import { api, ApiError, apiOrNull } from "../../lib/api";
 import { Dialog } from "../Dialog";
 import { ManualPrintOverlay } from "../ManualPrintOverlay";
 import { isAppleNativeShell } from "../../lib/platform";
-import type { AutonomyLevel, Skill } from "../../types";
+import type { AuditEvent, AutonomyLevel, Skill } from "../../types";
+import { PromotionCeremony, signerFromAudit } from "../wave/PromotionCeremony";
 import { Dt, PageHeader, SectionTitle } from "../Primitives";
 import { SkillRunway } from "../Visuals";
 import { DnaStepper, DnaTimeline, DnaDraw, type DnaStepState } from "../dna";
@@ -13,7 +14,7 @@ import { riskLabel, hoursLabel, levelLabel, LADDER_NAME_AR } from "../../lib/lab
 import { ladderStep, ladderPlain, ladderYourPart, RISK_PLAIN, SKILL_STATUS_PLAIN } from "../../lib/glossary";
 
 export type PromoteOptions={signOff?:boolean;note?:string};
-type Props={lang:"ar"|"en";skills:Skill[];onPromote:(id:string,l:AutonomyLevel,options?:PromoteOptions)=>void;onRollback:(id:string,v:number)=>void;onToggleKill:(id:string)=>void;onOpenPeople?:()=>void;onSkillUpdated?:(skill:Skill)=>void;notify?:(text:string,error?:boolean)=>void};
+type Props={lang:"ar"|"en";skills:Skill[];onPromote:(id:string,l:AutonomyLevel,options?:PromoteOptions)=>void;onRollback:(id:string,v:number)=>void;onToggleKill:(id:string)=>void;onOpenPeople?:()=>void;onSkillUpdated?:(skill:Skill)=>void;notify?:(text:string,error?:boolean)=>void;audit?:AuditEvent[]};
 
 interface PromotionReviewView{
   fromLevel:number;toLevel:number;upward:boolean;blocked:boolean;missing:string[];
@@ -144,7 +145,7 @@ function lifecycleState(status:string,i:number):DnaStepState{
 }
 const stages=["Observe","Practice","Shadow","Suggest","Prepare","Approval","Autopilot"];
 
-export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpenPeople,onSkillUpdated,notify}:Props){
+export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpenPeople,onSkillUpdated,notify,audit}:Props){
   const ar=lang==="ar"; const [selected,setSelected]=useState(skills[0]?.id||"");
   const [promoteTo,setPromoteTo]=useState<number|null>(null);
   /* الدورة تُعرض أولاً ثم السُّلّم: لا مقدّمتان معاً في اللوحة نفسها، والمجموع نحو 4.5 ثانية. */
@@ -161,6 +162,20 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
     const t=setTimeout(()=>setJustRung(null),2000);
     return()=>{clearTimeout(t);setJustRung(null)};
   },[skill?.id,skill?.autonomyLevel]);
+  /*
+   * حفل الترقية: يُنتظر بعد «وقّع ورقِّ» ولا يظهر إلا إن عادت المهارة فعلاً في المستوى الجديد
+   * (نجاح الخادم). الرفض لا يغيّر المستوى، فينقضي الانتظار بصمت بعد مهلة.
+   */
+  const [ceremonyWait,setCeremonyWait]=useState<{id:string;from:number;to:number;since:number}|null>(null);
+  const [ceremony,setCeremony]=useState<{id:string;from:number;to:number;since:number}|null>(null);
+  useEffect(()=>{
+    if(!ceremonyWait)return;
+    const s=skills.find(x=>x.id===ceremonyWait.id);
+    if(s&&s.autonomyLevel===ceremonyWait.to){setCeremony(ceremonyWait);setCeremonyWait(null);return}
+    const t=setTimeout(()=>setCeremonyWait(null),20000);
+    return()=>clearTimeout(t);
+  },[skills,ceremonyWait]);
+  const ceremonySkill=ceremony?skills.find(x=>x.id===ceremony.id):undefined;
   return <div className="page-enter">
     <PageHeader eyebrow={ar?"المهارات / الذاكرة":"SKILLS / MEMORY"} title={ar?"كل ما تعرفه المؤسسة.":"What the organization knows how to do."} hint={ar?"المهارة إجراءٌ من عمل مؤسستك مكتوبٌ بخطواته وقراراته واستثناءاته — لا نصُّ أمرٍ يُكتب لنموذج.":"A skill is verified operational memory — not a prompt."}/>
     <div className="skills-layout">
@@ -206,6 +221,7 @@ export function SkillsView({lang,skills,onPromote,onRollback,onToggleKill,onOpen
         <ManualPanel lang={lang} skill={skill} onSkillUpdated={onSkillUpdated} notify={notify}/>
       </div>}
     </div>
-    {skill&&promoteTo!==null&&<PromotionDialog lang={lang} skill={skill} target={promoteTo} onClose={()=>setPromoteTo(null)} onConfirm={o=>{onPromote(skill.id,promoteTo as AutonomyLevel,o);setPromoteTo(null)}}/>}
+    {skill&&promoteTo!==null&&<PromotionDialog lang={lang} skill={skill} target={promoteTo} onClose={()=>setPromoteTo(null)} onConfirm={o=>{if(o.signOff)setCeremonyWait({id:skill.id,from:skill.autonomyLevel,to:promoteTo,since:Date.now()});onPromote(skill.id,promoteTo as AutonomyLevel,o);setPromoteTo(null)}}/>}
+    {ceremony&&ceremonySkill&&<PromotionCeremony ar={ar} skill={ceremonySkill} from={ceremony.from} to={ceremony.to} at={new Date(ceremony.since)} signer={signerFromAudit(audit,ceremonySkill,ceremony.since)} onClose={()=>setCeremony(null)}/>}
   </div>
 }

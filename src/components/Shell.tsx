@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { InkToggle } from "./wave/InkToggle";
 import { Activity, UserRoundCheck, BarChart3, Bell, BookOpenCheck, BrainCircuit, CircleHelp, Building2, CreditCard, Crown, FlaskConical, HandCoins, GraduationCap, History, Languages, LayoutGrid, LogOut, MessagesSquare, PlugZap, RefreshCw, Search, ShieldCheck, Sparkles, Users, Workflow } from "lucide-react";
 import { BrandLockup, NahjMark } from "./Brand";
 import type { Organization, User } from "../types";
@@ -193,6 +194,7 @@ export function Shell({
                 <FlaskConical aria-hidden="true"/>
               </button>
             ) : null}
+            <InkToggle ar={ar}/>
             <button type="button" className="top-icon" onClick={onToggleLang} aria-label={ar ? "English — تغيير اللغة" : "العربية — Switch language"} title={ar ? "تغيير اللغة" : "Switch language"}><Languages aria-hidden="true"/></button>
             <button type="button" className="top-icon notification" onClick={onAlert} aria-label={ar ? `التنبيهات${alerts ? ` (${alerts})` : ""}` : `Alerts${alerts ? ` (${alerts})` : ""}`} title={ar ? "التنبيهات" : "Alerts"}><Bell aria-hidden="true"/>{alerts>0&&<b dir="ltr">{alerts>9?"9+":alerts}</b>}</button>
             {/* الاسم الأول بلا اللقب: كان «د. هيا ناصر» يُعرض «د.» وحده، فلا اسم يظهر. */}

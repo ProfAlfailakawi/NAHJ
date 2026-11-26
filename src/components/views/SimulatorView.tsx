@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from "react";
 import { Check, Circle, CreditCard, FileUp, RotateCcw, Send, ShieldCheck, UserRound } from "lucide-react";
 import { NahjGlyph } from "../Brand";
 import { PageHeader } from "../Primitives";
+import { ChatBrain } from "../wave/ChatBrain";
 
 type SimMessage={id:string;sender:"customer"|"ai"|"system";text:string;timestamp:string;cardType?:string;metadata?:Record<string,any>};
 export type SimulatorState={step:string;messages:SimMessage[];requiresManagerApproval?:boolean;approvalStatus?:string;civilIdVerified?:boolean;stages?:string[];stage?:number;samplePrompts?:string[];orgName?:string;approvalId?:string};
@@ -27,6 +28,7 @@ export function SimulatorView({lang,state,busy,onSend,onReset,onUpload,onOpenApp
         <div className="trace-orb"><NahjGlyph/></div>
         <strong>{ladder[Math.min(current,ladder.length-1)]}</strong><span>{ar?"مرحلة المحادثة":"conversation stage"}</span>
         <div className="trace-ladder">{ladder.map((s,i)=><div key={s} className={i<=current?"done":""}><i>{i<current?<Check aria-hidden="true"/>:i===current?<Circle aria-hidden="true" fill="currentColor"/>:null}</i><small>{s}</small></div>)}</div>
+        <ChatBrain ar={ar} messages={state.messages} approvalStatus={state.approvalStatus}/>
         {state.approvalStatus==="rejected"&&<p className="sim-note">{ar?"رُفض الطلب وأُعيد إلى الموظف المختص.":"Rejected and returned to staff."}</p>}
         <p className="sim-note">{ar?"اكتب كعميلك. عند القرار الحسّاس يتوقّف نهج ويطلب موافقتك.":"Write as your customer would. At a sensitive decision NAHJ stops and asks for your approval."}</p>
         {state.requiresManagerApproval&&state.approvalStatus==="pending"&&<button className="approval-cta mt-auto" onClick={onOpenApproval}><ShieldCheck/>{ar?"افتح بوابة القرار":"Open approval gate"}</button>}

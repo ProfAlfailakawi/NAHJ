@@ -6,6 +6,7 @@ import { apiOrNull, apiStrict, ApiError } from "../../lib/api";
 import { Dt, PageHeader } from "../Primitives";
 import { TeachStageVisual } from "../Visuals";
 import { DnaStepper, type DnaStepState } from "../dna";
+import { DictationWave, TeachThread } from "../wave/TeachThread";
 
 type EventRow={id:string;time:string;action:string;system:string;note?:string};
 type Synthesis={steps:SkillStep[];rules:string[];questions:{id:string;question:string;answered?:boolean}[]};
@@ -135,6 +136,9 @@ export function TeachView({lang,onSkillCodified,onNotify}:Props){
             ["approve",ar?"اعتماد":"Approve",codified?"done":result?"current":"pending"],
           ] as [string,string,DnaStepState][]).map(([key,label,state])=>({key,label,state}))}/>
         <TeachStageVisual active={recording||busy} eventCount={events.length} ar={ar}/>
+        {/* مسرح التعليم (عرضٌ فقط): موجة نشاط الإملاء، والخطوات على خيطٍ تنطوي إلى بصمة بعد الاستخلاص. */}
+        <DictationWave active={dictation.listening} interim={dictation.interim} ar={ar}/>
+        <TeachThread steps={events} ar={ar} result={result?{steps:result.steps.length,rules:result.rules.length}:null}/>
         <p className={`record-caption ${recording?"on":""}`} role="status"><i aria-hidden="true"/>{recording?(ar?"جارٍ التسجيل — اضغط الزر لإيقافه":"Recording — press the button to stop"):(ar?"زر الميكروفون يبدأ التسجيل":"The mic button starts recording")}</p>
         <div className="teach-controls">
           <button className={`record-orb ${recording?"recording":""}`} onClick={toggleRecording} aria-pressed={recording} title={recording?(ar?"إيقاف التسجيل":"Stop recording"):(ar?"بدء التسجيل":"Start recording")} aria-label={recording?(ar?"إيقاف التسجيل":"Stop recording"):(ar?"بدء التسجيل":"Start recording")}>{recording?<CircleStop/>:<Mic2/>}</button>

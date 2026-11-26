@@ -3,7 +3,9 @@ import {
   Activity, AlertTriangle, ArrowUpLeft, BookOpenCheck, BrainCircuit, CheckCircle2, Circle, Clock3, GraduationCap,
   FileCheck2, GitBranch, Lightbulb, MessagesSquare, UserRound, Route, ShieldCheck, Sparkles, Users, Waypoints
 } from "lucide-react";
-import type { ApprovalRequest, LearningProposal, Organization, Skill, WorkItem } from "../../types";
+import type { ApprovalRequest, AuditEvent, LearningProposal, Organization, Skill, WorkItem } from "../../types";
+import { LivingAtlas } from "../wave/LivingAtlas";
+import { DnaSegmented } from "../dna";
 import type { SectionId } from "../Shell";
 import { workStepText, workSteps } from "./WorkView";
 import { AppHub } from "./AppHub";
@@ -42,12 +44,17 @@ type Props = {
   policiesActive?: number | null;
   /* أحداث كل يوم من سجلّ التدقيق (موجودة أصلاً في /analytics) — للرسم المصغّر فقط. */
   activityTrend?: number[];
+  /* للأطلس الحي وشريط إعادة الأمس — سجلّ التدقيق نفسه المحمَّل للتطبيق. */
+  audit?: AuditEvent[];
+  paused?: boolean;
 };
 
-export function TodayView({ lang, organization, onNavigate, approvals, proposals, workItems, onApproval, todayMetrics, memory, skills = [], practiceCount = 0, canManageAccounts = false, serverLive = false, demoActive = false, policiesActive = null, activityTrend }: Props) {
+export function TodayView({ lang, organization, onNavigate, approvals, proposals, workItems, onApproval, todayMetrics, memory, skills = [], practiceCount = 0, canManageAccounts = false, serverLive = false, demoActive = false, policiesActive = null, activityTrend, audit = [], paused = false }: Props) {
   const ar = lang === "ar";
   /* المدار مطويّ افتراضياً في كل العروض خلف ملخّصه الظاهر دائماً؛ الفتح بيد المستخدم فقط فلا يتعلّق بعرض النافذة. */
   const [orbitOpen, setOrbitOpen] = React.useState(false);
+  /* الأطلس الحي يجمع الخريطتين في مشهدٍ واحد؛ خريطة الأقسام باقية بزرّ واحد بمداخلها كلها. */
+  const [mapMode, setMapMode] = React.useState<"atlas"|"sections">("atlas");
   const open = proposals.filter(p=>p.status==="pending");
   const active = workItems.filter(w=>w.state!=="completed").slice(0,3);
   const conflictCount = open.filter(p=>p.type==="conflict"||p.type==="process_drift").length;
@@ -81,10 +88,14 @@ export function TodayView({ lang, organization, onNavigate, approvals, proposals
       )}
 
       {/* خريطة التطبيق: إضافةٌ للعرض فقط، وخريطة الذاكرة أدناه كما كانت. */}
-      <AppHub ar={ar} onNavigate={onNavigate} documented={memory?.documentedSkills ?? 0} active={memory?.activeSkills ?? 0}
+      <DnaSegmented className="atlas-switch" ariaLabel={ar?"طريقة عرض الخريطة":"Map view"} value={mapMode} onChange={setMapMode}
+        options={[{value:"atlas",label:ar?"الأطلس الحي":"Living atlas"},{value:"sections",label:ar?"خريطة الأقسام":"Sections map"}]}/>
+      {mapMode==="atlas"
+        ? <LivingAtlas ar={ar} skills={skills} workItems={workItems} approvals={approvals} audit={audit} paused={paused} onNavigate={onNavigate} onApproval={onApproval}/>
+        : <AppHub ar={ar} onNavigate={onNavigate} documented={memory?.documentedSkills ?? 0} active={memory?.activeSkills ?? 0}
         pending={open.length} practice={practiceCount} workActive={workItems.filter(w=>w.state!=="completed").length}
         hours={todayMetrics?.hoursSavedThisMonth ?? organization.hoursSavedMonth} policies={policiesActive}
-        singlePerson={memory?.singlePersonDependencies ?? 0} auditToday={todayMetrics?.auditEventsToday ?? 0}/>
+        singlePerson={memory?.singlePersonDependencies ?? 0} auditToday={todayMetrics?.auditEventsToday ?? 0}/>}
 
       <section className="hero-grid">
         <article className="brain-hero-wrap">
